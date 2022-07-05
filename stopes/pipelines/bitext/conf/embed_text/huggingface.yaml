@@ -1,0 +1,13 @@
+defaults:
+  - /embed_text/encode@_here_
+  - config/encoder: hf_encoder
+
+# shortcuts
+
+encoder_model: ???
+
+# proper config structure
+
+config:
+  encoder:
+    encoder_model: ${...encoder_model}

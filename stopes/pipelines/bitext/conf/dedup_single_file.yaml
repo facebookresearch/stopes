@@ -1,0 +1,16 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+# update this if you are running local
+tmp_dir: /scratch/slurm_tmpdir/
+
+num_cpu: 40
+mem_gb: 300
+timeout_min: 14400
+
+output_file: ???
+input_file: ???
+field_def: 6 # update this to 7 if you have an lm score in your tsv
+
+wandb:

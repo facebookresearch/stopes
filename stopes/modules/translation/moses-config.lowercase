@@ -1,0 +1,450 @@
+################################################
+### CONFIGURATION FILE FOR AN SMT EXPERIMENT ###
+################################################
+
+[GENERAL]
+
+input-extension = {SRC}
+input-moses-code = {SRC_MOSES}
+output-extension = {TGT}
+output-moses-code = {TGT_MOSES}
+monolingual-corpus = {MONOLINGUAL_CORPUS}
+
+pair-extension = ${input-extension}-${output-extension}
+
+working-dir = {OUTPUT_DIR}/${pair-extension}
+data-dir = ${working-dir}/data
+moses-src-dir = /private/home/pkoehn/mosesdecoder/
+moses-script-dir = /private/home/pkoehn/mosesdecoder/scripts
+moses-bin-dir = /private/home/pkoehn/mosesdecoder/bin
+external-bin-dir = /private/home/guw/github/moses_deps
+
+ttable-binarizer = "$moses-src-dir/bin/processPhraseTableMin"
+decoder = $moses-src-dir/bin/moses
+
+input-tokenizer = "$moses-script-dir/tokenizer/normalize-punctuation.perl $input-moses-code | $moses-script-dir/tokenizer/tokenizer.perl -a -l $input-moses-code"
+output-tokenizer = "$moses-script-dir/tokenizer/normalize-punctuation.perl $output-moses-code | $moses-script-dir/tokenizer/tokenizer.perl -a -l $output-moses-code"
+input-lowercaser = $moses-script-dir/tokenizer/lowercase.perl
+output-lowercaser = $moses-script-dir/tokenizer/lowercase.perl
+
+### generic parallelizer for cluster and multi-core machines
+# you may specify a script that allows the parallel execution
+# parallizable steps (see meta file). you also need specify
+# the number of jobs (cluster) or cores (multicore)
+#
+#generic-parallelizer = $moses-script-dir/ems/support/generic-parallelizer.perl
+#generic-parallelizer = $moses-script-dir/ems/support/generic-multicore-parallelizer.perl
+
+### cluster settings (if run on a cluster machine)
+# number of jobs to be submitted in parallel
+#
+#jobs = 10
+
+# arguments to qsub when scheduling a job
+qsub-settings = "-l 'arch=*64'"
+# cache-model = "/scratch/guw/nmt_cache"
+
+#################################################################
+# PARALLEL CORPUS PREPARATION:
+# create a tokenized, sentence-aligned corpus, ready for training
+
+[CORPUS]
+qsub-settings = "-l 'arch=*64,hostname=[ab]*'"
+
+jobs = 50
+
+### tools to use to prepare the data
+#
+#tokenizer =
+#lowercaser =
+
+### long sentences are filtered out, since they slow down GIZA++
+# and are a less reliable source of data. set here the maximum
+# length of a sentence
+#
+max-sentence-length = 80
+
+[CORPUS:opus]
+
+### command to run to get raw corpus files
+#
+# get-corpus-script = $europarl-v3/get-parallel-corpus.perl
+
+### raw corpus files (untokenized, but sentence aligned)
+#
+raw-stem = ${data-dir}/train
+
+### tokenized corpus files (may contain long sentences)
+#
+#tokenized-stem =
+
+### long sentences are filtered out, since they slow down GIZA++
+# and are a less reliable source of data. set here the maximum
+# length of a sentence
+#
+#max-sentence-length = 80
+
+### if sentence filtering should be skipped,
+# point to the clean training data
+#
+#clean-stem =
+
+### if corpus preparation should be skipped,
+# point to the prepared training data
+#
+#lowercased-stem =
+
+#################################################################
+# LANGUAGE MODEL TRAINING
+
+[LM]
+train:qsub-settings = "-l 'arch=*64,mem_free=30G,ram_free=30G'"
+
+### tool to be used for language model training
+# for instance: ngram-count (SRILM), train-lm-on-disk.perl (Edinburgh)
+#
+#lm-training = /home/pkoehn/statmt/project/srilm/bin/i686-m64/ngram-count
+lm-training = "$moses-script-dir/ems/support/lmplz-wrapper.perl -bin $moses-bin-dir/lmplz"
+settings = "--prune '0 0 1' -T $working-dir/lm -S 10G"
+order = 3
+
+### script to use for binary table format
+# (default: no binarization)
+#
+#lm-binarizer = $moses-src-dir/irstlm/bin/compile-lm
+
+### script to create quantized language model format
+# (default: no quantization)
+#
+#lm-quantizer = $moses-src-dir/irstlm/bin/quantize-lm
+
+lm-binarizer = $moses-src-dir/bin/build_binary
+type = 8
+
+
+### tools to use to prepare the data
+#
+#tokenizer =
+#lowercaser =
+
+### each language model to be used has its own section here
+
+[LM:opus]
+
+### command to run to get raw corpus files
+#
+#get-corpus-script = "$europarl-v3/get-lm-corpus.perl $output-extension"
+
+### raw corpus (untokenized)
+#
+raw-corpus = ${monolingual-corpus}
+
+### tokenized corpus files (may contain long sentences)
+#
+#tokenized-corpus =
+
+### if corpus preparation should be skipped,
+# point to the prepared language model
+#
+#lm =
+
+#################################################################
+# INTERPOLATING LANGUAGE MODELS
+
+[INTERPOLATED-LM] IGNORE
+interpolate:qsub-settings = "-l 'arch=*64,mem_free=150G,ram_free=150G'"
+
+# if multiple language models are used, these may be combined
+# by optimizing perplexity on a tuning set
+# see, for instance [Koehn and Schwenk, IJCNLP 2008]
+
+### directory that includes srilm binaries
+#
+srilm-dir = /home/pkoehn/statmt/project/srilm/bin/i686-m64
+
+### script to interpolate language models
+# if commented out, no interpolation is performed
+#
+script = /home/pkoehn/moses/scripts/ems/support/interpolate-lm.perl
+
+### group language models for hierarchical interpolation
+# (flat interpolation is limited to 10 language models)
+group = "news07,news08,news09,news10,news11,news12,news13,news14 afp,apw,cna,ltw,nyt,wpb,xin"
+
+### tuning set
+# you may use the same set that is used for mert tuning (reference set)
+#
+raw-tuning = $data-dir/dev.${output-extension}
+
+# irstlm
+#lm-binarizer = $moses-src-dir/irstlm/bin/compile-lm
+
+# kenlm, also set type to 8
+lm-binarizer = $moses-src-dir/bin/build_binary
+type = 8
+
+#################################################################
+# FACTOR DEFINITION
+
+[INPUT-FACTOR]
+
+# also used for output factors
+temp-dir = $working-dir/training/factor
+
+[INPUT-FACTOR:morph] IGNORE
+factor-script = $moses-script-dir/training/wrappers/make-factor-de-morph.perl
+
+[INPUT-FACTOR:lemma] IGNORE
+factor-script = $moses-script-dir/training/wrappers/make-factor-de-lemma.perl
+
+[OUTPUT-FACTOR:pos] IGNORE
+factor-script = "$moses-script-dir/training/wrappers/make-factor-en-pos.mxpost.perl -mxpost /home/pkoehn/statmt/project/mxpost"
+
+[OUTPUT-FACTOR:lemma] IGNORE
+factor-script = $moses-script-dir/training/wrappers/make-factor-en-porter.perl
+
+#################################################################
+# TRANSLATION MODEL TRAINING
+
+[TRAINING]
+#build-osm:qsub-settings = "-l 'arch=*64,mem_free=10G,ram_free=100G'"
+#fast-align:qsub-settings = "-l 'arch=*64,mem_free=50G,ram_free=50G'"
+#fast-align-inverse:qsub-settings = "-l 'arch=*64,mem_free=50G,ram_free=50G'"
+#extract-phrases:qsub-settings = "-l 'arch=*64,mem_free=50G,ram_free=50G'"
+#build-ttable:qsub-settings = "-l 'arch=*64,mem_free=50G,ram_free=50G'"
+
+### training script to be used: either a legacy script or
+# current moses training script (default)
+#
+script = $moses-script-dir/training/train-model.perl
+
+### general options
+#
+training-options = "-sort-buffer-size 20G -sort-compress gzip -cores 24"
+fast-align-settings = "-d -o -v"
+binarize-all = $moses-script-dir/training/binarize-model.perl
+
+### symmetrization method to obtain word alignments from giza output
+# (commonly used: grow-diag-final-and)
+#
+alignment-symmetrization-method = grow-diag-final-and
+
+#run-giza-in-parts = 50
+
+### lexicalized reordering: specify orientation type
+# (default: only distance-based reordering model)
+#
+#lexicalized-reordering = hier-mslr-bidirectional-fe
+
+### factored training: specify here which factors used
+# if none specified, single factor training is assumed
+# (one translation step, surface to surface)
+#
+#input-factors = word lemma morph
+#output-factors = word lemma pos
+#input-factors = word lemma morph
+#output-factors = word lemma pos
+#alignment-factors = "word -> word"
+#translation-factors = "word+lemma+morph -> word+lemma+pos, lemma -> lemma, morph -> pos"
+#reordering-factors = "lemma -> lemma, morph -> pos"
+#generation-factors = "lemma -> pos, pos+lemma -> word"
+#decoding-steps = "t0:t1,g0,t2,g1"
+#decoding-graph-backoff = "0 1"
+
+### if word alignment (giza symmetrization) should be skipped,
+# point to word alignment files
+#
+#word-alignment = $working-dir/model/aligned.2
+
+#use-berkeley = true
+#alignment-symmetrization-method = berkeley
+#berkeley-train = $edinburgh-script-dir/berkeley-train.sh
+#berkeley-process =  $edinburgh-script-dir/berkeley-process.sh
+#berkeley-jar = /home/pkoehn/statmt/project/berkeleyaligner-1.1/berkeleyaligner.jar
+#berkeley-java-options = "-server -mx30000m -ea"
+#berkeley-training-options = "-Main.iters 5 5 -EMWordAligner.numThreads 8"
+#berkeley-process-options = "-EMWordAligner.numThreads 8"
+#berkeley-posterior = 0.5
+
+#srilm-dir = /home/pkoehn/statmt/project/srilm/bin/i686-m64
+#operation-sequence-model = "yes"
+#operation-sequence-model-order = 5
+#operation-sequence-model-settings = "--factor 0-0 -lmplz '/home/pkoehn/moses/bin/lmplz -S 10G --discount_fallback'"
+
+### hierarchical rule set
+#
+#hierarchical-rule-set = true
+#domain-features = "indicator"
+score-settings = " --GoodTuring --MinScore 2:0.0001"
+#sparse-features = "target-word-insertion top 50, source-word-deletion top 50, word-translation top 50 50, phrase-length"
+
+### include word alignment in phrase table
+#
+max-phrase-length = 5
+
+### if phrase extraction should be skipped,
+# point to stem for extract files
+#
+# extracted-phrases =
+
+### if phrase table training should be skipped,
+# point to phrase translation table
+#
+# phrase-translation-table =
+
+### if reordering table training should be skipped,
+# point to reordering table
+#
+# reordering-table =
+
+### if training should be skipped,
+# point to a configuration file that contains
+# pointers to all relevant model files
+#
+#config = $working-dir/data/moses.ini.5.wo-all
+
+#####################################################
+### TUNING: finding good weights for model components
+
+[TUNING]
+tune:qsub-settings = "-l 'hostname=b*,arch=*64,mem_free=50G,ram_free=50G' -pe smp 15"
+#jobs = 6
+
+### instead of tuning with this setting, old weights may be recycled
+# specify here an old configuration file with matching weights
+#
+#filtered-dir = $working-dir/tuning/filtered.5
+
+#weight-config = $working-dir/tuning/moses.weight-reused.ini.4
+
+### tuning script to be used
+#
+tuning-script = $moses-script-dir/training/mert-moses.pl
+tuning-settings = "-mertdir $moses-src-dir/bin --batch-mira --return-best-dev -maximum-iterations 20"
+
+### specify the corpus used for tuning
+# it should contain 100s if not 1000s of sentences
+#
+raw-input = $data-dir/dev.$input-extension
+# tokenized-input =
+# factorized-input =
+# input =
+#
+raw-reference = $data-dir/dev.${output-extension}
+# tokenized-reference =
+# factorized-reference =
+# reference =
+
+### size of n-best list used (typically 100)
+#
+nbest = 200
+
+### ranges for weights for random initialization
+# if not specified, the tuning script will use generic ranges
+# it is not clear, if this matters
+#
+# lambda =
+
+### additional flags for the decoder
+#
+decoder-settings = "-mp -search-algorithm 1 -cube-pruning-pop-limit 1000 -s 1000 -threads 20 -max-trans-opt-per-coverage 100"
+
+### if tuning should be skipped, specify this here
+# and also point to a configuration file that contains
+# pointers to all relevant model files
+#
+#config =
+#config-with-reused-weights = $working-dir/data/moses.tuned.ini.5.new
+
+#########################################################
+## RECASER: restore case, this part only trains the model
+
+[RECASING]
+
+#decoder = $moses-src-dir/moses-cmd/src/moses.1521.srilm
+
+### training data
+# raw input needs to be still tokenized,
+# also also tokenized input may be specified
+#
+#tokenized = [LM:europarl:tokenized-corpus]
+
+# recase-config =
+
+#lm-training = $moses-src-dir/srilm/bin/i686/ngram-count
+
+#######################################################
+## TRUECASER: train model to truecase corpora and input
+
+[TRUECASER]
+
+### script to train truecaser models
+#
+trainer = $moses-script-dir/recaser/train-truecaser.perl
+
+### training data
+# raw input needs to be still tokenized,
+# also also tokenized input may be specified
+#
+# tokenized-stem = $working-dir/data/ep+nc
+
+### trained model
+#
+#truecase-model = /home/pkoehn/experiment/wmt17-de-en/truecaser/truecase-model.1
+
+############################################################
+## EVALUATION: translating a test set using the tuned system
+
+[EVALUATION]
+
+### number of jobs (if parallel execution of testing)
+#
+decode:qsub-settings = "-l 'hostname=b*,arch=*64,mem_free=50G,ram_free=50G' -pe smp 20"
+#jobs = 4
+
+decoder-settings = "-mbr -mp -search-algorithm 1 -cube-pruning-pop-limit 5000 -s 5000 -threads 24 -max-trans-opt-per-coverage 100"
+
+### prepare system output for scoring
+# this may include detokenization and wrapping output in sgm
+# (needed for nist-bleu, ter, meteor)
+#
+detokenizer = "$moses-script-dir/tokenizer/detokenizer.perl -l $output-moses-code"
+#recaser = $moses-script-dir/recaser/recase.perl
+wrapping-script = "$moses-script-dir/ems/support/wrap-xml.perl ${output-extension}"
+# output-sgm =
+
+### should output be scored case-sensitive (default: no)?
+#
+# case-sensitive = yes
+
+### BLEU
+#
+#nist-bleu = $moses-script-dir/generic/mteval-v13a.pl
+#nist-bleu-c = "$moses-script-dir/generic/mteval-v13a.pl -c"
+multi-bleu = $moses-script-dir/generic/multi-bleu.perl
+multi-bleu-c = "$moses-script-dir/generic/multi-bleu.perl -lc"
+# ibm-bleu =
+
+### TER: translation error rate (BBN metric) based on edit distance
+#
+# ter = $edinburgh-script-dir/tercom_v6a.pl
+
+### METEOR: gives credit to stem / worknet synonym matches
+#
+# meteor =
+
+### Analysis: carry out various forms of analysis on the output
+#
+# analysis = $moses-script-dir/ems/support/analysis.perl
+# analyze-coverage = yes
+# report-segmentation = yes
+
+[EVALUATION:opus]
+raw-input = $data-dir/devtest.$input-extension
+raw-reference = $data-dir/devtest.${output-extension}
+
+[REPORTING]
+
+### what to do with result (default: store in file evaluation/report)
+#
+# email = pkoehn@inf.ed.ac.uk

@@ -1,0 +1,15 @@
+indic-nlp-library
+pythainlp
+laonlp
+khmer-nltk
+laonlp
+python-crfsuite
+fasttext
+sentence_splitter
+botok
+emoji
+xxhash
+https://github.com/kpu/kenlm/archive/master.zip
+wandb
+hydra-core>=1.2.0
+omegaconf==2.1.1

@@ -1,0 +1,7 @@
+defaults:
+  - /embed_text/preproc_and_encode@_here_
+  - config/encoder: laser2_encoder
+
+config:
+  model_dir: ???
+  vocab_dir: ???

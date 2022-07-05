@@ -1,0 +1,16 @@
+_target_: stopes.modules.bitext.mining.calculate_distances.CalculateDistancesModule
+config:
+  lang: ???
+  other_lang: ???
+  distance_type: ???
+  lang_embeddings: ???
+  index_other_lang: ???
+  output_dir: index.${module.config.data.data_version}
+
+  num_probe: 128
+  knn: 16
+  gpu_type: "fp16-shard"
+  save_dists_as_fp16: True
+
+  embedding_dimensions: 1024
+  normalize_query_embeddings: True

@@ -1,0 +1,63 @@
+defaults:
+  # base configs for the sub modules
+  - preproc_binarize_mined: standard_conf
+  - binarize: fairseq_binarize
+  - spm: standard_conf
+  - moses: standard_conf
+  - moses_filter: standard_conf
+  - launcher: submitit
+  - train_fairseq: nmt
+  - train_fairseq/config/params/model: transformer
+  - eval: generate_multi_bleu_detok
+  - _self_
+
+
+src_lang: ???
+tgt_lang: ???
+input_file_mined_data_tsv: ???          # this is the output of the global_mining_pipeline; this is taken in as the input file to the evaluation script
+public_bitext_base_dir: null
+public_bitext_margin: 2.0
+public_corpora_to_ignore: []
+output_dir: ./NMT_bitext_eval_output_dir
+bin_dir: ${output_dir}/bin_dir
+spm_train_and_binarize_output_dir: ${bin_dir}/spm_train_encode_and_binarize
+eval_minimum_epoch: 1 # must be <= eval_maximum_epoch
+eval_maximum_epoch: 100
+
+# override the sub module configs with the parents
+moses:
+  config:
+    output_dir: "Delay setting this value" # ${bin_dir}/moses_preproccessing_{split}
+moses_filter:
+  config:
+    output_dir: ${bin_dir}/moses_filter
+spm:
+  config:
+    output_dir: ${spm_train_and_binarize_output_dir}
+    vocab_size: 7_000
+binarize:
+  config:
+    output_dir: ${spm_train_and_binarize_output_dir}
+    vocab_file_path: "Delay Setting this Value"
+
+train_fairseq:
+  config:
+    num_gpus: 1 # 16 gpus still doesn't work fully (raises job.result() vs job.results() error due to 16 different output files on a non-array module)
+    output_dir: ${output_dir}/trained_models
+    params:
+      common:
+        wandb_project: bitext_eval
+      dataset:
+        dataset_impl: ${.....binarize.config.line_processor.dataset_impl}
+      task:
+        source_lang: ${src_lang}
+        target_lang: ${tgt_lang}
+        data: ${spm_train_and_binarize_output_dir}
+      optimization:
+        max_epoch: ${eval_maximum_epoch}
+eval:
+  config:
+    src_lang: ${src_lang}
+    tgt_lang: ${tgt_lang}
+    output_dir: "Delay Setting this Value"
+    binarized_dir: ${spm_train_and_binarize_output_dir}

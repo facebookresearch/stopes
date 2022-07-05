@@ -1,0 +1,20 @@
+lang: ???
+shards: ???
+encoder: ???
+output_dir: ???
+launcher: ${launcher} # reuse the global launcher config (but we'll get a new instance)
+
+encode:
+  _target_: stopes.modules.preprocess.line_processor.LineProcessorModule
+  config:
+    output_dir: ${...output_dir}/${...encoder._name}
+    shards: ${...shards}
+    line_processor: ${...encoder}
+    outfile_prefix: encf
+    buffer_size: 10_000
+    requirements:
+      nodes: 1
+      tasks_per_node: 1
+      gpus_per_node: 1
+      cpus_per_task: 4
+      timeout_min: 2880

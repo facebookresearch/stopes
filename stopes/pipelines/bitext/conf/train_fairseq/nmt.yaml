@@ -1,0 +1,43 @@
+# @package train_fairseq
+
+_target_: stopes.modules.train_fairseq_module.TrainFairseqModule
+
+config:
+  output_dir: ???
+  data: ???
+  # number of gpus to use for training the model
+  num_gpus: 1
+  # number of gpus per node in your cluster
+  num_gpus_per_node: 8
+  params:
+    model: ???
+    common:
+      log_interval: 500
+      log_format: simple
+      no_progress_bar: true
+    checkpoint:
+      save_interval: 1
+    dataset:
+      max_tokens: 2000
+    task:
+      _name: translation
+      source_lang: ???
+      target_lang: ???
+      data: ???
+    optimization:
+      max_epoch: 100
+      lr: [1e-3]
+      stop_min_lr: 1e-9
+      clip_norm: 0.0
+      update_freq: [4]
+    criterion: label_smoothed_cross_entropy
+    optimizer:
+      _name: adam
+      adam_betas: (0.9, 0.98)
+      weight_decay: 0.0001
+    lr_scheduler:
+      _name: inverse_sqrt
+      warmup_updates: 4000
+      warmup_init_lr: 1e-7
+    bpe: none
+    scoring: none

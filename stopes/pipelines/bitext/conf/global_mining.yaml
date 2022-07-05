@@ -1,0 +1,63 @@
+defaults:
+  # base configs for the sub modules
+  - embed_text: laser3
+  - train_index: train_faiss
+  - populate_index: populate_faiss
+  - merge_indexes: merge_faiss
+  - mine_indexes: base
+  - mine_sentences: base
+  - calculate_distances: base
+  - launcher: submitit
+  - _self_
+
+src_lang: ???
+tgt_lang: ???
+data: ???
+# you might want to set in a preset
+model_dir: ???
+vocab_dir: ???
+output_dir: ???
+embedding_dimensions: 1024
+mine_threshold: 1.04
+local_tmp_dir: /scratch/slurm_tmpdir/
+
+embedding_sample:
+  max_num_workers: 40
+
+#override the sub module configs with the parents
+embed_text:
+  config:
+    model_dir: ${model_dir}
+    vocab_dir: ${vocab_dir}
+    output_dir: ${output_dir}/embed.${data.data_version}
+    embedding_dimensions: ${embedding_dimensions}
+train_index:
+  config:
+    data: ${data}
+    output_dir: ${output_dir}/index.${data.data_version}
+    embedding_dimensions: ${embedding_dimensions}
+populate_index:
+  config:
+    output_dir: ${output_dir}/index.${data.data_version}
+    embedding_dimensions: ${embedding_dimensions}
+merge_indexes:
+  config:
+    data: ${data}
+    output_dir: ${output_dir}/index.${data.data_version}
+calculate_distances:
+  config:
+    output_dir: ${output_dir}/mine.${data.data_version}
+mine_indexes:
+  config:
+    src_lang: ${src_lang}
+    tgt_lang: ${tgt_lang}
+    output_dir: ${output_dir}/mine.${data.data_version}
+    mine_threshold: ${mine_threshold}
+mine_sentences:
+  config:
+    data: ${data}
+    src_lang: ${src_lang}
+    tgt_lang: ${tgt_lang}
+    output_dir: ${output_dir}/mine.${data.data_version}
+    mine_threshold: ${mine_threshold}
+lang_configs:

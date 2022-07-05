@@ -1,0 +1,34 @@
+defaults:
+  - launcher: submitit
+  - spm: standard_conf
+  - train_fairseq: nmt
+  - train_fairseq/config/params/model: transformer
+  - _self_
+
+bitext: ???
+langs: ???
+test_data_dir: ???
+valid_data_dir: ???
+output_dir: .
+
+launcher:
+  cluster: slurm
+
+spm:
+  config:
+    train_data_file: DELAYED
+    training_lines: 1_000_000
+    vocab_size: 7_000
+
+train_fairseq:
+  config:
+    params:
+      common:
+        log_format: simple
+        wandb_project: bitext_eval
+      dataset:
+        dataset_impl: mmap
+      task:
+        eval_bleu: true
+        eval_bleu_print_samples: true
+        eval_bleu_remove_bpe: sentencepiece
