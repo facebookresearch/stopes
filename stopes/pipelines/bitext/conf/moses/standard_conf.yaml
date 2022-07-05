@@ -1,0 +1,9 @@
+_target_: stopes.modules.preprocess.moses_cli_module.MosesPreprocessModule
+config:
+  lang: ???
+  shards: ???
+  output_dir: ???
+  lowercase: True
+  normalize_punctuation: True
+  remove_non_printing_chars: True
+  deescape_special_chars: True

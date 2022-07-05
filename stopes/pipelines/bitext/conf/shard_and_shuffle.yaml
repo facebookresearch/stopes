@@ -1,0 +1,13 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+nb_shards: 4
+output_dir: ???
+input_file: ???
+log_every: 10000
+tmp_dir: /scratch/slurm_tmpdir/
+
+num_cpu: 80
+mem_gb: null
+timeout_min: 1440

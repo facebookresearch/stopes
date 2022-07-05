@@ -1,0 +1,3 @@
+defaults:
+  - /embed_text/preproc_and_encode@_here_
+  - config/encoder: laser3_encoder

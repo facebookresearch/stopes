@@ -1,0 +1,74 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+langs: ???
+corpus_filter: ''
+data_dir: ???
+output_dir: .
+language_script_filename: language_scripts_200.tsv
+split_language_equivalences_filename: language_equivalences.tsv
+
+split_algo: default
+
+dist_tmp_dir: /checkpoint/${oc.env:USER}/monolingual_tmp
+# update this if you are running local
+local_tmp_dir: /scratch/slurm_tmpdir/
+max_shard_size: 15G
+
+filter:
+  min_chars: 10
+  max_chars: 500
+  max_punct_ratio: 0.2
+  max_number_ratio: 0.2
+  min_space_ratio: 0.05
+  max_space_ratio: 0.3
+  max_emoji_ratio: 0.1
+  script_threshold: 0.5
+  max_repeated_char: 20
+  tab_index: 0
+
+lid:
+  # one of this should be specified
+  model_date: 2022-02-18
+  model_file:
+  thresholds_file:
+
+  latest_models_path: ???
+  probability_threshold: 0.5
+  lang_thresholds:
+      fuv: 0.3
+      bis: 0.3
+      ewe: 0.2
+      fon: 0.2
+      kam: 0.3
+      kur: 0.2
+      lua: 0.4
+      pag: 0.4
+      sag: 0.3
+      ssw: 0.3
+      tso: 0.4
+      umb: 0.3
+      vec: 0.4
+      war: 0.4
+      yor: 0.4
+      diq: 0.4
+
+  label_unk: __label__unk
+
+
+preprocess_buffer_size: 10_000
+preproces_requirements:
+  nodes: 1
+  mem_gb: 200
+  tasks_per_node: 1
+  gpus_per_node: 0
+  cpus_per_task: 40
+  timeout_min: 1200
+
+# template for a glob search, corpus might be empty if corpus_filter is empty
+input_file_glob_template: $lang/$corpus*.$lang.xz
+
+wandb:
+  project: monolingual
+  entity: nllb

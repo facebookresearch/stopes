@@ -1,0 +1,15 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+requirements:
+  nodes: 1
+  tasks_per_node: 1
+  gpus_per_node: 0
+  cpus_per_task: 90
+  timeout_min: 1440
+
+tmp_dir: /scratch/slurm_tmpdir/
+input_files_glob: ???
+output_dir: ???
+text_starts_at_col: 6 # 0-indexed

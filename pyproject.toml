@@ -1,0 +1,100 @@
+[build-system]
+requires = ["flit_core >=3.2,<4", "setuptools"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "stopes"
+readme = "README.md"
+authors = [{name = "Facebook AI Research"}]
+requires-python = ">=3.8"
+dynamic = ["version", "description"]
+
+dependencies = [
+  "hydra-core>=1.2.0",
+  "submitit>=1.4.2",
+  "tqdm",
+  "joblib",
+]
+# zip_safe = false
+classifiers=[
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering",
+    "Development Status :: 4 - Beta",
+]
+
+[project.urls]
+  Source = "https://github.com/facebookresearch/stopes"
+  Tracker = "https://github.com/facebookresearch/stopes/issues"
+
+[project.optional-dependencies]
+  mono = [
+    "xxhash",
+    "fasttext",
+    "sentence_splitter",
+    # "kenlm",
+    "sentencepiece",
+    "indic-nlp-library",
+    "emoji",
+  ]
+  mining = [
+    "fairscale",
+    # "fairseq", Fairseq can't be installed normally
+    "faiss-gpu",
+    "sentencepiece",
+    "numpy",
+  ]
+  dev = [
+      # Test
+      "pytest>=4.3.0",
+      "pytest-asyncio>=0.15.0",
+      "pytest-cov>=2.6.1",
+      "coverage[toml]>=5.1",
+      # Format
+      "black==22.3.0",
+      "isort>=5.10.1",
+      # Linters
+      "mypy>=0.782",
+      "types-emoji",
+      "pylint>=2.8.0",
+      # Release
+      "flit>=3.5.1"
+  ]
+
+[tool.black]
+# Black defaults are great !
+
+[tool.isort]
+profile = "black"
+skip_gitignore = true
+skip_glob = ["*.pyx"]
+
+[tool.mypy]
+python_version = "3.8"
+show_error_codes = true
+check_untyped_defs = true
+
+files = [
+  "stopes/"
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "boto3",
+    "botocore",
+    "fairseq.*",
+    "faiss",
+    "sagemaker",
+    "sentencepiece",
+    "tqdm.*",
+]
+ignore_missing_imports = true
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+  "stopes/core",
+  "stopes/modules",
+  "stopes/pipelines/bitext",
+]
+asyncio_mode = "auto"

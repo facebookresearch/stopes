@@ -1,0 +1,11 @@
+_target_: stopes.modules.preprocess.hf_sentence_encoder.HFTextEncoder
+
+_name: ${.encoder_model} # Model Hub specification
+encoder_model: ???
+normalize: False
+fp16_storage: False
+
+# these are not used, but required as the laser3 uses it. but sentence transformer doesn't need them
+# we just set it to nothing
+spm_model: ''
+spm_vocab: ''

@@ -1,0 +1,22 @@
+_target_: stopes.modules.bitext.mining.mine_bitext_indexes.MineBitextIndexesModule
+config:
+    src_lang: ???
+    tgt_lang: ???
+    index_type: ???
+
+    #set later in pipeline
+    src2tgt_dist_files: ???
+    src2tgt_index_files: ???
+    tgt2src_dist_files: ???
+    tgt2src_index_files: ???
+
+    output_dir: ???
+    knn_dist: 16
+    src_k: 16
+    tgt_k: 16
+    k_extract: 1
+    margin: ratio
+    margin_norm: mean
+    num_probe: 128
+    gpu_type: fp16-shard
+    mine_threshold: 1.06

@@ -1,0 +1,23 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+# update this if you are running local
+tmp_dir: /scratch/slurm_tmpdir/
+merge_dir: /checkpoint/${oc.env:USER}/merge
+
+num_cpu: 40
+mem_gb: 300
+timeout_min: 14400
+
+output_file: ???
+glob: ???
+num_files: 10
+field_def: 6 # update this to 7 if you have an lm score in your tsv
+
+resort_files: false # if the initial files are not sorted, set this to true to do an initial sort before the merge
+process_locally: false # if it's faster to read locally, copy all files to tmp_dir first
+
+wandb:
+  project: monolingual
+  entity: nllb

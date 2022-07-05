@@ -1,0 +1,18 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+# must specify files or file_glob
+files: null
+file_glob: null
+
+out_dir: .
+text_starts_at_col: 7 # if you don't have LM score, could be 6
+requirements:
+  nodes: 1
+  tasks_per_node: 1
+  gpus_per_node: 0
+  cpus_per_task: 1
+  timeout_min: 1440
+
+tmp_dir: /scratch/slurm_tmpdir/

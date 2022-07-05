@@ -1,0 +1,208 @@
+# This TSV file provides equivalence mapping to handle languages for which
+# we may not have specific rules
+#
+#------------------------------
+# Some European languages
+cat spa     # Catalan
+ast spa     # Asturian
+lmo ita     # Lombard
+mwl ita     # Mirandese
+nap ita     # Napolitan
+cym eng     # Welsch
+gla eng     # Gaelic
+gle eng     # Irish
+mlt eng     # Maltese
+yid deu    # Yiddish
+ltz eng     # Luxemburgish
+#------------------------------
+# Indian languages not directly handled by the Indic NLP tool
+bho hin     # Bhojpuri, Devanagari
+kas hin     # Kashmiri, Devanagari
+mag hin     # Magahi, Devanagari
+mai hin     # Maithili, Devanagari
+san hin     # Santala, Devanagari
+sat hin     # Santala, Devanagari
+urd ara     # Urdu, Persian script
+#------------------------------
+# Turkic languages
+azj tur     # Azerbaijani, Latin script
+bak rus     # Baskir, Cyrilic script
+kaz_Cyrl rus    # Kazakh, Cyrilic script
+kaz rus     # Kazakh, Cyrilic script
+kir_Cyrl rus    # Kirghiz, Cyrilic script
+kir rus     # Kirghiz, Cyrilic script
+tat rus     # Tartar, Cyrilic script
+tuk ara     # Turkmen, Arabic/Latin script
+tur tur     # Turkish, Latin script
+uzb_Cyrl rus     # Uzbek, Cyrilic script
+uzb_Latn tur     # Uzbek, Latin script
+uzb tur     # Uzbek, Latin script
+#------------------------------
+# Iranian languages
+ckb ara     # Central Kurdish, Arabic
+prs ara     # Dari, Persian
+fas ara     # Farsi, Arabic
+kur eng     # Kurdish, Latin
+kmr eng     # Kurmanji, Latin?
+oss rus     # Ossetic, Cyrilic
+pus ara     # pashto, Arabic
+tgk rus     # Tajik, Cyrilic
+zza eng     # Zazaki, Latin
+#------------------------------
+# Malayo-Polynesian languages
+ceb ind     # Cebuano, Latin
+ilo ind     # Iloko, Latin
+ind ind     # Indonesian, Latin
+jav ind     # Javanese, Latin
+mlg ind     # Malagasy, Latin
+mri ind     # Maori, Latin
+msa ind     # Malay, Latin
+smo ind     # Saoman, Latin
+sun ind     # Sundanese, Latin
+tah ind     # Tahitian, Latin
+tgl ind     # Tagalog, Latin
+#------------------------------
+# African languages:
+# Those with Latin script are mapped to English
+ach eng
+bam eng
+bem eng
+cjk eng
+dyu eng
+ewe eng
+fon eng
+ful eng
+hau eng
+ibo eng
+kam eng
+kau eng
+kik eng
+kin eng
+kmb eng
+kon eng
+lin eng
+lug eng
+luo eng
+nso eng
+nya eng
+orm eng
+sna eng
+som eng
+sot eng
+ssw eng
+swh eng
+# tir # Ge'ez script
+tsn eng
+tso eng
+twi eng
+umb eng
+wol eng
+xho eng
+yor eng
+zul eng
+#------------------------------
+# low-resource languages with Latin script
+aym spa     # Aymara (seems to use ? like in Spanish)
+hat eng     # Haitian, Creole
+bis eng     # Bislama, Creole
+pap eng     # Papiamento, Creole
+kea eng     # Kabuverdianu, Creole
+que spa     # Quecha (seems to use ? like in Spanish)
+mri eng    # Maori, Latin
+#------------------------------
+# low-resource languages other than Latin script
+amh amh     # Amharic, Ge'ez script (rule based)
+kac eng     # Kachin, Sino-Tibetian
+lao lao     # Lao
+mon rus     # Mongolian, Cyrillic
+mya mya     # Burmese, Burmese (rule based)
+khm khm     # Khmer, Khmer script (rule based)
+sqi eng     # Albanian, Latin
+tir tir     # Tigrinya, Ge'ez script (rule based)
+#------------------------------
+# new languages part of the 200 set
+# mapped based on script
+ace_Arab ara
+ace_Latn eng
+acm ara
+acq ara
+aeb ara
+ajp ara
+aka eng
+apc ara
+ara_Latn eng
+ars ara
+ary ara
+awa hin
+azb ara
+bak rus # bashkir to russian
+bam eng
+bem eng
+bho hin
+bjn_Arab ara
+bjn_Latn eng
+# bod handled by special tokenizer for Tibt
+bug eng
+cjk eng
+crh_Latn eng
+dik eng
+diq eng
+# dzo in Tibt script handled by tokenizer for Tibt
+epo eng
+eus eng
+ewe eng
+fao eng
+fij eng
+fon eng
+fur ita
+grn eng
+hne hin
+kab eng
+kas_Arab ara
+kas_Deva hin
+kau_Arab ara
+kau_Latn eng
+kbp eng
+kik eng
+kin eng
+lij ita
+lim deu # german language
+ltg lit # latvian language
+lua eng
+lus eng
+mag hin
+mai hin
+min_Arab ara
+min_Latn eng
+# mni needs rule based
+mos eng
+nno eng
+nus eng
+pag eng
+pap ita
+prs ara
+run eng
+sag eng
+san hin
+# sat needs rule based
+scn ita
+# shn handled by burmese tokenizer as it's in mymr script
+smo eng
+sot eng
+srd ita
+szi ita
+tat_Cyrl rus
+tmh_Latn eng
+tmh_Tfng eng
+ton eng
+tpi eng
+tso eng
+tuk eng
+tum eng
+twi eng
+tzm eng
+uig ara
+vec ita
+war eng
+zho_Hant zho
+zho_Hans zho

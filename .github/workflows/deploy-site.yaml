@@ -1,0 +1,41 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    # Review gh actions docs if you want to further define triggers, paths, etc
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./website
+        run: npm ci
+      - name: Build website
+        working-directory: ./website
+        run: npm run build
+
+      - name: Push to gh-pages branch
+        run: |
+          mv ./website/build /tmp/gh-pages
+          git fetch origin gh-pages
+          git checkout -b gh-pages origin/gh-pages
+          rm -r ./*
+          cp -r /tmp/gh-pages/* .
+          git add --all
+          git status
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git commit -m "deploy website: $(git log -n 1 --pretty='format:%h %s' $GITHUB_SHA)" || exit 0
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git gh-pages

@@ -1,0 +1,11 @@
+_target_: stopes.modules.bitext.indexing.train_faiss_index_module.TrainFAISSIndexModule
+config:
+  lang: ???
+  index_type: ???
+  embedding_file: ???
+  data: ???
+  output_dir: ts.index.iteration_${.data.iteration}
+  num_cpu: 40
+  use_gpu: True
+  embedding_dimensions: 1024
+  fp16_storage: True

@@ -1,0 +1,164 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @format
+ */
+
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #074ad9;
+  --ifm-color-primary-dark: #0643c3;
+  --ifm-color-primary-darker: #063fb8;
+  --ifm-color-primary-darkest: #053498;
+  --ifm-color-primary-light: #0851ef;
+  --ifm-color-primary-lighter: #0a56f7;
+  --ifm-color-primary-lightest: #2b6cf8;
+}
+
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #4d82ff;
+  --ifm-color-primary-dark: #2c6bff;
+  --ifm-color-primary-darker: #1b5fff;
+  --ifm-color-primary-darkest: #0045e8;
+  --ifm-color-primary-light: #6e99ff;
+  --ifm-color-primary-lighter: #7fa5ff;
+  --ifm-color-primary-lightest: #b1c8ff;
+}
+
+.stopes {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: var(--ifm-code-font-size);
+}
+
+.sfeatures {
+  height: 30rem;
+  text-align: justify;
+}
+
+.sfeatures .card__image {
+  margin: auto;
+}
+
+.sfeatures .card__image img {
+  height: 10rem;
+}
+
+.ssection {
+  margin-top: 3rem;
+}
+
+.ssection h3 {
+  font: normal 500 2.4rem/1.1 var(--ifm-font-family-base);
+  margin-top: var(--ifm-global-spacing);
+  padding-bottom: var(--ifm-global-spacing);
+}
+
+.ssection .scontent {
+  text-align: justify;
+}
+
+.sbanner {
+  align-items: center;
+  background-color: rgb(238, 241, 245);
+  color: black;
+  display: flex;
+  flex-direction: column;
+  height: 548px;
+  margin-bottom: 2rem;
+}
+
+.sbanner .container {
+  border-left: 16px solid #0064e0;
+  padding-left: 55px;
+  align-items: center;
+  align-self: start;
+  margin: auto 0;
+  margin-top: 20px;
+  margin-left: 240px;
+  padding-top: 5px;
+}
+
+.sbanner .bottom {
+  align-self: flex-end;
+  width: 100%;
+  display: flex;
+  margin-bottom: 52px;
+}
+
+.sbanner .gh-stars {
+  margin-left: auto;
+  margin-top: 10px;
+}
+
+.sbanner .bottom .button-container {
+  margin-left: 255px
+}
+
+.sbanner .bottom .button-container .button {
+  background-color: #0064e0;
+  color: white;
+}
+
+.sbanner .bottom .banner-meta {
+  margin-left: auto;
+  margin-right: 81px;
+  padding-top: 10px;
+}
+
+.sbanner .sblue {
+  color: #1877f2;
+}
+
+.sbanner .banner1 {
+  margin-bottom: 22px;
+}
+
+.sbanner .banner2 {
+  margin-bottom: 57px;
+}
+
+.sbanner h1 {
+  margin-bottom: 30px;
+}
+
+.sbanner h1 .logo {
+  height: 85px;
+  margin-right: 1rem;
+}
+
+.smain {
+  margin-bottom: 10rem;
+}
+
+/* code highlighting */
+
+.token.keyword {
+  color: #ce6849;
+}
+
+
+@media only screen and (max-width: 700px) {
+
+  .sbanner .container {
+    margin-left: 5px;
+  }
+
+  .sbanner .bottom .button-container {
+    margin-left: 20px;
+  }
+
+  .sbanner .bottom .banner-meta {
+    margin-right: 0;
+  }
+}

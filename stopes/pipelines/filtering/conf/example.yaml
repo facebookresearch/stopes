@@ -1,0 +1,33 @@
+defaults:
+  - base_config
+  - train_primary/length_filter: default
+  - train_primary/lid_filter: default
+  - train_primary/toxicity_filter: default
+  - train_primary/dedup_filter: default
+
+directions:
+  - eng_Latn-lij_Latn
+  - eng_Latn-scn_Latn
+train_primary:
+  normalize_punctuation: true
+  included_corpora:
+    - nllbseed
+    - tatoeba
+  length_filter:
+    min_len: 5
+    max_len: 1050
+    max_len_ratio: 9
+  dedup_filter:
+    dedup_pairs: true
+    max_target_dedup: null
+  lid_filter: null
+  toxicity_filter: null
+train_mined: null
+train_bt: null
+executor:
+  log_folder: executor_logs
+  cluster: local
+hydra:
+  output_subdir: null
+  run:
+    dir: ${output_dir}

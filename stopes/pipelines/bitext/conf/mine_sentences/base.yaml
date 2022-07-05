@@ -1,0 +1,15 @@
+_target_: stopes.modules.bitext.mining.mine_bitext_sentences.MineBitextSentencesModule
+config:
+    src_lang: ???
+    tgt_lang: ???
+    src_text_files: ???
+    src_meta_files: ???
+    tgt_text_files: ???
+    tgt_meta_files: ???
+    alignment_file: ???  # the mined indexes, without npz extension
+    data: ???
+    output_dir: mine.${data.data_version}
+    mine_threshold: 1.04
+    score_max: 1.25
+    dedup_bitexts: True
+    compress_output: True

@@ -1,0 +1,14 @@
+# you'll need fairseq too
+
+# useful for the StopesModules
+hydra-core >= 1.2.0
+submitit
+tqdm
+
+# for the global mining logic
+numpy
+faiss-gpu
+torch
+
+# if we want to use HuggingFace sentence-transformers
+sentence-transformers

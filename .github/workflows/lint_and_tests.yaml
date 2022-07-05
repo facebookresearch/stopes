@@ -1,0 +1,46 @@
+name: lint_and_tests
+
+on:
+  # Trigger the workflow on push to master or any pull request
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      max-parallel: 1
+      matrix:
+        platform: [ubuntu-latest]
+        python-version: [3.8]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install
+      # TODO: Fairseq doesn't install with pip>=22.1,
+      # Also the version on pypi is from before Oct 2020.
+      run: |
+        python --version
+        python -m pip install --upgrade 'pip==21.1' setuptools wheel
+        python -m pip show pip
+        python -m pip install 'git+https://github.com/facebookresearch/fairseq.git'
+        python -m pip install -e '.[dev,mono,mining]'
+
+    - name: isort
+      run: isort --check .
+    - name: black
+      run: black --check .
+    - name: pytest
+      run: pytest
+    # TODO: fix type issues
+    - name: mypy
+      run: 'mypy || echo "Warning: mypy still does not pass"'

@@ -1,0 +1,7 @@
+_target_: stopes.modules.bitext.indexing.merge_faiss_indexes.MergeFAISSIndexesModule
+config:
+  lang: ???
+  index_type: ???
+  indexes: ???
+  data: ???
+  output_dir: index.${module.config.data.data_version}

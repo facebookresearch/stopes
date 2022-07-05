@@ -1,0 +1,71 @@
+_name: transformer
+
+activation_fn: "relu"
+share_decoder_input_output_embed: true
+encoder_layers: 6
+encoder_attention_heads: 8
+encoder_embed_dim: 512
+encoder_ffn_embed_dim: 4096
+decoder_layers: 6
+decoder_attention_heads: 8
+decoder_embed_dim: 512
+decoder_ffn_embed_dim: 4096
+dropout: 0.3
+attention_dropout: 0.2
+relu_dropout: 0.2
+encoder_normalize_before: true
+decoder_normalize_before: true
+weight_decay: 0.0001
+
+criterion: label_smoothed_cross_entropy
+label_smoothing: 0.2
+optimizer: adam
+adam_betas: '(0.9, 0.98)'
+clip_norm: 0.0
+
+lr_scheduler: inverse_sqrt
+warmup_updates: 4000
+warmup_init-lr: 1e-7
+lr: 1e-3
+stop_min_lr: 1e-9
+
+max_tokens: 2000
+update_freq: 4
+log_interval: 500
+max_epoch: 100
+save_interval: 1
+
+# defaults
+encoder_embed_path: null
+encoder_learned_pos: false
+decoder_embed_path: null
+decoder_learned_pos: false
+no_emb_dropout: false
+max_source_positions: null
+max_target_positions: null
+decoder_input_dim: ${.decoder_embed_dim}
+decoder_output_dim: ${.decoder_embed_dim}
+activation_dropout: 0.0
+adaptive_softmax_cutoff: null
+adaptive_softmax_dropout: 0
+share_all_embeddings: false
+no_token_positional_embeddings: false
+adaptive_input: false
+no_cross_attention: false
+cross_self_attention: false
+no_scale_embedding: false
+layernorm_embedding: false
+tie_adaptive_weights: false
+checkpoint_activations: false
+offload_activations: false
+encoder_layers_to_keep: null
+decoder_layers_to_keep: null
+encoder_layerdrop: 0
+decoder_layerdrop: 0
+quant_noise_pq: 0
+quant_noise_pq_block_size: 8
+quant_noise_scalar: 0
+is_moe: false
+selected_expert_count: 2
+no_embed_dropout: false
+init_model_on_gpu: false

@@ -1,0 +1,4 @@
+output_dir: ???
+filter_ratio: 2.5  # bitexts filtering using Moses's lean-corpus-n.perl
+filter_min: 1
+filter_max: 250 # this means that lines longer than 250 will be deleted
