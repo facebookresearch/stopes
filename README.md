@@ -3,11 +3,14 @@
 
 # `stopes`: A library for preparing data for machine translation research
 
-As part of the FAIR No Language Left Behind (NLLB) project to drive inclusion through machine translation, a large amount of data was processed to create training data. We provide the libraries and tools we used to:
+As part of the FAIR No Language Left Behind (NLLB) ([Paper](https://research.facebook.com/publications/no-language-left-behind/), [Website](https://ai.facebook.com/research/no-language-left-behind/), [Blog](https://ai.facebook.com/blog/nllb-200-high-quality-machine-translation/))
+project to drive inclusion through machine translation, a large amount of data was processed to create training data. We provide the libraries and tools we used to:
 
 1. create clean monolingual data from web data
 2. mine bitext
 3. easily write scalable pipelines for processing data for machine translation
+
+Full documentation on https://facebookresearch.github.io/stopes
 
 ## Examples
 
@@ -62,9 +65,7 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
   from two monolingual datasets. (inspired by
   [CCMatric](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
 
-## Full documentation
-
-see https://facebookresearch.github.io/stopes
+**Full documentation**: see https://facebookresearch.github.io/stopes
 or the `websites/docs` folder.
 
 ## Contributing
@@ -86,6 +87,17 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
 - [Guillaume Wenzek](https://github.com/gwenzek)
 
 (in alphabetical order)
+
+## Citation
+If you use `stopes` in your work or any models/datasets/artifacts published in NLLB, please cite :
+
+```bibtex
+@article{nllb2022,
+  title={No Language Left Behind: Scaling Human-Centered Machine Translation},
+  author={{NLLB Team} and Costa-jussà, Marta R. and Cross, James and Çelebi, Onur and Elbayad, Maha and Heafield, Kenneth and Heffernan, Kevin and Kalbassi, Elahe and Lam, Janice and Licht, Daniel and Maillard, Jean and Sun, Anna and Wang, Skyler and Wenzek, Guillaume and Youngblood, Al and Akula, Bapi and Barrault, Loic and Mejia-Gonzalez, Gabriel and Hansanti, Prangthip and Hoffman, John and Jarrett, Semarley and Sadagopan, Kaushik Ram and Rowe, Dirk and Spruit, Shannon and Tran, Chau and Andrews, Pierre and Ayan, Necip Fazil and Bhosale, Shruti and Edunov, Sergey and Fan, Angela and Gao, Cynthia and Goswami, Vedanuj and Guzmán, Francisco and Koehn, Philipp and Mourachko, Alexandre and Ropers, Christophe and Saleem, Safiyyah and Schwenk, Holger and Wang, Jeff},
+  year={2022}
+}
+```
 
 ## License
 `stopes` is MIT licensed, as found in the LICENSE file.
