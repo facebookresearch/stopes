@@ -44,13 +44,13 @@ const config = {
         },
       }),
     ],
+  ],
+  plugins: [
     [
       '@docusaurus/plugin-google-gtag',
       {
-        gtag: {
-          trackingID: 'G-9ZRD7WBVGH',
-          anonymizeIP: true,
-        },
+        trackingID: 'G-9ZRD7WBVGH',
+        anonymizeIP: true,
       },
     ],
   ],
