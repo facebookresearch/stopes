@@ -31,17 +31,19 @@ stopes uses [flit](https://flit.pypa.io/) to manage its setup, you will need a r
 pip for the install to work. We recommend that you first upgrade pip:
 `python -m pip install --upgrade pip`
 
-You can install stopes with pip:
-`pip install -e '.[dev,mono,mining]'`
-
-You can choose what to install. If you are only interested in `mining`, you do not need to install `dev`, and `mono`.
-
 The mining pipeline relies on fairseq to run LASER encoders, pip cannot install fairseq currently, so you will have to do this manually. Check the [fairseq](https://github.com/facebookresearch/fairseq) repo for up to date instructions and requirements:
 ```
 git clone https://github.com/pytorch/fairseq
 cd fairseq
 pip install --editable ./
 ```
+
+You can install stopes with pip:
+`pip install -e '.[dev,mono,mining]'`
+
+You can choose what to install. If you are only interested in `mining`, you do not need to install `dev`, and `mono`.
+
+Currently `fairseq` and `stopes` require different version of hydra, so `pip` might output some warnings.
 
 If you plan to train a lot of NMT model you will also want to setup apex to get a faster training.
 ```

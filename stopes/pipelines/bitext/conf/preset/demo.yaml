@@ -54,7 +54,7 @@ data:
   # we need to know the number of lines in each file, this is computed in
   # prepare.sh and this tells the pipeline where to find the files with this
   # info
-  nl_file_template: ${.data_shard_dir}/{lang}.nl
+  nl_file_template: "{lang}.nl"
 
 # for each language we support, specify where the laser encoder is and where the
 # spm model/vocab can be found. In our case, we have custom laser2/3 encoders
