@@ -54,7 +54,7 @@ The important parts of that preset config is:
    if you are only processing a few languages, you don't need so many entries,
    here we preset them for all languages from the WMT22 task
 
-::: tip
+:::tip
 
 Language codes are important, but not standardized everywhere. The `stopes` library does not make any assumptions to what codes you are using. As you will see in the configuration and the prepare script, codes are mostly important in naming data input files. If you want to use a different coding scheme, make sure that the files and config use the same naming conventions.
 
@@ -69,7 +69,8 @@ python -m stopes.pipelines.bitext.global_mining_pipeline src_lang=fuv tgt_lang=z
 
 - `src_lang` and `tgt_lang` specify the pair of languages we want to process,
 - `demo_dir` is the new variable we introduce in our preset/demo.yaml file, to
-  point to where the `prepare.sh` script downloaded our data,
+  point to where the `prepare.sh` script downloaded our data; make sure to
+  specify an absolute path,
 - `+preset=demo` tells hydra to load the demo.yaml preset file to set our
   defaults (the `+` here is because we are telling hydra to append a group that
   doesn't exist in the default config, see the [hydra
