@@ -35,6 +35,7 @@ The mining pipeline relies on fairseq to run LASER encoders, pip cannot install 
 ```
 git clone https://github.com/pytorch/fairseq
 cd fairseq
+git checkout tags/v0.12.1
 pip install --editable ./
 ```
 
