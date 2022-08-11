@@ -289,8 +289,11 @@ def add_embedding_to_index(
                 # but is quite slow, and when we aren't afraid of preemption we should skip it.
                 # Write partial index to the partial index file (and while this happens, keep is_partial_file_valid as False)
                 checkpoint_summary.is_partial_file_valid = False
+                partial_cpu_idx = (
+                    faiss.index_gpu_to_cpu(partial_idx) if gpu else partial_idx
+                )
                 faiss.write_index(
-                    partial_idx,
+                    partial_cpu_idx,
                     str(checkpoint_summary.partial_idx_file),
                 )
                 checkpoint_summary.is_partial_file_valid = True
