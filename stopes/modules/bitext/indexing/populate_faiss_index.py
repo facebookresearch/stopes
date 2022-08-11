@@ -109,7 +109,9 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
         return self.config.embedding_files
 
     async def run(
-        self, iteration_value: tp.Optional[tp.Any] = None, iteration_index: int = 0,
+        self,
+        iteration_value: tp.Optional[tp.Any] = None,
+        iteration_index: int = 0,
     ):
         lang_output_dir = Path(self.lang_output_dir)
         file_name = f"populate_index.{self.config.index_type}.{self.config.lang}.{iteration_index:03d}.data.idx"
@@ -173,7 +175,8 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
 
         # The process is complete: copying completed (checkpointed) index onto return value file
         shutil.copyfile(
-            str(self.checkpoint_summary.partial_idx_file), str(populated_index),
+            str(self.checkpoint_summary.partial_idx_file),
+            str(populated_index),
         )
         self.checkpoint_summary.is_partial_file_valid = False
         self.checkpoint_summary.partial_idx_file.unlink()
@@ -191,7 +194,8 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
     ) -> submitit.helpers.DelayedSubmission:
         return submitit.helpers.DelayedSubmission(
             PopulateFAISSIndexModule(
-                config=self.config, checkpoint_summary=self.checkpoint_summary,
+                config=self.config,
+                checkpoint_summary=self.checkpoint_summary,
             ),
             *args,
             **kwargs,
@@ -240,7 +244,7 @@ def add_embedding_to_index(
         partial_idx = index_to_gpu(partial_idx)
 
     with embedding.open_for_read(mode="memory") as data:
-        chunk_size = 2 ** 14  # Speed gains are marginal beyond 10k embeddings
+        chunk_size = 2**14  # Speed gains are marginal beyond 10k embeddings
 
         # Below, we calculate how much of the embedding is already populated onto the index
         # checkpointed_embedding_starting_row is the starting row to continue on from (every row before this we've already completed/checkpointed)
@@ -289,7 +293,8 @@ def add_embedding_to_index(
                     faiss.index_gpu_to_cpu(partial_idx) if gpu else partial_idx
                 )
                 faiss.write_index(
-                    partial_cpu_idx, str(checkpoint_summary.partial_idx_file),
+                    partial_cpu_idx,
+                    str(checkpoint_summary.partial_idx_file),
                 )
                 checkpoint_summary.is_partial_file_valid = True
 
@@ -298,7 +303,8 @@ def add_embedding_to_index(
     if gpu:
         partial_idx = faiss.index_gpu_to_cpu(partial_idx)
     faiss.write_index(
-        partial_idx, str(checkpoint_summary.partial_idx_file),
+        partial_idx,
+        str(checkpoint_summary.partial_idx_file),
     )
     checkpoint_summary.is_partial_file_valid = True
 
