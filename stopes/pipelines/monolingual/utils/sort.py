@@ -32,7 +32,7 @@ def build_sort_command(
         "-S 50%",  # use 50% of available memory
         f"--parallel={num_cpu}",  # sort in parallel over how many processes
         "--unique",  # only keep the first occurence - this is the dedup core
-        "-t$'\\t'",  # separator
+        "-t$'\\t'",  # tab separator
         "-k",
         str(field_def),  # field to start looking from (6 -> end)
         f"--temporary-directory={shlex.quote(str(tmp_dir.resolve()))}",  # where to put the temp files when processing

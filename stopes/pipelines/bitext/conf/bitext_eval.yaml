@@ -1,6 +1,6 @@
 defaults:
   - launcher: submitit
-  - spm: standard_conf
+  - spm/train: standard_conf
   - train_fairseq: nmt
   - train_fairseq/config/params/model: transformer
   - _self_
@@ -15,10 +15,11 @@ launcher:
   cluster: slurm
 
 spm:
-  config:
-    train_data_file: DELAYED
-    training_lines: 1_000_000
-    vocab_size: 7_000
+  train:
+    config:
+      train_data_file: DELAYED
+      input_sentence_size: 1_000_000
+      vocab_size: 7_000
 
 train_fairseq:
   config:

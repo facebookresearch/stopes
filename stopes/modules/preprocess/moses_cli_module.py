@@ -67,7 +67,7 @@ class MosesPreprocessModule(stopes_module.StopesModule):
         input_file = Path(iteration_value)  # type: ignore
         assert input_file.exists()
         # TODO: find a way to allow the caller to specify output
-        output_file = self.output_dir / input_file.with_suffix(f".moses").name
+        output_file = self.output_dir / f"moses.{input_file.name}"
 
         cmds = [utils.open_file_cmd(input_file)]
 

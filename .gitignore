@@ -1,3 +1,16 @@
+# Experimental Folder
+experimental/*
+
+# Weights and Biases logs
+wandb/
+
+# Debug results dir
+_results/*
+/stopes/modules/preprocess/moses/
+outputs/
+logs/
+scratch/
+
 # JetBrains PyCharm IDE
 .idea/
 
@@ -112,20 +125,10 @@ ENV/
 # mypy
 .mypy_cache/
 
-
 # VSCODE
 .vscode/ftp-sync.json
 .vscode/settings.json
 .vscode/launch.json
 
-# Experimental Folder
-experimental/*
-
-# Weights and Biases logs
-wandb/
-
-# Debug results dir
-_results/*
-/stopes/modules/preprocess/moses/
-outputs
-node_modules
+# Website
+node_modules/

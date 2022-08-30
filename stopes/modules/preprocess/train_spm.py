@@ -23,7 +23,8 @@ class TrainSpmConfig:
     output_dir: str = MISSING
     train_data_file: str = MISSING
     vocab_size: int = 50_000
-    training_lines: int = 5_000_000
+    input_sentence_size: int = 5_000_000
+    seed_sentencepiece_size: int = 5_000_000
     character_coverage: float = 0.999995
     model_type: str = "unigram"
     shuffle_input_sentence: bool = True
@@ -107,7 +108,8 @@ def train_spm(
         vocab_size=int(spm_config.vocab_size),
         character_coverage=spm_config.character_coverage,
         model_type=spm_config.model_type,
-        input_sentence_size=spm_config.training_lines,
+        input_sentence_size=spm_config.input_sentence_size,
+        seed_sentencepiece_size=spm_config.seed_sentencepiece_size,
         shuffle_input_sentence=spm_config.shuffle_input_sentence,
         num_threads=spm_config.num_threads,
     )

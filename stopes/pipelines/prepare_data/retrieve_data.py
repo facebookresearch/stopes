@@ -57,7 +57,6 @@ def retrieve_direction_step(
     output_prefix: str,
     preprocess_config: data_types.PreprocessingConfig,
     direction: str,
-    executor: Optional[AutoExecutor],
     tag: str,
     output_dir: str,
     custom_step_name: str,
@@ -107,7 +106,7 @@ async def retrieve_data(
     preprocess_config: data_types.PreprocessingConfig,
     tag: str,
     output_dir: str,
-    executor: Optional[AutoExecutor],
+    executor: AutoExecutor,
 ) -> Tuple[Dict[str, data_types.ParallelDataset]]:
     """
     Retrieve training data from multiple sources
@@ -116,22 +115,23 @@ async def retrieve_data(
 
     # submit all directions as part of the same array
     jobs = []
-    # with executor.batch():
-    if all_corpora_map:
-        for direction in all_corpora_map.keys():
-            logger.info(f"Scheduling retrieve data for {direction} job")
-            job = executor.submit(
-                retrieve_direction_step,
-                all_corpora_map=all_corpora_map,
-                output_prefix=output_prefix,
-                preprocess_config=preprocess_config,
-                direction=direction,
-                tag=tag,
-                executor=executor,
-                output_dir=output_dir,
-                custom_step_name=f"retrieve_data_step.{tag}.{direction}",
-            )
-            jobs.append(job.result())
+    with executor.batch():
+        if all_corpora_map:
+            for direction in all_corpora_map.keys():
+                logger.info(f"Scheduling retrieve data for {tag}: {direction} job")
+                job = executor.submit(
+                    retrieve_direction_step,
+                    all_corpora_map=all_corpora_map,
+                    output_prefix=output_prefix,
+                    preprocess_config=preprocess_config,
+                    direction=direction,
+                    tag=tag,
+                    output_dir=output_dir,
+                    custom_step_name=f"retrieve_data_step.{tag}.{direction}",
+                )
+                jobs.append(job)
+
+    _ = [job.result() for job in jobs]
     logger.info(f"All jobs for retrieve data are done ... now merging files")
 
     concatenated_paths = {}

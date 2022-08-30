@@ -34,6 +34,7 @@ class TrainFairseqConfig:
     # number of gpus per node in your cluster
     num_gpus_per_node: int = 8
     output_dir: str = "train.${data.data_version}/checkpoints"
+    timeout_min: int = 3 * 24 * 60
 
 
 class TrainFairseqModule(StopesModule):
@@ -58,7 +59,7 @@ class TrainFairseqModule(StopesModule):
             tasks_per_node=1,
             gpus_per_node=num_gpus_per_node,
             cpus_per_task=4,
-            timeout_min=24 * 60,
+            timeout_min=self.config.timeout_min,
         )
 
     def run(
@@ -102,7 +103,9 @@ class TrainFairseqModule(StopesModule):
         return "0.2"
 
     def name(self):
-        return f"train_fairseq_{self.config.params.task._name}"
-
-    def comment(self):
-        return f"Training Fairseq task: {self.config.params.task._name}."
+        if isinstance(self.config.params.task, str):
+            return self.config.params.task
+        elif getattr(self.config.params.task, "_name", False):
+            return f"train_fairseq_{self.config.params.task._name}"
+        else:
+            return f"train_fairseq_{self.config.params.task.task}"

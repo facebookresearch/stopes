@@ -32,7 +32,7 @@ def index_to_gpu(idx: faiss.Index, gpu_type: str, nprobe: int) -> faiss.Index:
     if "shard" in gpu_type:
         co.shard = True
     idx = faiss.index_cpu_to_all_gpus(idx, co=co)
-    if nprobe > 0:
+    if nprobe > 0 and hasattr(idx, "nprobe"):  # for Flat indices, this is false
         faiss.GpuParameterSpace().set_index_parameter(idx, "nprobe", nprobe)
     return idx
 

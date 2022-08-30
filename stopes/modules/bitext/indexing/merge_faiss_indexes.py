@@ -17,7 +17,6 @@ from omegaconf.omegaconf import MISSING
 from stopes.core.stopes_module import DistributedRequirements, StopesModule
 from stopes.core.utils import ensure_dir
 from stopes.utils.data_utils import DataConfig
-from stopes.utils.mining_utils import get_cached_line_count
 
 logger = logging.getLogger("stopes.merge_faiss_indexes")
 
@@ -26,6 +25,7 @@ logger = logging.getLogger("stopes.merge_faiss_indexes")
 class MergeFAISSIndexesConfig:
     indexes: tp.List[str] = MISSING
     lang: str = MISSING
+    expected_line_count = MISSING
     index_type: str = MISSING
     data: DataConfig = MISSING
     output_dir: str = "index.${data.data_version}"
@@ -119,7 +119,7 @@ class MergeFAISSIndexesModule(StopesModule):
         )  # submits to requeuing
 
     def version(self):
-        "0.5"
+        "0.6"
 
     def validate(
         self,
@@ -127,10 +127,7 @@ class MergeFAISSIndexesModule(StopesModule):
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ) -> bool:
-        expected_line_count = get_cached_line_count(
-            self.config.lang,
-            self.config.data,
-        )
+        expected_line_count = self.config.expected_line_count
         idx = faiss.read_index(output)
         assert (
             idx.ntotal == expected_line_count

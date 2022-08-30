@@ -30,7 +30,9 @@ config:
       stop_min_lr: 1e-9
       clip_norm: 0.0
       update_freq: [4]
-    criterion: label_smoothed_cross_entropy
+    criterion:
+      _name: label_smoothed_cross_entropy
+      label_smoothing: 0.2
     optimizer:
       _name: adam
       adam_betas: (0.9, 0.98)

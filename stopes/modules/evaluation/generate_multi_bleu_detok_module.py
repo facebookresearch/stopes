@@ -10,7 +10,6 @@ import subprocess
 import sys
 import typing as tp
 from dataclasses import dataclass, field
-from importlib import resources
 from pathlib import Path
 
 from omegaconf import MISSING
@@ -38,11 +37,10 @@ class FairseqGenerateOutputFileEmpty(Exception):
 class GenerateMultiBleuDetokConfig:
     src_lang: str = MISSING
     tgt_lang: str = MISSING
-    checkpoints: tp.List[
-        str
-    ] = MISSING  # list of all checkpoint file paths (produced by TrainFairseqModule)
+    checkpoint_dir: Path = MISSING
     binarized_dir: Path = MISSING  # contains binarized files for each lang and split
     output_dir: Path = MISSING
+    checkpoint_glob: str = "checkpoint[0-9]*.pt"
     beam: int = 5
     batch_size: int = 128
     batch_memory: int = 2
@@ -75,10 +73,9 @@ class GenerateMultiBleuDetokModule(StopesModule):
             self.binarized_dir.exists()
         ), f"binarized_dir doesn't exist: {self.binarized_dir.resolve()}"
 
-        for checkpoint_file in self.config.checkpoints:
-            assert Path(
-                checkpoint_file
-            ).exists(), f"checkpoint_file doesn't exist: {checkpoint_file}"
+        self.checkpoints = list(
+            Path(self.config.checkpoint_dir).glob(self.config.checkpoint_glob)
+        )
 
     def array(self):
         """
@@ -87,7 +84,7 @@ class GenerateMultiBleuDetokModule(StopesModule):
         """
         array = [
             JobConfig(split=split, checkpoint_file_path=Path(checkpoint_file))
-            for checkpoint_file in self.config.checkpoints
+            for checkpoint_file in self.checkpoints
             for split in self.config.splits
         ]
         return array
@@ -162,6 +159,8 @@ def fairseq_generate(
         str(batch_size),
         "--beam",
         str(beam),
+        "--post-process",
+        "sentencepiece",
     ]
 
     logger.info(f"Fairseq Generate subprocess command: {fairseq_generate_command}")
@@ -242,10 +241,8 @@ def process_output_ref_hyp_file(
         for line in read_file:
             if line.startswith(desired_line_prefix):
                 line = line.rstrip("\n")
+                # col format for ref (T) and hyp (H) lines: ID [tab] score [tab] text
                 desired_column = line.split("\t", 3)[desired_col_number]
-                desired_column = (
-                    desired_column.replace(" ", "").replace("_", " ").replace("▁", " ")
-                )
                 print(desired_column, file=write_file)
     return return_file
 

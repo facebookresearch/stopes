@@ -9,26 +9,19 @@ import re
 import typing as tp
 from pathlib import Path
 
-# Indicp NLP
-from indicnlp import common as indic_common
-from indicnlp import loader as indic_loader
-from indicnlp.normalize.indic_normalize import IndicNormalizerFactory
-from indicnlp.tokenize import sentence_tokenize as indic_sent_tok
-
 # --- sentence splitters
 # Moses-style
 from sentence_splitter import SentenceSplitter
 
+# Indicp NLP
+
+
 INDIC_NLP_RESOURCES = None  # apparently not needed for splitting and normalization
-from botok.tokenizers import sentencetokenizer as bod_sent_tok
-from khmernltk import sentence_tokenize as khm_sent_tok
 
 # pythainlp for Thai
 # Seahorse for Indonesian, Thai, Vietnamese
 # botok for tibetan
-# Spacy for
-# various tool-kits
-from laonlp.tokenize import sent_tokenize as lao_sent_tok
+# Spacy for various tool-kits
 
 logger = logging.getLogger("sentence_split")
 
@@ -208,6 +201,11 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
 
     elif split_algo == "indic":
         # initialize toolkit (apparently not needed for sentence segmentation)
+        from indicnlp import common as indic_common
+        from indicnlp import loader as indic_loader
+        from indicnlp.normalize.indic_normalize import IndicNormalizerFactory
+        from indicnlp.tokenize import sentence_tokenize as indic_sent_tok
+
         if INDIC_NLP_RESOURCES:
             logger.info(" - Initialize Indic NLP toolkit")
             indic_common.set_resources_path(INDIC_NLP_RESOURCES)
@@ -235,14 +233,20 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
 
     elif split_algo == "laonlp":
         logger.info(f" - LaoNLP sentence splitter applied to '{lang}'")
+        from laonlp.tokenize import sent_tokenize as lao_sent_tok
+
         return lao_sent_tok
 
     elif split_algo == "khmer":
+        from khmernltk import sentence_tokenize as khm_sent_tok
+
         logger.info(f" - Khmer NLTK sentence splitter applied to '{lang}'")
         return khm_sent_tok
 
     elif split_algo == "bodnlp":
         logger.info(f" - Tibetan NLTK sentence splitter applied to '{lang}'")
+        from botok.tokenizers import sentencetokenizer as bod_sent_tok
+
         return bod_sent_tok
 
     elif split_algo == "geez":

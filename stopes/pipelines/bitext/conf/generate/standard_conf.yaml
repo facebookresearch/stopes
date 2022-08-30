@@ -1,0 +1,13 @@
+_target_: stopes.modules.translation.fairseq_generate.FairseqGenerateModule
+config:
+  model: ???
+  # The input file and its language
+  src_text_file: ???
+  src_lang: ???
+  output_dir: null
+  tgt_lang: "eng"
+  spm: ""
+  beam_search:
+    beam: 5
+  file_list: []
+

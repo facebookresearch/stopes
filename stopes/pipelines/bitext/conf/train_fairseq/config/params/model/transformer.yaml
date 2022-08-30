@@ -17,24 +17,6 @@ encoder_normalize_before: true
 decoder_normalize_before: true
 weight_decay: 0.0001
 
-criterion: label_smoothed_cross_entropy
-label_smoothing: 0.2
-optimizer: adam
-adam_betas: '(0.9, 0.98)'
-clip_norm: 0.0
-
-lr_scheduler: inverse_sqrt
-warmup_updates: 4000
-warmup_init-lr: 1e-7
-lr: 1e-3
-stop_min_lr: 1e-9
-
-max_tokens: 2000
-update_freq: 4
-log_interval: 500
-max_epoch: 100
-save_interval: 1
-
 # defaults
 encoder_embed_path: null
 encoder_learned_pos: false

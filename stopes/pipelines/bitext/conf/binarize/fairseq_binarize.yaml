@@ -7,7 +7,7 @@ _target_: stopes.modules.preprocess.line_processor.LineProcessorModule
 config:
   vocab_file_path: ???
   spm_model_path: null
-  outfile_prefix: ${.encoder.dataset_impl}_ds
+  outfile_prefix: ${.line_processor.dataset_impl}_ds
   output_dir: .
   custom_name: FairSeqBinarizerEncoder
   shards: ???

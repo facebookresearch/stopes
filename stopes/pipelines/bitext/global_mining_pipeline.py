@@ -22,7 +22,7 @@ from stopes.modules.bitext.indexing.sample_embedding_module import (
 )
 from stopes.modules.bitext.mining.calculate_distances import DistanceType
 from stopes.utils.data_utils import DataConfig
-from stopes.utils.mining_utils import extract_shard_id, get_faiss_index_type
+from stopes.utils.mining_utils import determine_faiss_index_type, extract_shard_id
 
 logger = logging.getLogger("global_mining")
 
@@ -42,6 +42,7 @@ class GlobalMiningConfig:
     launcher: DictConfig
     data: DataConfig
     model_dir: str
+    count_lines: DictConfig
     embed_text: DictConfig
     train_index: DictConfig
     populate_index: DictConfig
@@ -59,23 +60,6 @@ class GlobalMiningPipeline:
     ):
         self.config = config
         self.launcher = hydra.utils.instantiate(config.launcher)
-        self.src_index_type = self._get_index_type(self.config.src_lang)
-        self.tgt_index_type = self._get_index_type(self.config.tgt_lang)
-
-    def _get_index_type(self, lang: str) -> str:
-        lang_config = getattr(self.config.lang_configs, lang, None)
-        idx_type = None
-        if lang_config:
-            idx_type = getattr(lang_config, "index_type", None)
-
-        if idx_type:
-            return idx_type
-
-        # this required a precomputed line count file
-        return get_faiss_index_type(
-            lang=lang,
-            data_cfg=self.config.data,
-        )
 
     def _find_data_shards(
         self,
@@ -104,7 +88,6 @@ class GlobalMiningPipeline:
     async def _process_lang(
         self,
         lang: str,
-        index_type: str,
     ) -> tp.Tuple[tp.List[str], tp.List[str], str]:
         """
         prepare embeddings and indexes for a single language
@@ -118,6 +101,13 @@ class GlobalMiningPipeline:
         existing_index_path = getattr(lang_config, "existing_index_path", None)
 
         text_shards = self._find_data_shards(lang)
+        line_counter = StopesModule.build(self.config.count_lines, shards=text_shards)
+        shard_sizes = await self.launcher.schedule(line_counter)
+        logger.info(f"Shards are {text_shards} with sizes {shard_sizes}")
+        nb_sent = sum(shard_sizes)
+        index_type = getattr(
+            lang_config, "index_type", None
+        ) or determine_faiss_index_type(nb_sent=nb_sent)
 
         if embedded_files_glob:
             # we already have precomputed the embedded files + merged index
@@ -150,14 +140,14 @@ class GlobalMiningPipeline:
                 self.config.embed_text,
                 lang=lang,
                 shards=text_shards,
+                # TODO: validate it with something like expected_shard_sizes=shard_sizes,
             )
             embedded_files = await self.launcher.schedule(embed_module)
             embedded_files = [str(f) for f in embedded_files]
 
         if existing_index_path:
             logger.info(f"index already provided for {lang}")
-
-            return (text_shards, embedded_files, existing_index_path)
+            return (text_shards, embedded_files, existing_index_path, index_type)
 
         else:
             sample_shards = getattr(
@@ -206,7 +196,7 @@ class GlobalMiningPipeline:
 
             if len(populated_indexes) == 1:
                 # there is only one index to start with, let's just use that instead of merging
-                return (text_shards, embedded_files, populated_indexes[0])
+                return (text_shards, embedded_files, populated_indexes[0], index_type)
 
             # otherwise, we need to run the merge
             merge_indexes_module = StopesModule.build(
@@ -215,9 +205,10 @@ class GlobalMiningPipeline:
                 indexes=sorted(populated_indexes, key=extract_shard_id),
                 lang=lang,
                 index_type=index_type,
+                expected_line_count=nb_sent,
             )
             merged = await self.launcher.schedule(merge_indexes_module)
-            return (text_shards, embedded_files, str(merged))
+            return (text_shards, embedded_files, str(merged), index_type)
 
     def run(self) -> None:
         loop = asyncio.get_event_loop()
@@ -230,20 +221,19 @@ class GlobalMiningPipeline:
         logger.info(f"working dir: {os.getcwd()}")
 
         (
-            (src_text_shards, src_embeddings, src_merged_index),
+            (src_text_shards, src_embeddings, src_merged_index, src_index_type),
             (
                 tgt_text_shards,
                 tgt_embeddings,
                 tgt_merged_index,
+                tgt_index_type,
             ),
         ) = await asyncio.gather(
             self._process_lang(
                 lang=self.config.src_lang,
-                index_type=self.src_index_type,
             ),
             self._process_lang(
                 lang=self.config.tgt_lang,
-                index_type=self.tgt_index_type,
             ),
         )
 
@@ -277,7 +267,7 @@ class GlobalMiningPipeline:
 
         mine_indexes_module = StopesModule.build(
             self.config.mine_indexes,
-            index_type=self.src_index_type,
+            index_type=src_index_type,
             src2tgt_dist_files=src2tgt_dist_files,
             src2tgt_index_files=src2tgt_index_files,
             tgt2src_dist_files=tgt2src_dist_files,

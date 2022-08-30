@@ -9,6 +9,7 @@ import logging
 import os
 import typing as tp
 from dataclasses import dataclass
+from pathlib import Path
 
 import faiss
 import numpy as np
@@ -87,7 +88,7 @@ class TrainFAISSIndexModule(StopesModule):
             f"Trained index of type: {self.index_type} and lang: {self.config.lang}, can be found in output file: {index_output_file_path}"
         )
 
-        return index_output_file
+        return Path(index_output_file)
 
     def name(self):
         return f"index-train.{self.config.lang}.iteration_{self.config.data.iteration}"
@@ -98,4 +99,4 @@ class TrainFAISSIndexModule(StopesModule):
         )
 
     def version(cls):
-        return "0.1"
+        return "0.2"

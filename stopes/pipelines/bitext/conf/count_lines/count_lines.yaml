@@ -1,0 +1,3 @@
+_target_: stopes.modules.bitext.mining.count_lines.CountLinesModule
+config:
+  shards: ???

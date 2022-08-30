@@ -12,7 +12,7 @@ cym eng     # Welsch
 gla eng     # Gaelic
 gle eng     # Irish
 mlt eng     # Maltese
-yid deu    # Yiddish
+yid deu     # Yiddish
 ltz eng     # Luxemburgish
 #------------------------------
 # Indian languages not directly handled by the Indic NLP tool

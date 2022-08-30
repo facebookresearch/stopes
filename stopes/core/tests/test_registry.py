@@ -4,11 +4,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
-import unittest
 from pathlib import Path
 
 import omegaconf
+import pytest
 
 from stopes.core.jobs_registry.registry import JobsRegistry
 from stopes.core.jobs_registry.submitit_slurm_job import RegistryStatuses, SubmititJob
@@ -46,30 +45,37 @@ async def schedule_module_and_check_registry(
         assert current_stopes_job.get_status() == RegistryStatuses.COMPLETED.value
 
 
-async def test_successful_single_job(tmp_path: Path):
+@pytest.mark.parametrize("distributed", [True, False])
+async def test_successful_single_job(tmp_path: Path, distributed: bool):
     """
     Tests the registry's functionality on a single module.
     """
     launcher = SubmititLauncher(
-        config_dump_dir=tmp_path / "conf", log_folder=tmp_path / "logs"
+        config_dump_dir=tmp_path / "conf", log_folder=tmp_path / "logs", cluster="local"
     )
 
     await schedule_module_and_check_registry(
         launcher,
         hello_world.HelloWorldModule,
         config=omegaconf.OmegaConf.create(
-            {"greet": "hello", "person": "world", "duration": 0.5}
+            {
+                "greet": "hello",
+                "person": "world",
+                "duration": 0.5,
+                "distributed": distributed,
+            }
         ),
         total_scheduled_jobs=1,
     )
 
 
-async def test_successful_array_jobs(tmp_path: Path):
+@pytest.mark.parametrize("distributed", [True, False])
+async def test_successful_array_jobs(tmp_path: Path, distributed: bool):
     """
     Tests the registry's functionality on an array module
     """
     launcher = SubmititLauncher(
-        config_dump_dir=tmp_path / "conf", log_folder=tmp_path / "logs"
+        config_dump_dir=tmp_path / "conf", log_folder=tmp_path / "logs", cluster="local"
     )
     team = ["Anna", "Bob", "Eve"]
 
@@ -77,7 +83,12 @@ async def test_successful_array_jobs(tmp_path: Path):
         launcher,
         hello_world.HelloWorldArrayModule,
         config=omegaconf.OmegaConf.create(
-            {"greet": "hello", "persons": team, "duration": 0.5}
+            {
+                "greet": "hello",
+                "persons": team,
+                "duration": 0.5,
+                "distributed": distributed,
+            }
         ),
         total_scheduled_jobs=len(team),
     )
