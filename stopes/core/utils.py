@@ -176,11 +176,11 @@ def split_large_files(
 
     /tmp will not work for distributed jobs, be careful
     """
+    tmp_dir.mkdir(exist_ok=True, parents=True)
     for f in files:
         if xz_size(f) < convert_size_unit(max_size):
             yield f
         else:
-            tmp_dir.mkdir(exist_ok=True, parents=True)
             # split file
             file_name = f"{f.stem}.split."
             file_prefix = str((tmp_dir / file_name).resolve())
@@ -212,6 +212,27 @@ def symlink(target: Path, actual: Path) -> None:
     if target.is_symlink():
         target.unlink()
     target.symlink_to(actual)
+
+
+def expand_if_compressed(input_file: Path, tmp_dir: Path) -> tp.Optional[Path]:
+    if input_file.suffix in {".gz", ".xz"}:
+        print(f"expanding {input_file.name}")
+        decompressed_tmp = tmp_dir / f"{input_file.name}_expanded.txt"
+        decompressed_tmp = decompressed_tmp.resolve()
+        subprocess.run(
+            " ".join(
+                [
+                    open_file_cmd(input_file),
+                    ">",
+                    shlex.quote(str(decompressed_tmp)),
+                ]
+            ),
+            shell=True,
+            check=True,
+        )
+        return decompressed_tmp
+    else:
+        return None
 
 
 @contextlib.contextmanager

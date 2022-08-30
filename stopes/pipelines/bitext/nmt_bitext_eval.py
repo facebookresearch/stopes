@@ -17,15 +17,14 @@ import stopes.core
 from stopes.core.utils import ensure_dir
 from stopes.modules.evaluation.generate_multi_bleu_detok_module import (
     GenerateMultiBleuDetokModule,
-    get_checkpoint_files_list_from_checkpoints_dir,
 )
 from stopes.modules.nmt_bitext_eval_utils.preproc_binarized_mined_utils import (
     NMTBitextEvalConfig,
-    ProcessLangMosesInputFiles,
-    ProcessLangRetVal,
     clone_config,
-    process_lang,
+    moses_preprocess,
+    parse_generated_bleu_files,
     split_to_mono,
+    spm_train_encode_binarize,
 )
 from stopes.modules.train_fairseq_module import TrainFairseqModule
 
@@ -89,7 +88,7 @@ class NMTBitextEval:
             self.config.src_lang != self.config.tgt_lang
         ), f"src_lang is {self.config.src_lang} must be different than tgt_lang"
 
-        logger.info(f"Starting to Split TSV and process_lang")
+        logger.info("Starting to Split TSV and process_lang")
         src_lang_file_after_split, tgt_lang_file_after_split = split_to_mono(
             self.input_file_mined_data_tsv,
             self.config.preproc_binarize_mined.max_number_of_tsv_lines_in_millions,
@@ -102,58 +101,32 @@ class NMTBitextEval:
             self.config.public_corpora_to_ignore,
         )
 
-        moses_inputs_per_split_src_lang = ProcessLangMosesInputFiles(
-            train=src_lang_file_after_split,
-            dev=Path(
-                self.config.preproc_binarize_mined.test_data_dir.path.format(
-                    split="dev", lang=self.config.src_lang
-                )
-            ),
-            test=Path(
-                self.config.preproc_binarize_mined.test_data_dir.path.format(
-                    split="test", lang=self.config.src_lang
-                )
-            ),
-        )
-        moses_inputs_per_split_tgt_lang = ProcessLangMosesInputFiles(
-            train=tgt_lang_file_after_split,
-            dev=Path(
-                self.config.preproc_binarize_mined.test_data_dir.path.format(
-                    split="dev", lang=self.config.tgt_lang
-                )
-            ),
-            test=Path(
-                self.config.preproc_binarize_mined.test_data_dir.path.format(
-                    split="test", lang=self.config.tgt_lang
-                )
-            ),
+        moses_src_output, moses_tgt_output = await moses_preprocess(
+            self.config,
+            src_lang_file_after_split,
+            tgt_lang_file_after_split,
+            self.launcher,
         )
 
-        # process_lang does moses_preprocessing, spm_training, spm_encode+binarizing for all 3 splits
-        processed_src_lang_outputs, processed_tgt_lang_outputs = await asyncio.gather(
-            process_lang(
+        # trains a spm model, spm-encodes, and then binarizes all splits
+        binarized_src_lang_outputs, binarized_tgt_lang_outputs = await asyncio.gather(
+            spm_train_encode_binarize(
                 self.lang_pair,
                 self.config.src_lang,
-                moses_inputs_per_split_src_lang,
+                moses_src_output,
                 self.launcher,
                 self.config,
             ),
-            process_lang(
+            spm_train_encode_binarize(
                 self.lang_pair,
                 self.config.tgt_lang,
-                moses_inputs_per_split_tgt_lang,
+                moses_tgt_output,
                 self.launcher,
                 self.config,
             ),
         )
-        assert isinstance(
-            processed_src_lang_outputs, ProcessLangRetVal
-        ), f"processed_src_lang_outputs: {processed_src_lang_outputs} must be an instance of ProcessLangRetVal"
-        assert isinstance(
-            processed_tgt_lang_outputs, ProcessLangRetVal
-        ), f"processed_tgt_lang_outputs: {processed_tgt_lang_outputs} must be an instance of ProcessLangRetVal"
 
-        logger.info(f"Starting Train Fairseq Module")
+        logger.info("Starting Train Fairseq Module")
         cache_fixed_spm_and_binarize_output_dir = (
             self.config.spm_train_and_binarize_output_dir
         )
@@ -165,9 +138,9 @@ class NMTBitextEval:
         ):
             prefix: Path = f"{split}.{self.lang_pair}.{lang}"
             binarized_files = (
-                processed_src_lang_outputs.binarized_files
+                binarized_src_lang_outputs
                 if lang == self.config.src_lang
-                else processed_tgt_lang_outputs.binarized_files
+                else binarized_tgt_lang_outputs
             )
             binarized_files_parent_dir = (
                 getattr(binarized_files, split).parent
@@ -218,19 +191,12 @@ class NMTBitextEval:
         train_fairseq_module = TrainFairseqModule(edited_train_fairseq_config)
         best_checkpoint_path = await self.launcher.schedule(train_fairseq_module)
         train_fairseq_checkpoints_dir = best_checkpoint_path.parent
-        logger.info(f"Starting Evaluation")
 
+        logger.info(f"Starting Evaluation")
         with clone_config(self.config.eval.config) as edited_eval_config:
             edited_eval_config.binarized_dir = cache_fixed_spm_and_binarize_output_dir
             edited_eval_config.output_dir = str(train_fairseq_checkpoints_dir)
-            # get_checkpoint_files_list_from_checkpoints_dir returns a list of all checkpoint paths found in the TrainFairseq checkpoints dir
-            edited_eval_config.checkpoints = (
-                get_checkpoint_files_list_from_checkpoints_dir(
-                    train_fairseq_checkpoints_dir,
-                    self.config.eval_minimum_epoch,
-                    self.config.eval_maximum_epoch,
-                )
-            )
+            edited_eval_config.checkpoint_dir = str(best_checkpoint_path.parent)
 
         generate_multi_bleu_detok_module = GenerateMultiBleuDetokModule(
             edited_eval_config
@@ -241,24 +207,10 @@ class NMTBitextEval:
 
         logger.info(f"Evaluation completed, output dir: {self.output_dir}")
 
-        # Logging last two generated bleu scores (one for each split)
-        last_bleu_score_file = generated_bleu_score_files[-1]
-        second_last_bleu_score_file = generated_bleu_score_files[-2]
-        with open(last_bleu_score_file, "r") as last_bleu_score, open(
-            second_last_bleu_score_file, "r"
-        ) as second_last_bleu_score:
-            # TODO: bleu scores could be parsed from files & best checkpoint score logged
-            last_bleu_score_contents = str(last_bleu_score.read())
-            second_last_bleu_score_contents = str(second_last_bleu_score.read())
+        results = parse_generated_bleu_files(generated_bleu_score_files)
 
-            logger.info(
-                f"Last (but not necessarily best) generated bleu score file path: {last_bleu_score_file}.\n"
-                f"Score: {last_bleu_score_contents}"
-            )
-            logger.info(
-                f"Second Last (but not necessarily best) generated bleu score file path: {second_last_bleu_score_file}.\n"
-                f"Score: {second_last_bleu_score_contents}",
-            )
+        for split in results:
+            logger.info(f"BEST BLEU ({split}): {max(results[split])}")
 
         # set_of_bleu_score_output_dirs contains dirs of all generated bleu scores for the user to view
         set_of_bleu_score_output_dirs = set()
@@ -267,7 +219,7 @@ class NMTBitextEval:
             set_of_bleu_score_output_dirs.add(bleu_score_file.parent)
 
         logger.info(
-            f"To inspect all generated bleu scores, please view .bleu files in these folder(s):"
+            "To inspect all generated bleu scores, please view .bleu files in these folder(s):"
         )
         for dir in set_of_bleu_score_output_dirs:
             logger.info(f"\t - {str(dir)}")
@@ -276,7 +228,8 @@ class NMTBitextEval:
         ensure_dir(self.output_dir)
         ensure_dir(self.config.bin_dir)
         ensure_dir(self.config.spm_train_and_binarize_output_dir)
-        ensure_dir(self.config.spm.config.output_dir)
+        ensure_dir(self.config.moses_filter.output_dir)
+        ensure_dir(self.config.spm.train.config.output_dir)
         ensure_dir(self.config.train_fairseq.config.output_dir)
 
 

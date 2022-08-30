@@ -125,7 +125,7 @@ SCRIPT_RANGES = {
 
 def get_script_map(language_script_file: Path) -> tp.Dict[str, str]:
     """Returns a dict mapping a lang to its expected script in a single read run"""
-    lang_map = defaultdict(lambda: None)
+    lang_map: tp.Dict[str, str] = defaultdict(str)
     with language_script_file.open("r", encoding="utf-8") as ls:
         for row in ls:
             columns = row.split("\t")
@@ -143,9 +143,12 @@ def find_lang_script(lang: str, language_script_file: Path) -> tp.Optional[str]:
         return None
 
 
-def get_script_predictor() -> tp.Callable[[str], str]:
+ScoredScript = tp.Tuple[tp.Optional[str], float]
 
-    hist_map = {}
+
+def get_script_predictor() -> tp.Callable[[str], ScoredScript]:
+
+    hist_map: tp.Dict[int, tp.Set[str]] = {}
     for key, ranges in SCRIPT_RANGES.items():
         for r in ranges:
             for ordinal in range(r[0], r[1] + 1):
@@ -159,12 +162,12 @@ def get_script_predictor() -> tp.Callable[[str], str]:
         for c in string.whitespace + string.punctuation + string.digits
     }
 
-    def predict_script(sent: str) -> str:
+    def predict_script(sent: str) -> ScoredScript:
         sent = sent.translate(replacement_map)
 
         char_counts = Counter(sent).most_common()
 
-        script_count = defaultdict(int)
+        script_count: tp.Dict[str, int] = defaultdict(int)
         total = 0
 
         for char, count in char_counts:
@@ -173,7 +176,7 @@ def get_script_predictor() -> tp.Callable[[str], str]:
                 total += count
                 script_count[script_name] += count
 
-        max_score = 0
+        max_score = 0.0
         max_script = None
         for script, count in script_count.items():
             score = abs(count / total)

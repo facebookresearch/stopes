@@ -8,10 +8,7 @@ import csv
 import functools
 import logging
 import re
-import typing as tp
 from pathlib import Path
-
-from stopes.utils.data_utils import DataConfig
 
 logger = logging.getLogger("mining_utils")
 
@@ -40,62 +37,7 @@ def test_tokenization_types():
     assert tokenization_type("oci") == "en"
 
 
-def _find_nl_file(
-    lang: str,
-    data_cfg: DataConfig,
-) -> Path:
-    nl_file = Path(data_cfg.data_shard_dir) / data_cfg.nl_file_template.format(
-        lang=lang
-    )
-    assert nl_file.is_file(), f"ERROR: {nl_file} missing"
-    return nl_file
-
-
-def get_cached_line_count(
-    lang: str,
-    data_cfg: DataConfig,
-    shard: tp.Optional[int] = None,
-) -> int:
-    """
-    the xxx.nl file contains the number of lines for each shard of that lang. Sum this up.
-    If you ask for a specific shard, return just the number for that shard.
-    """
-    nl_file = _find_nl_file(
-        lang,
-        data_cfg,
-    )
-    count = 0
-    with nl_file.open("r", encoding="utf-8") as f:
-        for idx, line in enumerate(f):
-            if shard is not None and shard == idx:
-                return int(line)
-            count += int(line)
-    return count
-
-
-def get_cached_num_parts(
-    lang: str,
-    data_cfg: DataConfig,
-) -> int:
-    """
-    the xxx.nl file contains the number of lines for each shard of that lang. Get number of shards
-    from that.
-    """
-    nl_file = _find_nl_file(
-        lang,
-        data_cfg,
-    )
-    count = 0
-    with nl_file.open("r", encoding="utf-8") as _:
-        count += 1
-    return count
-
-
-def get_faiss_index_type(
-    lang: str,
-    data_cfg: DataConfig,
-) -> str:
-    nb_sent = get_cached_line_count(data_cfg=data_cfg, lang=lang)
+def determine_faiss_index_type(nb_sent: int) -> str:
     if nb_sent > 500000000:
         return "OPQ64,IVF262144,PQ64"
     elif nb_sent > 100000000:
@@ -112,7 +54,9 @@ def get_faiss_index_type(
         return "OPQ64,IVF4096,PQ64"
     elif nb_sent > 80000:
         return "OPQ64,IVF2048,PQ64"
-    return "OPQ64,IVF1024,PQ64"
+    elif nb_sent > 10000:
+        return "OPQ64,IVF1024,PQ64"
+    return "Flat"  # this is faster, and with very few points the clustering fails
 
 
 def extract_shard_id(filename: str, default: int = 0) -> int:

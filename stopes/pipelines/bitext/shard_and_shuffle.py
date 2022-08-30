@@ -7,13 +7,18 @@
 import asyncio
 import logging
 import lzma
+import math
 import random
 import shutil
+import subprocess
 import typing as tp
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import hydra
+import numpy as np
+from fairseq.file_chunker_utils import Chunker
+from more_itertools import iterate
 from omegaconf import MISSING, DictConfig, OmegaConf
 
 from stopes.core import stopes_module, utils
@@ -62,6 +67,8 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
         # our params
         nb_shards: int,
         log_every: int = 10_000,
+        min_lines_per_shard: int = None,  # optional param specifying a minimum number of lines per output shard - resulting in sampling with replacement
+        total_file_lines: int = None,  # optional param which denotes total number of lines in input file and is used if min_lines_per_shard is not None
     ):
         super().__init__(
             outfile_prefix=outfile_prefix,
@@ -83,6 +90,33 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
 
         self.shards = []
 
+        self.min_lines_per_shard = min_lines_per_shard
+        self.total_file_lines = total_file_lines
+
+        if self.min_lines_per_shard is not None:
+            if self.total_file_lines is None:
+                self.total_file_lines = int(
+                    subprocess.run(
+                        ["wc", "-l", self.input_file], stdout=subprocess.PIPE
+                    )
+                    .stdout.decode("utf-8")
+                    .split()[0]
+                )
+            else:
+                self.total_file_lines = total_file_lines
+
+        self.chunk_num_lines = 0
+        if (
+            self.min_lines_per_shard is not None
+            and self.offset_end is not None
+            and self.offset_start is not None
+        ):
+            with Chunker(
+                str(self.input_file), self.offset_start, self.offset_end
+            ) as line_iterator:
+                for _ in line_iterator:
+                    self.chunk_num_lines += 1
+
     def __enter__(self):
         for i in range(self.nb_shards):
             shard = self.output_file.with_suffix(f".{i:03d}.xz")
@@ -103,14 +137,45 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
 
     def process_lines(self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]) -> None:
         """
-        process a batch of lines, filter them, dedup them locally
-        and write them to the output file
+        shards input file into output shards by sampling with replacement if self.min_lines_per_shard is defined, or otherwise
+        randomly writes out each line in the input file to an output shard
         """
         random.seed(42)
+        if self.chunk_num_lines == 0:
+            return
+        # Sampling with replacement to satisfy minimum lines per shard requirement.
+
+        # Algorithm: We have `total_lines` number of sentences in the file and `num_shards` amount of target languages, and `chunk_num_lines` sentences in the
+        # current chunk being processed by the LineProcessor, and want a total of `min_lines_per_shard` sentences in each output shard.
+        # We want to sample `chunk_lines_per_shard` sentences from the current chunk for each output shard, computed as a
+        # proportion of min_lines_per_shard.
+        # chunk_lines_per_shard * T = total number of lines needed from current chunk
+        # (chunk_lines_per_shard * T) / chunk_num_lines = how many times should each line in the current chunk be assigned
+        shard_indices = np.arange(self.nb_shards)
+        if self.min_lines_per_shard:
+            chunk_lines_per_shard = (
+                self.chunk_num_lines / self.total_file_lines
+            ) * self.min_lines_per_shard
+            num_shards_per_line = (
+                chunk_lines_per_shard * self.nb_shards
+            ) / self.chunk_num_lines
+            round_up_freq = round(num_shards_per_line % 1, 3) * 1000
         for idx, line in lines_with_number:
-            r = random.randint(0, self.nb_shards - 1)
-            self.shards[r].cnt += 1
-            print(line.strip(), file=self.shards[r].outfd)
+            if self.min_lines_per_shard:
+                # Select `num_shards_per_line` shards.
+                # If that value is fractional, round up round_up_freq/10 of the time
+                if idx % 1000 < round_up_freq:
+                    n = math.ceil(num_shards_per_line)
+                else:
+                    n = math.floor(num_shards_per_line)
+                n = min(n, len(shard_indices))
+                selected_shards = np.random.permutation(shard_indices)[:n]
+            else:
+                selected_shards = [random.randint(0, self.nb_shards - 1)]
+            # write out this line to selected_shards
+            for index in selected_shards:
+                self.shards[index].cnt += 1
+                print(line.strip(), file=self.shards[index].outfd)
             if idx % self.log_every == 0:
                 print(f"{self.output_file} Processed {idx} lines")
 
@@ -118,7 +183,6 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
         return self.shards
 
     def merge_results(self, splits: tp.List[tp.List[Shard]]) -> tp.List[Path]:
-
         merge = Path(self.output_dir) / (
             f"{self.outfile_prefix}.{self.input_file_idx:03d}"
         )
@@ -140,8 +204,9 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
                 f_shard = final_shards[idx]
                 f_shard.cnt += s.cnt
                 with lzma.open(str(s.path), mode="rb") as shard_fd:
-                    shutil.copyfileobj(shard_fd, f_shard.outfd)
-                    f_shard.outfd.write("\n".encode("utf-8"))
+                    if s.cnt != 0:
+                        shutil.copyfileobj(shard_fd, f_shard.outfd)
+                        f_shard.outfd.write("\n".encode("utf-8"))
 
         for idx, shard in enumerate(final_shards):
             shard.outfd.close()
@@ -152,13 +217,25 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
         return [s.path for s in final_shards]
 
 
-async def shard_and_shuffle(config: ShardAndShuffleConfig):
-    launcher = hydra.utils.instantiate(config.launcher)
+async def shard_and_shuffle(
+    config: ShardAndShuffleConfig,
+    min_lines_per_shard: int = None,
+    launcher: Launcher = None,
+):
+    if launcher is None:
+        launcher = hydra.utils.instantiate(config.launcher)
 
     OmegaConf.save(
         config=config,
         f=str(Path(launcher.config_dump_dir) / "shard_and_shuffle.yaml"),
     )
+
+    if min_lines_per_shard is not None:
+        total_file_lines = int(
+            subprocess.run(["wc", "-l", config.input_file], stdout=subprocess.PIPE)
+            .stdout.decode("utf-8")
+            .split()[0]
+        )
 
     file_processor = MultiprocLineProcessorModule(
         config=MultiprocLineProcessorConfig(
@@ -167,11 +244,13 @@ async def shard_and_shuffle(config: ShardAndShuffleConfig):
                     "_target_": "stopes.pipelines.bitext.shard_and_shuffle.ShardAndShuffleMC",
                     "nb_shards": config.nb_shards,
                     "log_every": config.log_every,
+                    "min_lines_per_shard": min_lines_per_shard,
+                    "total_file_lines": total_file_lines,
                 }
             ),
             custom_name=f"shard_and_shuffle",
             output_dir=str(config.output_dir),
-            outfile_prefix="shard",
+            outfile_prefix=config.outfile_prefix,
             shards=[config.input_file],
             requirements=stopes_module.DistributedRequirements(
                 nodes=1,
@@ -190,6 +269,7 @@ async def shard_and_shuffle(config: ShardAndShuffleConfig):
     logger.info(f"Done sharding and shuffling to shards")
     for f in shards:
         print(f"\t{f}")
+    return shards
 
 
 @hydra.main(config_path="conf", config_name="shard_and_shuffle")

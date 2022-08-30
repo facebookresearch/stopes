@@ -42,7 +42,7 @@ pip install --editable ./
 You can install stopes with pip:
 `pip install -e '.[dev,mono,mining]'`
 
-You can choose what to install. If you are only interested in `mining`, you do not need to install `dev`, and `mono`.
+You can choose what to install. If you are only interested in `mining`, you do not need to install `dev`, and `mono`. If you are interested in the distillation pipeline, you will need to install at least `mono`.
 
 Currently `fairseq` and `stopes` require different version of hydra, so `pip` might output some warnings.
 
@@ -67,6 +67,7 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
 - `bitext` to run the "global mining" pipeline and extract aligned sentences
   from two monolingual datasets. (inspired by
   [CCMatric](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
+- `distilation` to run our sequence-level knowledge distillation pipeline which trains a small student model from a pre-trained large teacher model (approach based on https://arxiv.org/abs/1606.07947)
 
 **Full documentation**: see https://facebookresearch.github.io/stopes
 or the `websites/docs` folder.
@@ -81,6 +82,7 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
 - [Onur Çelebi](https://github.com/Celebio)
 - [Angela Fan](https://github.com/huihuifan)
 - [Vedanuj Goswami](https://github.com/vedanuj)
+- [Alex Guo](https://github.com/aguo71)
 - [Kevin Heffernan](https://github.com/heffernankevin)
 - [Ammar Kamran](https://github.com/AmmarKamran)
 - [Jean Maillard](https://github.com/jeanm)

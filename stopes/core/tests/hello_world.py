@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 import logging
 import time
 import typing as tp
@@ -13,7 +12,11 @@ from dataclasses import dataclass
 from omegaconf.omegaconf import MISSING, OmegaConf
 
 from stopes.core.launcher import Launcher
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import (
+    DistributedRequirements,
+    LocalOnlyRequirements,
+    StopesModule,
+)
 
 
 @dataclass
@@ -21,6 +24,7 @@ class HelloWorldConfig:
     greet: str = "hello"
     person: str = "world"
     duration: float = 0.1
+    distributed: bool = True
 
 
 class HelloWorldModule(StopesModule):
@@ -28,6 +32,8 @@ class HelloWorldModule(StopesModule):
         self.config = config
 
     def requirements(self):
+        if not self.config.distributed:
+            return LocalOnlyRequirements()
         return DistributedRequirements(
             nodes=1,
             mem_gb=10,
@@ -55,6 +61,7 @@ class HelloWorldArrayConfig:
     greet: str = "hello"
     persons: tp.List[str] = MISSING
     duration: float = 0.1
+    distributed: bool = True
 
 
 class HelloWorldArrayModule(StopesModule):
@@ -66,6 +73,8 @@ class HelloWorldArrayModule(StopesModule):
         self.logger = logging.getLogger("hello_world_array_module")
 
     def requirements(self):
+        if not self.config.distributed:
+            return LocalOnlyRequirements()
         return DistributedRequirements(
             nodes=1,
             mem_gb=10,

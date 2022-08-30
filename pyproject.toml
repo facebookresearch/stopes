@@ -32,6 +32,7 @@ classifiers=[
     "fasttext",
     "sentence_splitter",
     # "kenlm",
+    "sacremoses",
     "sentencepiece",
     "indic-nlp-library",
     "emoji",
@@ -59,6 +60,14 @@ classifiers=[
       # Release
       "flit>=3.5.1"
   ]
+  hmine = [
+    "bs4",
+    "func_argparse",
+    "nltk",
+    "pandas",
+    "scipy",
+    "sklearn",
+  ]
 
 [tool.black]
 # Black defaults are great !
@@ -79,22 +88,22 @@ files = [
 
 [[tool.mypy.overrides]]
 module = [
-    "boto3",
-    "botocore",
-    "fairseq.*",
-    "faiss",
-    "sagemaker",
-    "sentencepiece",
-    "tqdm.*",
+  "boto3",
+  "botocore",
+  "fairseq.*",
+  "faiss",
+  "sagemaker",
+  "sentencepiece",
+  "tqdm.*",
 ]
 ignore_missing_imports = true
 
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = [
-  "stopes/core",
-  "stopes/modules",
-  "stopes/pipelines/bitext",
+testpaths = ["stopes"]
+python_files = [
+  "test_*.py",
+  "monolingual/utils/*.py"
 ]
 asyncio_mode = "auto"

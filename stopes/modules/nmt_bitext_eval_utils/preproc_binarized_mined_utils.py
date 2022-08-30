@@ -6,16 +6,16 @@
 
 import asyncio
 import contextlib
-import importlib
 import itertools
 import logging
+import re
 import subprocess
 import tempfile
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-import fairseq.dataclass.configs
 import omegaconf
 from fairseq.dataclass.configs import FairseqConfig
 from omegaconf import MISSING, DictConfig
@@ -108,14 +108,14 @@ def split_to_mono(
     """
     src_lang_file_after_split: Path = Path(bin_dir) / "_".join(
         [
-            f"{src_lang}_split_tsv_{max_tsv_lines_in_millions}M",
-            f"TH-{bitext_min_score_threshold}",
+            f"split_tsv_{max_tsv_lines_in_millions}M",
+            f"TH-{bitext_min_score_threshold}.{src_lang}",
         ]
     )
     tgt_lang_file_after_split: Path = Path(bin_dir) / "_".join(
         [
-            f"{tgt_lang}_split_tsv_{max_tsv_lines_in_millions}M",
-            f"TH-{bitext_min_score_threshold}",
+            f"split_tsv_{max_tsv_lines_in_millions}M",
+            f"TH-{bitext_min_score_threshold}.{tgt_lang}",
         ]
     )
     with tempfile.NamedTemporaryFile() as tmpfile:
@@ -193,7 +193,7 @@ def split_TSV(
         for line in itertools.islice(filep, max_number_of_tsv_lines):
             (score, lang1, lang2) = line.rstrip("\n").split("\t")
 
-            if float(score) > bitext_alignment_minimum_score_threshold:
+            if float(score) >= bitext_alignment_minimum_score_threshold:
                 total_accepted_lines += 1
                 print(lang1, file=lang1_out)
                 print(lang2, file=lang2_out)
@@ -216,55 +216,64 @@ async def spm_train_module_call(
     return model_file, vocab_as_fairseq_dict
 
 
-class ProcessLangRetVal:
-    def __init__(
-        self,
-        lang: str,
-        model_file: Path,
-        dict_file: Path,
-        binarized_files: BinarizeLangOutputFiles,
-    ):
-        self.lang = lang
-        self.model_file = model_file
-        self.dict_file = dict_file
-        self.binarized_files = binarized_files
-
-
-async def process_lang(
-    lang_pair: str,
-    lang: str,
-    moses_inputs_per_split: ProcessLangMosesInputFiles,
-    launcher: SubmititLauncher,
+async def moses_preprocess(
     config: NMTBitextEvalConfig,
-) -> ProcessLangRetVal:
-    logger = logging.getLogger("process_lang")
-    logger.info(f"Starting process_lang on {lang}")
-    logger.info(f"Starting Moses Pre-processing")
+    src_file: Path,
+    tgt_file: Path,
+    launcher: SubmititLauncher,
+) -> Tuple[Path, Path]:
+    logger = logging.getLogger("moses_preprocessing")
+    logger.info("Starting Moses Pre-processing")
     moses_config: MosesPreprocessConfig = config.moses.config
 
     moses_preprocess_jobs_list = []
-    for split in ("train", "dev", "test"):
+    for lang, infile in zip([config.src_lang, config.tgt_lang], [src_file, tgt_file]):
         moses_preprocess_jobs_list.append(
-            moses_preprocess_lang_split(
+            moses_preprocess_lang(
                 config.bin_dir,
                 moses_config,
-                getattr(moses_inputs_per_split, split),
-                split,
+                infile,
                 launcher,
                 lang,
             )
         )
-    moses_output_train, moses_output_dev, moses_output_test = await asyncio.gather(
+
+    moses_src_output, moses_tgt_output = await asyncio.gather(
         *moses_preprocess_jobs_list
     )
-    moses_outputs_per_split: ProcessLangMosesOutputFiles = ProcessLangMosesOutputFiles(
-        train=moses_output_train, dev=moses_output_dev, test=moses_output_test
+
+    assert (
+        moses_src_output.suffix == f".{config.src_lang}"
+        and moses_tgt_output.suffix == f".{config.tgt_lang}"
+    ), (
+        "moses corpus cleaning expects input files to have lang suffix."
+        + f"Inputs given: {moses_src_output} and {moses_tgt_output}"
     )
+    # basename for both input files ending in lang suffix
+    moses_clean_input_basename = moses_src_output.with_suffix("")
+    moses_src_output_clean, moses_tgt_output_clean = moses_corpus_clean(
+        f"{config.src_lang}",
+        f"{config.tgt_lang}",
+        config.moses_filter,
+        moses_clean_input_basename,
+    )
+
+    return moses_src_output_clean, moses_tgt_output_clean
+
+
+async def spm_train_encode_binarize(
+    lang_pair: str,
+    lang: str,
+    infile: Path,
+    launcher: SubmititLauncher,
+    config: NMTBitextEvalConfig,
+) -> BinarizeLangOutputFiles:
+    logger = logging.getLogger("process_lang")
     logger.info("Starting SPM Train")
 
     model_file, dict_file = await spm_train_module_call(
-        config.spm.config,
-        moses_outputs_per_split.train,
+        config.spm.train.config,
+        infile,
         launcher,
         config.spm_train_and_binarize_output_dir,
     )
@@ -295,7 +304,12 @@ async def process_lang(
     logger.info("Starting SPM Encode and Binarize")
     binarize_lang_jobs_list = []
     for split in ("train", "dev", "test"):
-        moses_preprocessed_file = getattr(moses_outputs_per_split, split)
+        if split != "train":  # infile is initially train
+            infile = Path(
+                config.preproc_binarize_mined.test_data_dir.path.format(
+                    split=split, lang=lang
+                )
+            )
 
         # necessary to change terminology from "valid" to "dev" due to naming difference with flores dataset
         split = "valid" if split == "dev" else split
@@ -304,7 +318,7 @@ async def process_lang(
         outfile_prefix = f"{split}.{lang_pair}.{lang}"
         binarize_lang_jobs_list.append(
             binarize_lang(
-                moses_preprocessed_file,
+                infile,
                 dict_file,
                 model_file,
                 outfile_prefix,
@@ -313,31 +327,23 @@ async def process_lang(
             )
         )
     binarized_output_files = await asyncio.gather(*binarize_lang_jobs_list)
-
-    binarize_lang_outputs = BinarizeLangOutputFiles(
+    binarized_lang_outputs = BinarizeLangOutputFiles(
         train=binarized_output_files[0],
         valid=binarized_output_files[1],
         test=binarized_output_files[2],
     )
-
-    return ProcessLangRetVal(
-        lang, model_file, symlinked_dict_file, binarize_lang_outputs
-    )
+    return binarized_lang_outputs
 
 
-async def moses_preprocess_lang_split(
+async def moses_preprocess_lang(
     bin_dir: Path,
     moses_config: MosesPreprocessConfig,
     moses_preprocess_input_file: Path,
-    split: str,
     launcher: SubmititLauncher,
     lang: str,
 ):
-    assert (
-        split == "train" or split == "dev" or split == "test"
-    ), f"invalid split pased in: {split}; must be any of train, valid or test"
-
-    moses_output_dir = str(Path(bin_dir) / f"moses_preprocess_{split}_data")
+    # only use moses preprocessing on train data, not dev or test
+    moses_output_dir = str(Path(bin_dir) / "moses_preprocess_train_data")
 
     with clone_config(moses_config) as edited_moses_config:
         edited_moses_config.shards = [str(moses_preprocess_input_file)]
@@ -352,31 +358,31 @@ async def moses_preprocess_lang_split(
 
 # TODO change into a module and integrate moses filter step into nmt_bitext_eval script
 @dataclass
-class MosesFilterConfig:
+class MosesCorpusCleanConfig:
     output_dir: Path = MISSING
     filter_ratio: float = 2.5  # bitexts filtering using Moses's lean-corpus-n.perl
     filter_min: float = 1
     filter_max: float = 250  # removes lines of more than 250 in length
 
 
-def filter_bitexts_via_moses(
+def moses_corpus_clean(
     src_lang: str,
     tgt_lang: str,
-    moses_filter_config: MosesFilterConfig,
+    moses_filter_config: MosesCorpusCleanConfig,
     spm_encode_output_file_prefix_before_lang_name: str,
-):
+) -> Tuple[Path, Path]:
     moses_filter_file = get_moses_script("scripts/training/clean-corpus-n.perl")
     # Note: spm_encode_output_file_prefix_before_lang_name is the path to the spm encode output file excluding the last 4 characters which are the lang (excluding, e.g. ".ben")
-    logger = logging.getLogger("Moses filter")
+    logger = logging.getLogger("moses_corpus_clean")
 
     filter_ratio = str(moses_filter_config.filter_ratio)
     corpus = spm_encode_output_file_prefix_before_lang_name
     filter_min = str(moses_filter_config.filter_min)
     filter_max = str(moses_filter_config.filter_max)
-    moses_filter_output_file = (
+    moses_filter_output_file = Path(
         Path(moses_filter_config.output_dir) / "moses_filtered_output"
     )
-    moses_filter_log_file: Path = (
+    moses_filter_log_file = Path(
         Path(moses_filter_config.output_dir) / "both_langs_moses_filter.logs"
     )
 
@@ -403,8 +409,29 @@ def filter_bitexts_via_moses(
             f"Error during distance moses_filter_bash_command, see moses_filter_log_file: {moses_filter_log_file}."
         )
         raise e
+    return (
+        moses_filter_output_file.with_suffix(f".{src_lang}"),
+        moses_filter_output_file.with_suffix(f".{tgt_lang}"),
+    )
 
-    return moses_filter_output_file
+
+def parse_generated_bleu_file(input_file: str) -> float:
+    with open(input_file, "r") as infile:
+        result_line = infile.readline()
+        # expected format: BLEU = [score],
+        bleu = float(re.search("(?<=^BLEU = )[^,]+", result_line).group())
+    return bleu
+
+
+def parse_generated_bleu_files(input_files: List[Path]) -> dict:
+    results = {}
+    for input_file in input_files:
+        split = re.search(".*_(valid|test).bleu", str(input_file)).group(1)
+        if split not in results:
+            results[split] = []
+        bleu = parse_generated_bleu_file(input_file)
+        results[split].append(bleu)
+    return results
 
 
 async def binarize_lang(

@@ -7,6 +7,8 @@
 import asyncio
 import importlib
 import logging
+import shlex
+import subprocess
 import typing as tp
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +31,7 @@ from stopes.pipelines.monolingual.monolingual_line_processor import (
     MonolingualProcessResult,
     SplitNormalizeFilterLID,
 )
+from stopes.pipelines.monolingual.utils import slurm_tmp_maybe
 from stopes.pipelines.monolingual.utils.predict_script import find_lang_script
 from stopes.pipelines.monolingual.utils.sentence_split import map_lang
 
@@ -36,14 +39,17 @@ from stopes.pipelines.monolingual.utils.sentence_split import map_lang
 @dataclass
 class MonoLingualConfig:
     launcher: DictConfig
+    dedup: DictConfig
     langs: tp.List[str] = MISSING
     data_dir: str = MISSING
     output_dir: str = MISSING
     corpus_filter: str = ""
     # this is the name of the tsv resource in this package
-    language_script_file_name: str = MISSING
+    language_script_filename: str = MISSING
     # this is the name of the tsv resource in this package
     split_language_equivalences_filename: str = MISSING
+
+    skip_dedup: bool = False
 
     # size argument passed down to `split`
     # from the man page: The SIZE argument is an integer and optional unit (example: 10K is 10*1024).
@@ -94,7 +100,7 @@ async def launch_preprocessor(
         f"found {len(raw_files)} file for {lang}, using script {lang_script} and splitter for {splitter_lang}."
     )
 
-    tmp_dir = Path(config.dist_tmp_dir) / lang
+    tmp_dir = slurm_tmp_maybe(Path(config.dist_tmp_dir)) / lang
 
     # TODO this will cause trouble for the cache as the splits will always be different probably
     shards = list(utils.split_large_files(raw_files, config.max_shard_size, tmp_dir))
@@ -116,6 +122,7 @@ async def launch_preprocessor(
                     "num_cpu": config.preproces_requirements.cpus_per_task,
                     "local_tmp_dir": config.local_tmp_dir,
                     "_version": "0.3",
+                    "skip_dedup": config.skip_dedup,
                 }
             ),
             custom_name=f"monolingual_preproc_{lang}",
@@ -143,7 +150,7 @@ async def launch_preprocessor(
         tmp_dir.rmdir()
     except Exception as e:
         logger.error(
-            f"could not clean up the temp shards in {tmp_dir}, perhaps because it was not created. Check it manually and clean if necessary.",
+            f"Could not clean up the temp shards in {tmp_dir}, perhaps because it was not necessary. Check it manually and clean if necessary.",
             exc_info=e,
         )
 
@@ -156,7 +163,6 @@ async def process_lang(
     launcher: Launcher,
 ):
     data_dir = Path(config.data_dir)
-
     raw_files = list(
         data_dir.glob(
             Template(config.input_file_glob_template).substitute(
@@ -180,26 +186,42 @@ async def process_lang(
 
     processed_files = [s.output_file for s in preprocess_summaries]
 
-    logger.info(f"starting to dedup from {len(processed_files)}")
-    # Deduplicate
-    if len(processed_files) > 1:
-        dedup_module = DedupeWithMergeSort(
-            DictConfig(
-                {
-                    "shards": [
-                        str(f.resolve()) for f in processed_files
-                    ],  # Path are not supported
-                    "output_file": str(out_dir / f"{lang}_all_dedup.xz"),
-                    "num_cpu": config.preproces_requirements.cpus_per_task,
-                    "tmp_dir": config.local_tmp_dir,
-                }
-            )
+    # Deduplicate if necessary
+    if config.skip_dedup:
+        # Skip deduplication
+        logger.info(f"starting to merge unsorted files from {len(processed_files)}")
+        output_file = Path(out_dir / f"{lang}_no_dedup.xz")
+        # Concatenates the contents of the processed files (source data from different corpi) into one output_file without deduping the merge
+        subprocess.run(
+            utils.bash_pipefail(
+                " ".join(
+                    ["cat"]
+                    + [str(f) for f in processed_files]
+                    + [">"]
+                    + [shlex.quote(str(output_file))]
+                )
+            ),
+            shell=True,
+            check=True,
         )
-        final = await launcher.schedule(dedup_module)
+        logger.info(f"done merging unsorted files in {output_file}")
+        return output_file
     else:
-        final = processed_files[0]
+        # Deduplicate
+        logger.info(f"starting to dedup from {len(processed_files)}")
+        if len(processed_files) > 1:
+            with utils.clone_config(config.dedup) as dedup_config:
+                dedup_config.shards = [str(f.resolve()) for f in processed_files]
+                dedup_config.output_file = str(out_dir / f"{lang}_all_dedup.xz")
+                dedup_config.num_cpu = config.preproces_requirements.cpus_per_task
+                dedup_config.tmp_dir = config.local_tmp_dir
+            dedup_module = DedupeWithMergeSort(dedup_config)
 
-    logger.info(f"done cleaning and deduplicating in {final}")
+            final = await launcher.schedule(dedup_module)
+        else:
+            final = processed_files[0]
+        logger.info(f"done cleaning and deduplicating in {final}")
+        return final
 
 
 async def monolingual_cleaning(config: MonoLingualConfig):
@@ -211,9 +233,10 @@ async def monolingual_cleaning(config: MonoLingualConfig):
         f=str(Path(launcher.config_dump_dir) / "monolingual.yaml"),
     )
 
-    await asyncio.gather(
+    finals = await asyncio.gather(
         *[process_lang(lang, config, launcher) for lang in config.langs]
     )
+    return finals
 
 
 @hydra.main(config_path="conf", config_name="monolingual")

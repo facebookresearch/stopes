@@ -7,9 +7,20 @@
 
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 from stopes.core.utils import open
+
+
+class LoopLogic(Enum):
+    """
+    Three conditions for DatasetReader generator for loop logic.
+    """
+
+    CONTINUE = "Continue"
+    BREAK = "Break"
+    YIELD = "Yield"
 
 
 @dataclass
@@ -57,13 +68,21 @@ class DatasetReader(ExitStack):
     It can be used as a context manager and will abstract over reading from differet
     types of Dataset."""
 
-    def __init__(self, dataset: Dataset, corpus: str):
+    def __init__(
+        self,
+        dataset: Dataset,
+        corpus: str,
+        line_offset_start: int = None,
+        line_offset_end: int = None,
+    ):
         super().__init__()
         self.dataset = dataset
         self.corpus = corpus
         self.src_path = dataset.src
         self.tgt_path = dataset.tgt
         self.tsv_path = dataset.tsv
+        self.line_offset_start = line_offset_start
+        self.line_offset_end = line_offset_end
         if self.tsv_path:
             self.f_tsv = self.enter_context(open(self.tsv_path, "rt"))
         if self.src_path:
@@ -73,19 +92,46 @@ class DatasetReader(ExitStack):
 
     def __iter__(self):
         if self.tsv_path:
-            for line in self.f_tsv:
-                score, src, tgt = line.strip().split("\t")
-                yield DatasetLine(
-                    corpus=self.corpus,
-                    score=float(score),
-                    src=src.strip(),
-                    tgt=tgt.strip(),
-                )
+            for idx, line in enumerate(self.f_tsv):
+                loop_logic = self._check_offset(idx)
+                if loop_logic == LoopLogic.CONTINUE:
+                    continue
+                elif loop_logic == LoopLogic.BREAK:
+                    break
+                else:
+                    score, src, tgt = line.strip().split("\t")
+                    yield DatasetLine(
+                        corpus=self.corpus,
+                        score=float(score),
+                        src=src.strip(),
+                        tgt=tgt.strip(),
+                    )
         elif self.src_path and self.tgt_path:
-            for src, tgt in zip(self.f_src, self.f_tgt):
-                yield DatasetLine(corpus=self.corpus, src=src.strip(), tgt=tgt.strip())
+            for idx, (src, tgt) in enumerate(zip(self.f_src, self.f_tgt)):
+                loop_logic = self._check_offset(idx)
+                if loop_logic == LoopLogic.CONTINUE:
+                    continue
+                elif loop_logic == LoopLogic.BREAK:
+                    break
+                else:
+                    yield DatasetLine(
+                        corpus=self.corpus, src=src.strip(), tgt=tgt.strip()
+                    )
         elif self.src_path:
-            for src in self.f_src:
-                yield DatasetLine(corpus=self.corpus, src=src.strip())
+            for idx, src in enumerate(self.f_src):
+                loop_logic = self._check_offset(idx)
+                if loop_logic == LoopLogic.CONTINUE:
+                    continue
+                elif loop_logic == LoopLogic.BREAK:
+                    break
+                else:
+                    yield DatasetLine(corpus=self.corpus, src=src.strip())
         else:
             raise ValueError("Invalid combination of paths: {self.dataset}")
+
+    def _check_offset(self, idx: int) -> LoopLogic:
+        if self.line_offset_start and idx < self.line_offset_start:
+            return LoopLogic.CONTINUE
+        if self.line_offset_end and idx >= self.line_offset_end:
+            return LoopLogic.BREAK
+        return LoopLogic.YIELD

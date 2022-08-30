@@ -2,7 +2,7 @@ defaults:
   # base configs for the sub modules
   - preproc_binarize_mined: standard_conf
   - binarize: fairseq_binarize
-  - spm: standard_conf
+  - spm/train: standard_conf
   - moses: standard_conf
   - moses_filter: standard_conf
   - launcher: submitit
@@ -21,20 +21,20 @@ public_corpora_to_ignore: []
 output_dir: ./NMT_bitext_eval_output_dir
 bin_dir: ${output_dir}/bin_dir
 spm_train_and_binarize_output_dir: ${bin_dir}/spm_train_encode_and_binarize
-eval_minimum_epoch: 1 # must be <= eval_maximum_epoch
-eval_maximum_epoch: 100
+maximum_epoch: 100
 
 # override the sub module configs with the parents
 moses:
   config:
+    lowercase: False
     output_dir: "Delay setting this value" # ${bin_dir}/moses_preproccessing_{split}
 moses_filter:
-  config:
-    output_dir: ${bin_dir}/moses_filter
+  output_dir: ${bin_dir}/moses_filter
 spm:
-  config:
-    output_dir: ${spm_train_and_binarize_output_dir}
-    vocab_size: 7_000
+  train:
+    config:
+      output_dir: ${spm_train_and_binarize_output_dir}
+      vocab_size: 7_000
 binarize:
   config:
     output_dir: ${spm_train_and_binarize_output_dir}
@@ -54,7 +54,7 @@ train_fairseq:
         target_lang: ${tgt_lang}
         data: ${spm_train_and_binarize_output_dir}
       optimization:
-        max_epoch: ${eval_maximum_epoch}
+        max_epoch: ${maximum_epoch}
 eval:
   config:
     src_lang: ${src_lang}

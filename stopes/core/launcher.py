@@ -264,6 +264,10 @@ class FileCache(Cache):
 ################################################################################
 
 
+async def await_second_arg(idx, task):
+    return idx, await task
+
+
 class Launcher(ABC):
     def __init__(
         self, cache: tp.Optional[Cache], config_dump_dir: tp.Optional[str] = None
@@ -280,12 +284,14 @@ class Launcher(ABC):
         os.makedirs(self.config_dump_dir, exist_ok=True)
         self.jobs_registry: JobsRegistry = JobsRegistry()
 
+    def dump_config(self, module: "StopesModule") -> Path:
+        config_file = Path(self.config_dump_dir) / f"{module.name()}.yaml"
+        OmegaConf.save(config=module.config, f=config_file)
+        return config_file
+
     async def schedule(self, module: "StopesModule"):
         with logging_redirect_tqdm():
-            OmegaConf.save(
-                config=module.config,
-                f=os.path.join(self.config_dump_dir, f"{module.name()}.yaml"),
-            )
+            self.dump_config(module)
             value_array = module.array()
             if value_array is not None:
                 result = await self._schedule_array(module, value_array)
@@ -304,7 +310,10 @@ class Launcher(ABC):
         # it is an iterator of awaitables that we can wait for in as_completed
         it = (
             [
-                module(iteration_value=val, iteration_index=idx, cache=self.cache)
+                await_second_arg(
+                    idx,
+                    module(iteration_value=val, iteration_index=idx, cache=self.cache),
+                )
                 for (idx, val) in not_cached
             ]  # if we are only running locally, let's just call module directly here
             if isinstance(reqs, LocalOnlyRequirements)

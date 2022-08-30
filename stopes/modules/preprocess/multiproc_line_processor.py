@@ -144,22 +144,8 @@ class MultiprocLineProcessorModule(StopesModule):
             tmp_dir = tmp_dir / slurm_env
         tmp_dir.mkdir(parents=True, exist_ok=True)
 
-        decompressed_tmp = None
-        if input_file.suffix in {".gz", ".xz"}:
-            print(f"expanding {input_file.name}")
-            decompressed_tmp = tmp_dir / f"{input_file.name}_expanded.txt"
-            decompressed_tmp = decompressed_tmp.resolve()
-            subprocess.run(
-                " ".join(
-                    [
-                        utils.open_file_cmd(input_file),
-                        ">",
-                        shlex.quote(str(decompressed_tmp)),
-                    ]
-                ),
-                shell=True,
-                check=True,
-            )
+        decompressed_tmp = utils.expand_if_compressed(input_file, tmp_dir)
+        if decompressed_tmp:
             offsets = find_offsets(str(decompressed_tmp), num_workers)
             read_from = decompressed_tmp
         else:
@@ -169,6 +155,7 @@ class MultiprocLineProcessorModule(StopesModule):
         # find_offsets returns a list of position [pos1, pos2, pos3, pos4] but we would want pairs:
         # [(pos1, pos2), (pos2, pos3), (pos3, pos4)] to process the chunks with start/end info
         # we zip the list with itself shifted by one to get all the pairs.
+
         file_chunks = list(zip(offsets, offsets[1:]))
 
         proc_cb = partial(

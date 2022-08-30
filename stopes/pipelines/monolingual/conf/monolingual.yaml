@@ -1,5 +1,6 @@
 defaults:
   - launcher: submitit
+  - dedup: dedup_files
   - _self_
 
 langs: ???
@@ -8,6 +9,9 @@ data_dir: ???
 output_dir: .
 language_script_filename: language_scripts_200.tsv
 split_language_equivalences_filename: language_equivalences.tsv
+
+# update to true if you wish to skip dedup of monolingual input
+skip_dedup: false
 
 split_algo: default
 
