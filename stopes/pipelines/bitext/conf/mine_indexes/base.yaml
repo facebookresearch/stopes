@@ -7,8 +7,10 @@ config:
     #set later in pipeline
     src2tgt_dist_files: ???
     src2tgt_index_files: ???
+    src_text_files: ???
     tgt2src_dist_files: ???
     tgt2src_index_files: ???
+    tgt_text_files: ???
 
     output_dir: ???
     knn_dist: 16
@@ -20,3 +22,4 @@ config:
     num_probe: 128
     gpu_type: fp16-shard
     mine_threshold: 1.06
+    filter_step: null

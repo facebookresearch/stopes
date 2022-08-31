@@ -10,6 +10,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
+from omegaconf import DictConfig
 
 # TODO: maybe import that from calculate_distances_utils once merged or
 # ideally, rely on the filenames returned by the module within global_mining_pipeline.py
@@ -36,17 +37,32 @@ class Neighbors:
         self.indices = indices
 
 
+def noop_filter(
+    original_alignments: Alignments,
+    src_text_files: tp.List[str],
+    tgt_text_files: tp.List[str],
+    filter_step_cfg: DictConfig,
+) -> Alignments:
+    """
+    this filtering does nothing, but you can replace it by your own filtering step (e.g. running a classifier)
+    """
+    return original_alignments
+
+
 def mine(
     dists_x2y_files: tp.List[Path],
     dists_y2x_files: tp.List[Path],
     indices_x2y_files: tp.List[Path],
     indices_y2x_files: tp.List[Path],
+    src_text_files: tp.List[str],
+    tgt_text_files: tp.List[str],
     k_src: int,
     k_trg: int,
     k_extract: int,
     threshold: float,
     mean_is_last: bool,
     logger: logging.Logger,
+    filter_step_cfg: DictConfig,
 ) -> Alignments:
     # forward direction
     logger.info("Loading forward neighbors")
@@ -83,14 +99,37 @@ def mine(
         tgt_idx[pos] = target_index
         pos += 1
 
+    post_margin_alignments = Alignments(
+        scores=dists,
+        src_idx=src_idx,
+        tgt_idx=tgt_idx,
+    )
+
+    filtered_alignments = (
+        noop_filter(
+            original_alignments=post_margin_alignments,
+            src_text_files=src_text_files,
+            tgt_text_files=tgt_text_files,
+            filter_step_cfg=filter_step_cfg,
+        )
+        if filter_step_cfg is not None
+        else post_margin_alignments
+    )
+
     # TODO: make these logs optional with a verbose option, as the min and max
     # calculations could be taxing
-    logger.info("Margin stats: min={:.3f} max={:.3f}".format(dists.min(), dists.max()))
+    logger.info(
+        "Margin stats: min={:.3f} max={:.3f}".format(
+            filtered_alignments.scores.min(), filtered_alignments.scores.max()
+        )
+    )
     for th in np.arange(threshold - 0.02, threshold + 0.02, 0.01):
-        nb_bitexts = src_idx[dists >= th].shape[0]
+        nb_bitexts = filtered_alignments.src_idx[
+            filtered_alignments.scores >= th
+        ].shape[0]
         logger.info("Mined {:d} bitexts with threshold {:.2f}".format(nb_bitexts, th))
 
-    return Alignments(scores=dists, src_idx=src_idx, tgt_idx=tgt_idx)
+    return filtered_alignments
 
 
 # TODO: could be put at a more global level e.g. to read in fp16 setting

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from omegaconf import MISSING
+from omegaconf import MISSING, DictConfig
 
 from stopes.core.stopes_module import DistributedRequirements, StopesModule
 from stopes.core.utils import ensure_dir
@@ -35,15 +35,23 @@ class MineBitextConfig:
     # index files is the list of indexes in the embedding, not
     #  the faiss index
     src2tgt_index_files: tp.List[str] = MISSING
+    # original shards of text for source
+    src_text_files: tp.List[str] = MISSING
 
     tgt2src_dist_files: tp.List[str] = MISSING
     # index files is the list of indexes in the embedding, not
     #  the faiss index
     tgt2src_index_files: tp.List[str] = MISSING
+    # original shards of text for target
+    tgt_text_files: tp.List[str] = MISSING
 
     index_type: str = MISSING
 
     output_dir: str = MISSING
+
+    # config for the filter step.
+    filter_step: tp.Optional[DictConfig] = None
+
     knn_dist: int = 16
     src_k: int = 16
     tgt_k: int = 16
@@ -87,16 +95,17 @@ class MineBitextIndexesModule(StopesModule):
 
         # mining, extracting sentence indices
         scores, src_idx, trg_idx = mine(
-            self.config.src2tgt_dist_files,
-            self.config.tgt2src_dist_files,
-            self.config.src2tgt_index_files,
-            self.config.tgt2src_index_files,
-            self.config.src_k,
-            self.config.tgt_k,
-            self.config.k_extract,
-            self.config.mine_threshold,
-            self.config.margin_norm == "last",
-            logger,
+            dists_x2y_files=self.config.src2tgt_dist_files,
+            dists_y2x_files=self.config.tgt2src_dist_files,
+            indices_x2y_files=self.config.src2tgt_index_files,
+            indices_y2x_files=self.config.tgt2src_index_files,
+            k_src=self.config.src_k,
+            k_trg=self.config.tgt_k,
+            k_extract=self.config.k_extract,
+            threshold=self.config.mine_threshold,
+            mean_is_last=self.config.margin_norm == "last",
+            logger=logger,
+            filter_step_cfg=self.config.filter_step,
         )
 
         # persisting results to disk

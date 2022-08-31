@@ -270,8 +270,10 @@ class GlobalMiningPipeline:
             index_type=src_index_type,
             src2tgt_dist_files=src2tgt_dist_files,
             src2tgt_index_files=src2tgt_index_files,
+            src_text_files=src_text_shards,
             tgt2src_dist_files=tgt2src_dist_files,
             tgt2src_index_files=tgt2src_index_files,
+            tgt_text_files=tgt_text_shards,
         )
         mined_indexes = await self.launcher.schedule(mine_indexes_module)
 
