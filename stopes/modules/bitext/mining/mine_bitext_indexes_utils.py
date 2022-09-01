@@ -81,6 +81,10 @@ def mine(
     compute_margin_scores(neighbors_y2x, avg_y2x, avg_x2y)
 
     logger.info("Starting fastmax retrieval with threshold {:f}".format(threshold))
+
+    # the retrieval of the matching sentences is done in `fastmax_retrieval`. If you 
+    # wanted to use a different mining approach, you could just change this call.
+    
     fastmax_neighbors = fastmax_retrieval(
         neighbors_x2y, neighbors_y2x, k_extract, threshold
     )
@@ -98,6 +102,13 @@ def mine(
         src_idx[pos] = source_index
         tgt_idx[pos] = target_index
         pos += 1
+
+    # Alignments represent the aligned pairs of sentences from the data as retrieved
+    # by the above `fastmax_retrieval`.
+    # - src_idx represents the sentence id from the original src_text_files. There might be multiple shards of src
+    # the index is sequential from the first line of the first file in the list to the last line of the last file in the list
+    # see mine_bitext_sentences_utils._load_data for an example of how to retrieve text lines.
+    # - tgt_idx represents the aligned sentence in the destination file
 
     post_margin_alignments = Alignments(
         scores=dists,
