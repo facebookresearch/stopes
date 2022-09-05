@@ -39,8 +39,13 @@ git checkout tags/v0.12.1
 pip install --editable ./
 ```
 
-You can install stopes with pip:
-`pip install -e '.[dev,mono,mining]'`
+You can then install stopes with pip:
+```
+cd ..
+git clone https://github.com/facebookresearch/stopes.git
+cd stopes
+pip install -e '.[dev,mono,mining]'
+```
 
 You can choose what to install. If you are only interested in `mining`, you do not need to install `dev`, and `mono`. If you are interested in the distillation pipeline, you will need to install at least `mono`.
 
