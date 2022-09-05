@@ -1,0 +1,21 @@
+# ignore: these fields are automatically set in monolingual_pipeline
+shards: ???
+output_file: ???
+
+launcher: ${launcher}
+
+# update this if you are not running locally
+tmp_dir: ${tmp_dir}
+merge_dir: ${merge_dir}
+
+num_cpu: 40
+mem_gb: 300
+timeout_min: 1440
+
+num_files: 10 # merges this number of files at a time
+field_def: 6 # on what field do we merge; update this to 7 if you have an lm score in your tsv
+
+process_locally: false # ignore: if it's faster to read locally, copy all files to tmp_dir first
+resort_files: false # ignore
+glob: '' # ignore
+wandb: null # ignore

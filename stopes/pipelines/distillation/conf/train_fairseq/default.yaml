@@ -1,0 +1,100 @@
+# @package train_fairseq
+
+_target_: stopes.modules.train_fairseq_module.TrainFairseqModule
+
+# ignore: handled by pipeline
+output_dir: ???
+
+# number of gpus to use for training the model
+num_gpus: 1
+# number of gpus per node in your cluster
+num_gpus_per_node: 8
+timeout_min: 4320 # 3 days
+params:
+  model: ???
+  common:
+    log_interval: 500
+    log_format: simple
+    no_progress_bar: true
+  checkpoint:
+    save_interval: 1
+    save_dir: ???
+  dataset:
+    max_tokens: 2000
+  optimization:
+    max_epoch: 100
+    lr: [1e-3]
+    stop_min_lr: 1e-9
+    clip_norm: 0.0
+    max_update: 100000
+    update_freq: [4]
+  criterion: label_smoothed_cross_entropy
+  optimizer:
+    _name: adam
+    adam_betas: (0.9, 0.98)
+    weight_decay: 0.0001
+  lr_scheduler:
+    _name: inverse_sqrt
+    warmup_updates: 4000
+    warmup_init_lr: 1e-7
+  bpe: none
+  scoring: none
+  task:
+    lang_pairs: ???
+    langs: ???
+    task: translation_multi_simple_epoch
+    _name: translation_multi_simple_epoch
+    dataset_impl: ${....binarize.line_processor.dataset_impl}
+    valid_subset: valid
+    sampling_method: concat
+    sampling_temperature: 1.5
+    seed: 2
+    lang_dict: null
+    source_lang: null
+    target_lang: null
+    source_dict: null
+    target_dict: null
+    lang_tok_style: multilingual
+    load_alignments: false
+    left_pad_source: true
+    left_pad_target: false
+    max_source_positions: 1024
+    max_target_positions: 1024
+    upsample_primary: 1
+    truncate_source: false
+    encoder_langtok: src
+    decoder_langtok: false
+    lang_tok_replacing_bos_eos: false
+    enable_lang_ids: false
+    enable_reservsed_directions_shared_datasets: false
+    extra_data: null
+    extra_lang_pairs: null
+    fixed_dictionary: null
+    langtoks_specs: main
+    langtoks: null
+    sampling_weights_from_file: null
+    sampling_weights: null
+    virtual_epoch_size: null
+    virtual_data_size: null
+    pad_to_fixed_length: false
+    use_local_shard_size: false
+    enable_m2m_validation: true
+    add_data_source_prefix_tags: false
+    add_ssl_task_tokens: false
+    tokens_per_sample: 512
+    sample_break_mode: eos
+    mask: 0.1
+    mask_random: 0.0
+    insert: 0.0
+    permute: 0.0
+    rotate: 0.0
+    poisson_lambda: 3.0
+    permute_sentences: 0.0
+    mask_length: subword
+    replace_length: 1
+    ignore_mmt_main_data: false
+    mixed_multitask_denoising_prob: 0.5
+    eval_lang_pairs: null
+    finetune_dict_specs: null
+    keep_inference_langtok: false
+    one_dataset_per_batch: false

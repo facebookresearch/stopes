@@ -2,7 +2,7 @@ _target_: stopes.modules.preprocess.train_spm.TrainSpmModule
 config:
   output_dir: ???
   vocab_size: 50_000
-  input_sentence_size: 5_000_000
+  training_lines: 5_000_000
   seed_sentencepiece_size: 5_000_000
   character_coverage: 0.999995
   model_type: "unigram"
