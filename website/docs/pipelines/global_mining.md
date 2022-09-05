@@ -163,3 +163,59 @@ The `-m` parameter tells the pipeline to start with multi-run and `tgt_lang=bn,h
 ```bash
 python global_mining_pipeline.py -m src_lang=en tgt_lang=bn,hi +data=ccg embed_text=hf_roberta_large,hf_labse
 ```
+
+# NMT model training on mined bitexts
+
+Once a mined bitext has been produced, `stopes` can then run an end-to-end bilingual NMT system. It follows the following steps:
+
+1. Takes as input a mined bitext (format: alignment-score [tab] text [tab] text)
+2. Applies threshold filters based on alignment score and max number of alignments to use for training
+3. Applies moses preprocessing (on bitext only)
+4. Trains spm (on bitext only)
+5. Spm-encodes bitext and chosen evaluation data
+6. Binarizes files for fairseq
+7. Trains bilingual NMT using `fairseq-train` on binarized data
+8. Runs `fairseq-generate` on binarized evaluation data for all model checkpoints
+9. Calculates BLEU scores
+
+# Run it
+
+```
+python -m stopes.pipelines.bitext.nmt_bitext_eval                   \
+src_lang=lin_Latn tgt_lang=eng_Latn                                 \
+input_file_mined_data_tsv=/path/to/your/bitext.tsv                  \
+preproc_binarize_mined.test_data_dir.dataset_name=flores200         \
+preproc_binarize_mined.test_data_dir.base_dir=/path/to/flores200    \
+output_dir=/directory/to/store/preprocessed/data/and/checkpoints    \
+launcher.cache.caching_dir=/path/to/cache                           \
+maximum_epoch=20
+```
+
+**NOTE**: In order for the training pipeline to know which column of the bitext corresponds to the selected `src_lang` and `tgt_lang`, it presumes that the two text columns in the bitext are ordered by their sorted language names. For example, for a `eng-lin` bitext, the format is: alignment-score [tab] english-text [tab] lingala-text (not alignment-score [tab] lingala-text [tab] english-text). 
+
+## Outputs
+
+The NMT pipeline will create the following directories in the specified `output_dir`:
+- `bin_dir`: moses preprocessed, spm-encoded, and binarized data.
+- `trained_models`: checkpoints from `fairseq-train`. **Note**: this directory will also contain files containing the outputs of both `fairseq-generate` (files ending in `.out`) and the corresponding BLEU evaluations for each checkpoint (files ending in `.bleu`).
+
+## Evaluation data
+
+To find the evaluation data for your chosen languages, `stopes` needs to know the relevant path. See `path` in `stopes/pipelines/bitext/conf/preproc_binarize_mined/standard_conf.yaml`. Currently it defaults to the format of the `flores200` dataset. To use this, please [download flores200](https://github.com/facebookresearch/flores/tree/main/flores200). 
+
+## Example overrides
+
+**Spm training**
+
+```spm.train.config.vocab_size=7000```
+
+**Model configuation**
+
+```
+train_fairseq.config.params.optimization.lr=[0.0001]
+train_fairseq.config.params.optimization.update_freq=[8]
+train_fairseq.config.params.model.encoder_layers=6
+train_fairseq.config.params.model.encoder_embed_dim=512
+train_fairseq.config.params.model.dropout=0.3
+train_fairseq.config.num_gpus=8
+```

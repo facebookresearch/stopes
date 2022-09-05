@@ -1,0 +1,51 @@
+language_script_filename: ${mono_pipeline.language_script_filename}
+split_language_equivalences_filename: ${mono_pipeline.split_language_equivalences_filename}
+
+# used for sentence splitting
+split_algo: ${mono_pipeline.split_algo} 
+
+local_tmp_dir: ${local_tmp_dir}
+dist_tmp_dir: ${dist_tmp_dir}
+
+bitext_processor:
+  split_algo: ${..split_algo}
+  filter_config: ${..filter}
+  lid_config: ${..lid}
+  num_cpu: ${..requirements.cpus_per_task}
+  local_tmp_dir: ${..local_tmp_dir}
+  _version: 0.3
+
+outfile_prefix: ''
+outfile_postfix: ''
+output_dir: ???
+
+filter:
+  min_chars: 10
+  max_chars: 500
+  max_punct_ratio: 0.2
+  max_number_ratio: 0.2
+  min_space_ratio: 0.05
+  max_space_ratio: 0.3
+  max_emoji_ratio: 0.1
+  script_threshold: 0.5
+  max_repeated_char: 20
+  tab_index: 0
+
+lid:
+  # default set from parent config
+  model_date:
+  model_file:
+  thresholds_file:
+
+  latest_models_path:
+  probability_threshold:
+  lang_thresholds:
+
+preprocess_buffer_size: 10_000
+requirements:
+  nodes: 1
+  mem_gb: 200
+  tasks_per_node: 1
+  gpus_per_node: 0
+  cpus_per_task: 40
+  timeout_min: 1200

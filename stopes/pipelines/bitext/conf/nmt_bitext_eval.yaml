@@ -44,6 +44,7 @@ train_fairseq:
   config:
     num_gpus: 1 # 16 gpus still doesn't work fully (raises job.result() vs job.results() error due to 16 different output files on a non-array module)
     output_dir: ${output_dir}/trained_models
+    timeout_min: 1_440
     params:
       common:
         wandb_project: bitext_eval

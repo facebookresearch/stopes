@@ -1,0 +1,13 @@
+launcher: ${launcher}
+
+# ignore: handled by pipeline
+nb_shards: ???
+output_dir: ???
+input_file: ???
+
+log_every: 10000
+tmp_dir: ${tmp_dir}
+
+num_cpu: 80
+mem_gb: null
+timeout_min: 1440

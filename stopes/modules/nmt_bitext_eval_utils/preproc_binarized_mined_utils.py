@@ -303,7 +303,7 @@ async def spm_train_encode_binarize(
 
     logger.info("Starting SPM Encode and Binarize")
     binarize_lang_jobs_list = []
-    for split in ("train", "dev", "test"):
+    for split in ("train", "dev", "devtest"):
         if split != "train":  # infile is initially train
             infile = Path(
                 config.preproc_binarize_mined.test_data_dir.path.format(
@@ -311,8 +311,11 @@ async def spm_train_encode_binarize(
                 )
             )
 
-        # necessary to change terminology from "valid" to "dev" due to naming difference with flores dataset
-        split = "valid" if split == "dev" else split
+        # necessary to change terminology due to naming difference with flores dataset
+        if split == "dev":
+            split = "valid"
+        elif split == "devtest":
+            split = "test"
 
         # outfile_prefix's naming scheme must strictly be followed; hardcoded requirement by train fairseq module
         outfile_prefix = f"{split}.{lang_pair}.{lang}"

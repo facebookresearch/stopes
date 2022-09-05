@@ -1,0 +1,50 @@
+launcher: ${launcher}
+dedup: ${dedup}
+langs: ${src_langs}
+corpus_filter: ''
+data_dir: ${mono_data_dir}
+output_dir: .
+language_script_filename: language_scripts_200.tsv
+split_language_equivalences_filename: language_equivalences.tsv
+skip_dedup: ${skip_dedup}
+
+split_algo: default # used for sentence splitting
+
+local_tmp_dir: ${local_tmp_dir}
+dist_tmp_dir: ${dist_tmp_dir}
+max_shard_size: 15G
+
+filter:
+  min_chars: 10
+  max_chars: 500
+  max_punct_ratio: 0.2
+  max_number_ratio: 0.2
+  min_space_ratio: 0.05
+  max_space_ratio: 0.3
+  max_emoji_ratio: 0.1
+  script_threshold: 0.5
+  max_repeated_char: 20
+  tab_index: 0
+
+lid:
+  # defualt set from parent config
+  model_date:
+  model_file:
+
+  thresholds_file:
+  latest_models_path:
+  label_unk:
+
+preprocess_buffer_size: 10_000
+preproces_requirements:
+  nodes: 1
+  mem_gb: 200
+  tasks_per_node: 1
+  gpus_per_node: 0
+  cpus_per_task: 40
+  timeout_min: 1200
+
+# template for a glob search, corpus might be empty if corpus_filter is empty
+input_file_glob_template: $lang/$corpus*.$lang.xz
+
+wandb: null

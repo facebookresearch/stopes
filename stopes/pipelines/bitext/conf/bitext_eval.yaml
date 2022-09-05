@@ -18,7 +18,7 @@ spm:
   train:
     config:
       train_data_file: DELAYED
-      input_sentence_size: 1_000_000
+      training_lines: 1_000_000
       vocab_size: 7_000
 
 train_fairseq:

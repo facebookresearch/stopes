@@ -1,0 +1,78 @@
+defaults:
+  - launcher: local
+  - dedup: default
+  - mono_pipeline: default
+  - shard: default
+  - lang_code_mapping: default
+  - generate: default
+  - bitext_clean: default
+  - binarize: default
+  - train_fairseq: default
+  - train_fairseq/params/model: transformer
+  - _self_
+
+# main pipeline config specifications
+src_langs: ???
+tgt_langs: ???
+mono_data_dir: ???
+output_dir: .
+
+# update to true if you wish to skip deduplication of monolingual input
+skip_dedup: false
+
+launcher:
+  partition: ??? # set as null if running locally
+
+# update this if you are not running locally, used in dedup
+tmp_dir: /tmp
+# update this to be a path on a shared partition if running on slurm
+merge_dir: /tmp/merge 
+
+# update this if you are not running locally (used in mono_pipeline cleaning and bitext clean)
+local_tmp_dir: ${tmp_dir}
+dist_tmp_dir: /tmp/mono_tmp
+
+# used in mono_pipeline and bitext clean
+lid:
+  # one of these two should be specified
+  model_date:
+  model_file:
+
+  # path to LID model
+  latest_models_path: ??? 
+
+  # optional
+  
+  probability_threshold: 0.5
+  lang_thresholds:
+      fuv: 0.3
+      bis: 0.3
+      ewe: 0.2
+      fon: 0.2
+      kam: 0.3
+      kur: 0.2
+      lua: 0.4
+      pag: 0.4
+      sag: 0.3
+      ssw: 0.3
+      tso: 0.4
+      umb: 0.3
+      vec: 0.4
+      war: 0.4
+      yor: 0.4
+      diq: 0.4
+
+  label_unk: __label__unk
+
+# used in sharding, minimum number of lines you want in each target shard
+min_lines_per_shard: 1,000,000
+
+generate:
+  model: ??? # pre-trained teacher model checkpoint path
+
+# pre-trained spm model and vocab paths (for binarizing and generate)
+vocab_file_path: ???
+spm_model_path: ???
+
+# update if you use wandb
+wandb: null 

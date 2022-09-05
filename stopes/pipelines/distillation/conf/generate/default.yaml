@@ -1,0 +1,30 @@
+spm: ${spm_model_path}
+model:
+
+arg_overrides: null # can add subfield `data: ` here if you would like to specify another data directory containing dicts for the pre-trained model to use
+
+sentence_splitter: ""
+use_gpu: true
+fp16: true
+batch_size: 32
+torchscript: false
+cache_size: 1_000_000
+lang_code_mapping: ${lang_code_mapping}
+max_sentence_len: 256
+encoder-langtok: src
+decoder-langtok: true
+
+beam_search:
+  beam: 5
+  max_len_a: 0
+  max_len_b: 200
+  min_len: 1
+  unnormalized: false
+  lenpen: 1.0
+  unkpen: 0.0
+  temperature: 1.0
+  match_source_len: false
+  no_repeat_ngram_size: 0
+  sampling: false
+  sampling_topk: -1
+  sampling_topp: -1.0
