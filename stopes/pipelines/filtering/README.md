@@ -19,7 +19,7 @@ python filter.py \
   data_conf_dir=/home/$USER/data_conf
 ```
 This command will run using the output directory and `data_conf_dir` directory (the
-location where the `populate_data_conf.py` and `compute_lenght_factors.py` scripts
+location where the `populate_data_conf.py` and `compute_length_factors.py` scripts
 output their configuration files) as specified above, and will additionally load the
 default example config `conf/example.yaml`. Anything not specified on the command line
 or in `conf/example.yaml` will be set to the default values specified in
