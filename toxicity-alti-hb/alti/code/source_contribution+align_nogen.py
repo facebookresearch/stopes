@@ -8,19 +8,13 @@ data_name_or_path=str(sys.argv[3])
 filen=sys.argv[4]
 ofilen=sys.argv[5]
 
-#'/private/home/costajussa/interpretability/nmt/data/'
 
 
 outputFile = open(ofilen, 'w')
 
 
-#print (data_name_or_path)
 
 import torch
-#torch.cuda.empty_cache()
-#torch.cuda.set_device(1)
-#torch.cuda.current_device()
-#torch.cuda.memory_summary(device=None, abbreviated=False)
 import warnings
 from pathlib import Path
 
@@ -46,13 +40,11 @@ import string
 import logging
 logger = logging.getLogger()
 logger.setLevel('WARNING')
-#warnings.simplefilter('ignore')
 
 from dotenv import load_dotenv
 load_dotenv()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-#print (device)
 
 model_size = 'small' # small (412M) /big (1.2B)
 data_sample = 'generate' # generate/interactive
@@ -63,15 +55,9 @@ only_alti = True
 # Paths
 # Checkpoint path
 #
-ckpt_dir = '/checkpoint/vedanuj/nmt/flores200/dense.mfp16.mu300000.uf1.lss.tmp1.lr0.002.drop0.1.maxtok4096.seed2.max_pos512.shem.NBF.adam16bit.fully_sharded.entsrc.det.transformer.ELS24.DLS24.ef8192.df8192.E2048.H16.AD0.1.RD0.0.ts_train_train_mining_train_mmt_bt_train_smt_bt.ngpu256/'
+ckpt_dir = '/ckpt_dir/' #CUSTOMIZE
 #
-checkpoint_file = 'checkpoint_18_300000-shard0.pt'
-
-
-#ckpt_dir ='/large_experiments/nllb/opensource/nllb_200_dense_3b/'
-#ckpt_dir='/large_experiments/nllb/opensource/nllb_200_dense_distill_1b/'
-#checkpoint_file = 'checkpoint.pt'
-
+checkpoint_file = 'checkpoint_file.pt' #CUSTOMIZE
 
 
 
@@ -81,7 +67,7 @@ hub = FairseqMultilingualTransformerHub.from_pretrained(
     ckpt_dir,
     checkpoint_file=checkpoint_file,
     data_name_or_path=data_name_or_path,
-    dict_path='/large_experiments/nllb/mmt/multilingual_bin/validation.en_xx_en.v4.4/data_bin/shard000//dict.eng_Latn.txt',
+    dict_path='/dict.txt', #CUSTOMIZE
     source_lang= source,
     target_lang= target,
     lang_pairs =source+'-'+target)
