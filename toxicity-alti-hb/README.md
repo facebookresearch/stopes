@@ -4,3 +4,22 @@ MT toxicity at scale: deep detection and analysis. Subfolders:
 - `analysis/`: scripts for calculating/plotting toxicity results, given (1) toxicities precomputed with ETOX and (2) ALTI+ scores.
 - `annotation/`: contains the false positive and the false negative analysis conducted for 8 outputs on the holisticbias toxicity detection.
 - `ETOX/`: contains the tool for detecting toxicity
+
+
+# Contributors:
+
+Marta R. Costa-jussà, alti/ 
+Eric Smith, analysis/
+Christophe Ropers, annotation/
+Daniel Licht, ETOX/
+
+# Citation:
+
+If you use toxicity-alti-hb in your work, please cite :
+
+@article{toxicity2022,
+  title={Toxicity in Multilingual Machine Translation at Scale},
+  author={Costa-jussà, M.R., Smith, E, Ropers, C., Licht.,D., Ferrando, J., Escolano, C.}
+  journal={ARXIV}
+  year={2022}
+}
