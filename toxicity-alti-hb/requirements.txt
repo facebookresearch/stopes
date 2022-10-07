@@ -1,0 +1,8 @@
+joblib~=1.0.1
+matplotlib==3.5.3
+numpy~=1.21.0
+pandas~=1.4.0
+scipy==1.9.1
+sentencepiece~=0.1.96
+statsmodels==0.13.2
+tqdm~=4.62.3
