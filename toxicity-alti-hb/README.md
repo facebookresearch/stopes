@@ -9,8 +9,11 @@ MT toxicity at scale: deep detection and analysis. Subfolders:
 # Contributors:
 
 Marta R. Costa-jussà, alti/
+
 Eric Smith, analysis/
+
 Christophe Ropers, annotation/
+
 Daniel Licht, ETOX/
 
 # Citation:
@@ -18,8 +21,14 @@ Daniel Licht, ETOX/
 If you use toxicity-alti-hb in your work, please cite :
 
 @article{toxicity2022,
+
   title={Toxicity in Multilingual Machine Translation at Scale},
-  author={Costa-jussà, M.R., Smith, E, Ropers, C., Licht.,D., Ferrando, J., Escolano, C.}
-  journal={ARXIV}
+
+  author={Costa-jussà, M.R., Smith, E, Ropers, C., Licht.,D., Ferrando, J., Escolano, C.},
+  
+  journal={Arxiv, abs/2210.03070},
+  
+  url={https://arxiv.org/abs/2210.03070.pdf},
+  
   year={2022}
 }
