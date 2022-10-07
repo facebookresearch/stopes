@@ -8,7 +8,7 @@ MT toxicity at scale: deep detection and analysis. Subfolders:
 
 # Contributors:
 
-Marta R. Costa-jussà, alti/ 
+Marta R. Costa-jussà, alti/
 Eric Smith, analysis/
 Christophe Ropers, annotation/
 Daniel Licht, ETOX/

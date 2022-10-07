@@ -16,7 +16,6 @@ import pandas as pd
 import sentencepiece as spm
 from holistic_bias.src.sentences import HolisticBiasSentenceGenerator
 
-
 # HolisticBias params (ideally we wouldn't hardcode these in)
 NUMBERS_OF_NOUNS = {"female": 10, "male": 11, "total": 30}
 # The current number of nouns in the dataset

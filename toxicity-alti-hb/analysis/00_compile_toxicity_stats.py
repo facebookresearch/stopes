@@ -11,14 +11,13 @@ import os
 
 import pandas as pd
 from tqdm import tqdm
-
 from util import (
-    get_holistic_bias_metadata,
-    get_translations_with_metadata,
     BASE_TOXICITY_SAVE_FOLDER,
     LANG_ALLOWLIST,
     RAW_TOXICITIES_FOLDERS,
     TOXICITY_STAT_FOLDER_NAMES,
+    get_holistic_bias_metadata,
+    get_translations_with_metadata,
 )
 
 

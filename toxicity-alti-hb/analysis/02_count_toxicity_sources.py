@@ -13,11 +13,7 @@ import random
 import pandas as pd
 import sentencepiece as spm
 from tqdm import tqdm
-
 from util import (
-    get_holistic_bias_metadata_map,
-    get_per_line_data,
-    identify_toxic_words,
     END_PUNCTUATION,
     LANG_ALLOWLIST,
     LEAKED_LANG_TAGS,
@@ -26,6 +22,9 @@ from util import (
     SPM_TOKENIZATION_LANGS,
     TOXICITY_SOURCE_FOLDER,
     UNK_LANGS,
+    get_holistic_bias_metadata_map,
+    get_per_line_data,
+    identify_toxic_words,
 )
 
 
@@ -39,9 +38,7 @@ def count_toxicity_sources(skip_compilation: bool):
         os.makedirs(folder, exist_ok=True)
     log_path_template = os.path.join(log_folder, "{lang_string}.txt")
     full_result_path_template = os.path.join(full_result_folder, "{lang_string}.csv")
-    num_toxic_words_path = os.path.join(
-        save_folder, "num_toxic_words.csv"
-    )
+    num_toxic_words_path = os.path.join(save_folder, "num_toxic_words.csv")
     aligned_word_category_frac_path = os.path.join(
         save_folder, "aligned_word_category_fractions.csv"
     )

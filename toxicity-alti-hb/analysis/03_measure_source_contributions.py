@@ -19,22 +19,21 @@ import sentencepiece as spm
 from scipy.stats import median_test
 from statsmodels.stats.proportion import proportions_ztest
 from tqdm import tqdm
-
 from util import (
-    get_holistic_bias_metadata_map,
-    get_per_line_data,
-    identify_toxic_words,
     LANG_ALLOWLIST,
     LEAKED_LANG_TAGS,
     NONE_STRING,
     NUMBERS_OF_NOUNS,
-    SOURCE_CONTRIBUTIONS_FOLDER,
-    SOURCE_CONTRIBUTION_FULL_RESULTS_FOLDER,
     SOURCE_CONTRIBUTION_FULL_RESULT_STRING_COLUMNS,
+    SOURCE_CONTRIBUTION_FULL_RESULTS_FOLDER,
+    SOURCE_CONTRIBUTIONS_FOLDER,
     SOURCE_SENTENCES_PATH,
     SPM_MODEL_PATH,
     SPM_TOKENIZATION_LANGS,
     UNK_LANGS,
+    get_holistic_bias_metadata_map,
+    get_per_line_data,
+    identify_toxic_words,
 )
 
 
@@ -775,7 +774,7 @@ def calculate_gini_impurity(aligned_descriptor_word_list_sr: pd.Series) -> float
     word_list_fracs = {
         word_list: count / total_count for word_list, count in word_list_counter.items()
     }
-    impurity = 1 - sum(frac ** 2 for frac in word_list_fracs.values())
+    impurity = 1 - sum(frac**2 for frac in word_list_fracs.values())
     return impurity
 
 

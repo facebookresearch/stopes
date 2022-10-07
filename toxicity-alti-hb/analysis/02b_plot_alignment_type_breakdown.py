@@ -16,12 +16,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import pandas as pd
-
-from util import (
-    BASE_TOXICITY_SAVE_FOLDER,
-    LANG_NAMES_PATH,
-    TOXICITY_SOURCE_FOLDER,
-)
+from util import BASE_TOXICITY_SAVE_FOLDER, LANG_NAMES_PATH, TOXICITY_SOURCE_FOLDER
 
 
 def plot_alignment_type_breakdown():

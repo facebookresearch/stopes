@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import pandas as pd
 from matplotlib.colors import LogNorm
-
 from util import BASE_TOXICITY_SAVE_FOLDER
 
 
