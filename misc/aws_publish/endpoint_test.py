@@ -4,13 +4,15 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
 import json
+import time
+
 import requests
 
 API_KEY = "<enter api key here>"
 SECRET = "<enter secret here>"
 ENDPOINT = "<enter endoint here>"
+
 
 def mk_sample(sentence: str, uid: int, src: str, tgt: str):
     return {
@@ -56,6 +58,7 @@ def translate(paragraph: str, *, tgt: str, src: str = "en", model: str = None):
     x = api_call(data, model)
     return x
 
+
 def parse_response(response, throw=True):
     answer = [json.loads(l) for l in response.text.split("\n")]
     if "errorMessage" in answer[0]:
@@ -89,14 +92,17 @@ Gigaom
 Big data
 """
 
+
 def test_one(model=None):
     tr = translate(APACHE, tgt="zu", model=model).text
     print(tr)
+
 
 def stress_testing_qps(qps, duration, paragraph=APACHE):
     freq = 1 / qps
     n = qps * duration
     stress_testing(n, freq, paragraph)
+
 
 def stress_testing(n, freq, paragraph=APACHE):
     print(f"Stress testing with {n} parallel queries every {freq}s")
@@ -114,9 +120,7 @@ def stress_testing(n, freq, paragraph=APACHE):
     queries = []
     for _ in range(n):
         time.sleep(freq)
-        queries.append(
-            ex.submit(requests.post, ENDPOINT, data=data, headers=headers)
-        )
+        queries.append(ex.submit(requests.post, ENDPOINT, data=data, headers=headers))
 
     responses = [q.result() for q in queries]
     latencies = [r.elapsed.total_seconds() for r in responses]
@@ -128,10 +132,13 @@ def stress_testing(n, freq, paragraph=APACHE):
 
     translations = [parse_response(r, throw=False) for r in responses if r.ok]
     success = sum(translations[0] == t for t in translations)
-    assert success == len(responses), f"Received {success} valid translations in {len(responses)}"
+    assert success == len(
+        responses
+    ), f"Received {success} valid translations in {len(responses)}"
     assert not failures, len(failures)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_one()
     # stress_testing_qps(duration=1, qps=100)
     # stress_testing_qps(duration=60, qps=10)

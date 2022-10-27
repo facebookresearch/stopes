@@ -3,14 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-FROM nvidia/cuda:11.4.2-cudnn8-runtime-ubuntu20.04
+FROM nvidia/cuda:11.3.0-cudnn8-runtime-ubuntu20.04
 
 ENV PYTHONUNBUFFERED TRUE
 
 ARG tarball
 ARG requirements
 ARG my_secret
-ARG task_code
 ARG model_store
 ARG model_name
 
@@ -19,7 +18,6 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 
 RUN mkdir -p /home/model-server/ && mkdir -p /home/model-server/tmp
 COPY config.properties /home/model-server/config.properties
-COPY ${task_code}.json /home/model-server/code/
 
 ENV TEMP=/home/model-server/tmp
 ADD ${tarball} /home/model-server/code
@@ -45,7 +43,10 @@ RUN cd /tmp \
     && curl -O https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py
 
+# Install NLLB branch of fairseq, with GPU support
 RUN python -m pip install --no-cache-dir torch==1.12.1+cu113 torchaudio==0.12.1+cu113 torchserve -f https://download.pytorch.org/whl/torch_stable.html
+RUN git clone https://github.com/facebookresearch/fairseq --branch nllb --depth 5 fairseq_repo
+RUN cd fairseq_repo; pip install -e '.[dev]'
 
 WORKDIR /home/model-server/code
 

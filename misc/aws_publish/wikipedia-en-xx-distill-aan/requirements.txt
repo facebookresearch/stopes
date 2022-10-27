@@ -1,5 +1,1 @@
 sentencepiece
-
-# Install the fairseq packaged with the model
-# https://github.com/facebookresearch/fairseq/commit/eb61e229bedf02321bfef25cde3da28b3c155ade
--e ./fairseq[dev]
