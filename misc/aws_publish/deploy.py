@@ -25,7 +25,6 @@ from typing import Any
 import boto3
 import botocore
 import sagemaker
-
 from deploy_config import config
 
 logger = logging.getLogger("build")
@@ -133,7 +132,6 @@ class ModelDeployer:
         build_args = {
             "tarball": tarball,
             "requirements": setup_config["requirements"],
-            "task_code": setup_config["task"],
             "model_store": str(self.full_archive_path.parent),
             "model_name": self.full_archive_path.name,
         }
