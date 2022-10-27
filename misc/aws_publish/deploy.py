@@ -263,7 +263,7 @@ class ModelDeployer:
         os.remove(tarball)
         os.remove(mar)
 
-    def register_model(self):
+    def register_model(self) -> None:
         model_s3_path = "s3://" + self.model_s3_path()
         image_ecr_path = self.image_ecr_path
         logger.info(f"Deploying model {self.name} to Sagemaker")

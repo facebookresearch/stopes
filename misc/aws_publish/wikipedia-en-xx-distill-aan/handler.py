@@ -10,13 +10,13 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-sys.path.append("/home/model-server/code/fairseq")
 import fairseq.checkpoint_utils
 import sentencepiece
 import torch
 from fairseq.data import data_utils
 from fairseq.sequence_generator import SequenceGenerator
 from fairseq.tasks.translation import TranslationConfig, TranslationTask
+from ts.torch_handler.base_handler import BaseHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -48,7 +48,7 @@ DOT = re.compile(r"(?<!\.)\.(?![\d\.])")
 COLON = re.compile(r":(?![\da-zA-Z])")
 
 
-def zh_postprocess(input):
+def zh_postprocess(input: str) -> str:
     if len(QUOTES.findall(input)) == 2:
         s = QUOTES.split(input)
         input = "{}“{}”{}".format(s[0], s[1], s[2])
@@ -59,6 +59,8 @@ def zh_postprocess(input):
     input = STARTQUOTE.sub(r"“\1", input)
     input = ENDQUOTE.sub(r"\2“", input)
     input = HYPHEN.sub(r"——", input)
+    input = NUMERALS.sub(r" \1 ", input)
+    input = LATIN.sub(r" \1 ", input)
     input = SPACE.sub(r" ", input)
     input = PUNCT.sub(r"\1", input)
     input = PUNCT2.sub(r"\1", input)
@@ -94,7 +96,13 @@ class FakeGenerator:
         return [[{"tokens": tokens[:-1]}] for tokens in src_tokens]
 
 
-class Handler:
+# Type stub for torchserve context
+class Context(NamedTuple):
+    system_properties: dict
+    manifest: dict
+
+
+class Handler(BaseHandler):
     """Use Fairseq model for translation.
     To use this handler, download one of the Flores pretrained model:
 
@@ -107,25 +115,35 @@ class Handler:
     Notably there should be a "dict.txt" and a "sentencepiece.bpe.model".
     """
 
-    def initialize(self, context):
+    def __init__(self):
+        super().__init__()
+        self.initialized = False
+
+    def initialize(self, context: Context):
         """
         load model and extra files.
+
+        # Reference implementation: https://github.com/pytorch/serve/blob/master/ts/torch_handler/base_handler.py#L55
         """
         logger.info(
             f"Will initialize with system_properties: {context.system_properties}"
         )
-        model_pt_path, model_file_dir, device = self._handler_initialize(context)
-        self.device = device
+        properties = context.system_properties
+        model_pt_path = os.path.join(
+            properties["model_dir"], context.manifest["model"]["serializedFile"]
+        )
+        model_file_dir = properties["model_dir"]
+        self.device = (
+            "cuda:" + str(properties["gpu_id"])
+            if properties.get("gpu_id") is not None and torch.cuda.is_available()
+            else "cpu"
+        )
+
         config = json.loads(
             (Path(model_file_dir) / "model_generation.json").read_text()
         )
         directions = config.get("directions")
         self.supported_directions = set(directions) if directions else None
-
-        translation_cfg = TranslationConfig()
-        self.vocab = TranslationTask.load_dictionary(
-            str(Path(model_file_dir) / "dict.txt")
-        )
 
         spm_path = config.get("sentencepiece", "sentencepiece.bpe.model")
         self.spm = sentencepiece.SentencePieceProcessor()
@@ -136,10 +154,18 @@ class Handler:
             self.sequence_generator = FakeGenerator()
             logger.warning("Will use a FakeGenerator model, only testing SPM")
         else:
-            task = TranslationTask(translation_cfg, self.vocab, self.vocab)
-            [model], cfg = fairseq.checkpoint_utils.load_model_ensemble(
-                [model_pt_path], task=task
+            [model], cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task(
+                [model_pt_path],
+                arg_overrides={
+                    "data": ".",
+                    "source_lang": "eng",
+                    "target_lang": "ibo",
+                    "add_data_source_prefix_tags": False,
+                    "add_ssl_task_tokens": False,
+                    "finetune_dict_specs": None,
+                },
             )
+            self.vocab = task.dicts["eng"]
             model.eval().to(self.device)
             self.model = model
             logger.info(f"Loaded model from {model_pt_path} to device {self.device}")
@@ -149,6 +175,8 @@ class Handler:
             logger.info(
                 f"Will use the following config: {json.dumps(config, indent=4)}"
             )
+            if getattr(cfg.task, "lang_pairs", False):
+                self.supported_directions = set(cfg.task.lang_pairs)
             self.sequence_generator = SequenceGenerator(
                 [model], tgt_dict=self.vocab, **config["generation"]
             )
@@ -234,6 +262,7 @@ class Handler:
             }
             for translation, sample in zip(translations, samples)
         ]
+        responses.sort(key=lambda x: x["id"])
         return responses
 
     def accepts(self, sample) -> bool:
@@ -364,33 +393,14 @@ def wrap_as_batches(results, num_batches, sample2batch):
     return responses
 
 
-def mk_sample(text, tgt, i=0):
+def mk_sample(text, i, tgt, src="eng"):
     return {
         "uid": f"sample{i}",
         "sourceText": text,
-        "sourceLanguage": "eng",
+        "sourceLanguage": src,
         "targetLanguage": tgt,
     }
 
-
-class Context(NamedTuple):
-    system_properties: dict
-    manifest: dict
-
-    def _call_handler(self, data):
-        need_wrap = not isinstance(data, list)
-        if need_wrap:
-            data = [data]
-        bin_data = b"\n".join(json.dumps(d).encode("utf-8") for d in data)
-        torchserve_data = [{"body": bin_data}]
-        responses = handle(torchserve_data, self)
-        parsed_responses = [
-            json.loads(l)["translatedText"] for l in responses[0].splitlines()
-        ]
-        if need_wrap:
-            return parsed_responses[0]
-        else:
-            return parsed_responses
 
 
 def local_test():
@@ -403,10 +413,26 @@ def local_test():
             testcase(ctx)
 
 
+def _call_handler(ctx: Context, data):
+    need_wrap = not isinstance(data, list)
+    if need_wrap:
+        data = [data]
+    bin_data = b"\n".join(json.dumps(d).encode("utf-8") for d in data)
+    torchserve_data = [{"body": bin_data}]
+    responses = handle(torchserve_data, ctx)
+    parsed_responses = [
+        json.loads(l)["translatedText"] for l in responses[0].splitlines()
+    ]
+    if need_wrap:
+        return parsed_responses[0]
+    else:
+        return parsed_responses
+
+
 def test_no_unk(ctx):
     en_src = "a gazetteer compiled by Chang Qu (常璩) during the Western Jin Dynasty"
     isl_ref = "lögbók sem Chang Qu (常璩) tók saman á tímum Vestur-Jin-keisaraættarinnar"
-    isl_translated = ctx._call_handler(mk_sample(en_src, "isl"))
+    isl_translated = _call_handler(ctx, mk_sample(en_src, 0, "isl"))
     assert "<unk>" not in isl_translated
     # 璩 is really not part of the dict so we can't generate it.
     # assert "(常璩)" in isl_translated
@@ -421,19 +447,63 @@ Jazz is characterized by swing and blue notes, complex chords, call and response
 Jazz has roots in West African cultural and musical expression, and in African-American music traditions.
 """.strip().splitlines()
     mock_data = [
-        mk_sample(line, lang, i)
+        mk_sample(line, i, lang)
         for lang in ["oci", "lug", "zul", "ibo", "zho_simp", "isl", "hau"]
         for i, line in enumerate(JAZZ)
     ]
 
-    batch_responses = ctx._call_handler(mock_data)
+    breakpoint()
+    batch_responses = _call_handler(ctx, mock_data)
     print("==== batch ====")
     print("\n".join(batch_responses))
-    single_responses = [ctx._call_handler(d) for d in mock_data]
+    single_responses = [_call_handler(ctx, d) for d in mock_data]
     print("==== one by one ====")
     print("\n".join(single_responses))
     assert batch_responses == single_responses
 
+
+def test_from_french_fr(ctx):
+    SENEGAL = """
+L'explication de l'origine du nom Sénégal reste sujette à débats.
+Dès 1850, l'abbé David Boilat, quarteron et fils de signare (riche commerçante métisse), y voyait dans ses Esquisses sénégalaises une déformation de l'expression wolof suñu gaal, c'est-à-dire « notre pirogue ».
+Très populaire, cette version est en général relayée par les médias et favorisée par les autorités dans la mesure où elle met en avant la solidarité nationale.
+Elle est pourtant contestée depuis les années 1960 et plusieurs autres étymologies ont été avancées, celle considérée actuellement comme la plus plausible rattachant le toponyme à une tribu berbère du Sahara, les Sanhadja (« Zenaga » en berbère).
+"""
+
+    print(tr(ctx, SENEGAL, tgt=["wol", "oci", "lug", "zul", "ibo", "zho_Hans", "isl", "hau"]))
+
+
+def test_yue(ctx):
+    CORONAVIRUS = """
+The scientific name Coronavirus was accepted as a genus name by the International Committee for the Nomenclature of Viruses (later renamed International Committee on Taxonomy of Viruses) in 1971.
+As the number of new species increased, the genus was split into four genera, namely Alphacoronavirus, Betacoronavirus, Deltacoronavirus, and Gammacoronavirus in 2009.
+The common name coronavirus is used to refer to any member of the subfamily Orthocoronavirinae.
+As of 2020, 45 species are officially recognised.
+"""
+
+    JAZZ = """
+Jazz is a music genre that originated in the African-American communities of New Orleans, Louisiana, United States, in the late 19th and early 20th centuries, with its roots in blues and ragtime.
+Since the 1920s Jazz Age, it has been recognized as a major form of musical expression in traditional and popular music, linked by the common bonds of African-American and European-American musical parentage.
+Jazz is characterized by swing and blue notes, complex chords, call and response vocals, polyrhythms and improvisation.
+Jazz has roots in West African cultural and musical expression, and in African-American music traditions.
+"""
+    print(tr(ctx, CORONAVIRUS, tgt="yue"))
+    print(tr(ctx, JAZZ, tgt="yue"))
+
+
+def tr(ctx: Context, text: str, tgt, src: str = "eng") -> str:
+    tgt = [tgt] if isinstance(tgt, str) else tgt
+    lines = text.strip().splitlines()
+    mock_data = [
+        mk_sample(line, i * len(lines) + j, tgt=lang, src=src)
+        for i, lang in enumerate(tgt)
+        for j, line in enumerate(lines)
+    ]
+    mock_data.sort(key=lambda x: x["uid"])
+    print([x["uid"] for x in mock_data])
+
+    batch_responses = _call_handler(ctx, mock_data)
+    return("\n".join(batch_responses))
 
 if __name__ == "__main__":
     local_test()
