@@ -1,13 +1,6 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
+import boto3
 import json
 import os
-
-import boto3
 
 runtime = boto3.client("sagemaker-runtime")
 ENDPOINT_NAME = os.environ["ENDPOINT_NAME"]
@@ -16,18 +9,43 @@ STAGING_SECRET = os.environ["STAGING_SECRET"]
 
 assert SECRET
 assert STAGING_SECRET
+assert ENDPOINT_NAME
 
 WIKI2ISO = {
-    "en": "eng",  # English
-    "oc": "oci",  # Occitan
-    "lg": "lug",  # Luganda
-    "zu": "zul",  # Zulu
-    "ig": "ibo",  # Igbo
-    "zh": "zho_simp",  # Chinese simplified
-    "is": "isl",  # Icelandic
-    "ha": "hau",  # Hausa
+    "as": "asm", # Assamese
+    "ast": "ast", # Asturian
+    "ay": "ayr", # Central Aymara
+    "ba": "bak", # Bashkir
+    "bem": "bem", # Bemba
+    "ca": "cat", # Catalan
+    "ckb": "ckb", # Central Kurdish
+    "en": "eng", # English
+    "fr": "fra", # French
+    "ha": "hau", # Hausa
+    "ig": "ibo", # Igbo
+    "ilo": "ilo", # Iloko
+    "is": "isl", # Icelandic
+    "kg": "kon", # Kongo
+    "ln": "lin", # Lingala
+    "lg": "lug", # Ganda
+    "nso": "nso", # Norther Sotho
+    "oc": "oci", # Occitan
+    "om": "orm", # Oromo
+    "pt": "por", # Portuguese
+    "ss": "ssw", # Swati
+    "qu": "que", # Quechua
+    "ru": "rus", # Russian
+    "es": "spa", # Spanish
+    "ss": "ssw", # Swati
+    "ti": "tir", # Tigrinya
+    "tn": "tsn", # Tswana
+    "ts": "tso", # Tswana
+    "wo": "wol", # Wolof
+    "zh-yue": "yue", # Yue Chinese
+    "yue": "yue",
+    "zh": "zho_simp", # Chinese
+    "zu": "zul", # Zulu
 }
-
 
 def lambda_handler(event, context):
     """
@@ -40,7 +58,7 @@ def lambda_handler(event, context):
           "targetLanguage": "zh",
         }
       ],
-      "model": "endpoint-name",
+      "model_name": "endpoint-name",
       "secret": "some_top_secret"
     }
 
@@ -48,21 +66,26 @@ def lambda_handler(event, context):
     """
     if event.get("secret") not in (SECRET, STAGING_SECRET):
         raise Exception("Invalid authentication")
-    endpoint = event.get("model") or ENDPOINT_NAME
+    endpoint = event.get("model_name", ENDPOINT_NAME)
+    if event.get("secret") == STAGING_SECRET:
+        endpoint = "wikipedia-staging"
+
     for sample in event["samples"]:
         src = sample["sourceLanguage"]
         tgt = sample["targetLanguage"]
         try:
-            sample["sourceLanguage"] = WIKI2ISO.get(src, src)
-            sample["targetLanguage"] = WIKI2ISO.get(tgt, tgt)
+            sample["sourceLanguage"] = WIKI2ISO[src]
+            sample["targetLanguage"] = WIKI2ISO[tgt]
         except KeyError as e:
-            raise Exception(
-                f"Unknown language in {src}->{tgt}. Chose from: {', '.join(WIKI2ISO.keys())}"
-            )
+            error_message = f"CLIENTERROR Unknown language in {src}->{tgt}. Chose from: {', '.join(WIKI2ISO.keys())}"
+
+            return error_message
+
 
     payload = "\n".join(json.dumps(s) for s in event["samples"])
 
     # Invoke sagemaker endpoint to get model result
+    assert endpoint
     try:
         response = runtime.invoke_endpoint(
             EndpointName=endpoint,
