@@ -24,33 +24,44 @@ There are two main "services" that interest us:
 
 # How to ?
 
-## How to deploy a model from the FAIR cluster
+## How to deploy a model from your machine
 
 ### Pre-requirements
 
-You'll need a conda environment with pytorch installed.
+There are two sets of requirements.
+To build the docker image and upload the model,
+you only need to have a python venv with `pip install -r requirements.txt`
 
-conda activate ???
-cd misc/aws_publish
-pip install -r requirements.txt
+To test the model locally you need to have a venv with pytorch
+and the correct fairseq branch installed.
 
-You also need to be able to create docker images:
+```
+python -m pip install --no-cache-dir torch==1.12.1+cu113 torchaudio==0.12.1+cu113 torchserve -f https://download.pytorch.org/whl/torch_stable.html
+git clone https://github.com/facebookresearch/fairseq --branch nllb --depth 5 fairseq_repo
+cd fairseq_repo; pip install -e '.[dev]'; cd -
+```
 
-`sudo usermod -aG docker $USER`
+(see Dockerfile for reference instruction)
 
-You'll need to exit and relogin for this change to take effect.
+You also need the model itself. 
+Unzip the content of https://dl.fbaipublicfiles.com/large_objects/nllb/models/wiki/checkpoint.22-06-02-08-21-29.zip (3GB download) in `wikipedia_distillated`.
+In `wikipedia_distillated` you should see the files
+`checkpoint.pt`, `sentencepiece.bpe.model`,
+and a bunch of `dict.*.txt` files,
+along side the pre-existing `handler.py`
 
 ### Run local tests on the model
 
-cd wikipedia-en-xx-distill-aan
+cd wikipedia_distillated
 python handler.py
 
 Note that the tests and the handler may need some adjustment 
 if you change how the model is trained.
+In particular the inference preprocessing must match the training preprocessing.
 
 ### Upload the model through command line
 
-`python deploy.py -f $FOLDER`
+`python deploy.py -f ./wikipedia_distillated/`
 
 This will:
 * build a docker image
@@ -61,6 +72,14 @@ This will:
 
 **Note**: you can pass the name of a docker image to reuse, 
 skipping the long docker build with `--docker`. 
+
+**Note**: I'm using an ubuntu image, those are big, you can probably use another
+image from https://hub.docker.com/r/nvidia/cuda.
+I'm just not sure about the exact runtime dependencies of torchserve and 
+the part of pytorch we use.
+`cudnn` is also probably not required, so you could also try an image without it.
+
+The model should appear at https://us-east-1.console.aws.amazon.com/sagemaker/home?region=us-east-1#/models/
 
 ## How to test a staging model
 
@@ -99,7 +118,6 @@ To change the model used by an endpoint:
 * Chose a model from the list
 * Change the default instance type to something with gpu. 
 Typically ml.g4dn.4xlarge is big enough for our models.
-ml.p3.2xlarge could also be an option.
 * Chose how many instances to use
 * Name the endpoint configuration with the model name and instance name
 * Create the endpoint
