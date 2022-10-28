@@ -447,8 +447,8 @@ Jazz is characterized by swing and blue notes, complex chords, call and response
 Jazz has roots in West African cultural and musical expression, and in African-American music traditions.
 """.strip().splitlines()
     mock_data = [
-        mk_sample(line, i, lang)
-        for lang in ["oci", "lug", "zul", "ibo", "zho_simp", "isl", "hau"]
+        mk_sample(line, f"{lang}_{i}", lang)
+        for lang in ["hau", "ibo", "isl", "lug", "oci", "zho_simp", "zul"]
         for i, line in enumerate(JAZZ)
     ]
 
@@ -492,14 +492,13 @@ Jazz has roots in West African cultural and musical expression, and in African-A
 
 
 def tr(ctx: Context, text: str, tgt, src: str = "eng") -> str:
-    tgt = [tgt] if isinstance(tgt, str) else tgt
+    tgt = [tgt] if isinstance(tgt, str) else sorted(tgt)
     lines = text.strip().splitlines()
     mock_data = [
-        mk_sample(line, i * len(lines) + j, tgt=lang, src=src)
-        for i, lang in enumerate(tgt)
-        for j, line in enumerate(lines)
+        mk_sample(line, f"{lang}_{i}", tgt=lang, src=src)
+        for lang in tgt
+        for i, line in enumerate(lines)
     ]
-    mock_data.sort(key=lambda x: x["uid"])
     print([x["uid"] for x in mock_data])
 
     batch_responses = _call_handler(ctx, mock_data)
