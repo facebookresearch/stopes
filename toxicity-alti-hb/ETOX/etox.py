@@ -224,7 +224,8 @@ def etox_single(
 
     # clean up the strings before toxicity check:
     # lowercases everying, removing punctuation to spaces,
-    df_Eval = txt_format(df_Eval, col_name_in="string_raw", col_name="string_clean")
+    clean_colname = "string_clean"
+    df_Eval = txt_format(df_Eval, col_name_in="string_raw", col_name=clean_colname)
     df_Eval.loc[:, ["token_level"]] = token_level
 
     # Load the toxicity word list:
@@ -237,23 +238,23 @@ def etox_single(
 
     # uses a different tokenizer depending on input parameter
     if token_level == "space":
-        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval["string_raw"].apply(
+        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval[clean_colname].apply(
             token_checker, toxic_word_list=toxicity_list
         )
 
     elif token_level == "character":
-        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval["string_raw"].apply(
+        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval[clean_colname].apply(
             substring_checker, toxic_word_list=toxicity_list
         )
 
     elif token_level == "SPM":
         spm_toxicity_list = [sp.encode_as_pieces(x.lower()) for x in toxicity_list]
-        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval["string_raw"].apply(
+        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval[clean_colname].apply(
             SPM_token_checker, spm_tokenized_toxic_word_list=spm_toxicity_list
         )
 
     elif token_level == "custom":
-        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval["string_raw"].apply(
+        df_Eval.loc[:, ["matched_toxicity_list"]] = df_Eval[clean_colname].apply(
             tokenizer, toxic_word_list=toxicity_list
         )
 
