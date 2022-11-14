@@ -46,7 +46,7 @@ class CalculateDistancesConfig:
 
     num_probe: int = 128
     knn: int = 16
-    gpu_type: str = "fp16-shard"
+    gpu_type: tp.Optional[str] = "fp16-shard"
     gpu_memory_gb: int = 32
     save_dists_as_fp16: bool = True
     embedding_dimensions: int = 1024

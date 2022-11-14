@@ -38,11 +38,15 @@ classifiers=[
     "emoji",
   ]
   mining = [
+    "requests",
     "fairscale",
-    # "fairseq", Fairseq can't be installed normally
-    "faiss-gpu",
+#    "fairseq==0.12.1",
+    "faiss-cpu",
     "sentencepiece",
     "numpy",
+  ]
+  mining_gpu = [
+    "faiss-gpu",
   ]
   dev = [
       # Test

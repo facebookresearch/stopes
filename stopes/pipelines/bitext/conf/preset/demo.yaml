@@ -39,6 +39,7 @@ train_index:
 calculate_distances:
   config:
     gpu_memory_gb: 32
+    gpu_type: null
 
 # Provides info about the data. A lot of this is used to generate nice output
 # file names.
