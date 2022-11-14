@@ -65,13 +65,17 @@ def test_bash_pipefail():
 def open_file_cmd(filename: str) -> str:
     if isinstance(filename, Path):
         filename = shlex.quote(str(filename))
-    cat = "cat"
+    cat = ["cat"]
     if filename.endswith(".xz"):
-        cat = "xzcat"
+        cat = ["xzcat"]
     if filename.endswith(".gz"):
-        cat = "zcat"
+        import platform
+        if platform.system() == 'Darwin':
+            cat = ["gunzip","--to-stdout"]
+        else:
+            cat = ["zcat"]
 
-    return shlex.join((cat, filename))
+    return shlex.join(cat + [filename])
 
 
 def open(
