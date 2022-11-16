@@ -1,8 +1,6 @@
 # Annotations from human evaluations
 
-Annotations are available from this link:
-
-https://tinyurl.com/hbtoxicannotation
+Annotations are available to download from [here](https://tinyurl.com/hbtoxicannotation).
 
 
 The folder contains 16 TSV files, 2 files for each of the below languoids.
