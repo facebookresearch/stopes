@@ -79,14 +79,11 @@ print(compute_alti_metrics(*compute_alti_nllb(hub, src, tgt2))['avg_sc'])  # 0.4
 # Citation
 If you use ALTI+ in your work, please consider citing:
 ```bibtex
-@misc{alti_plus,
+@inproceedings{alti_plus,
     title = {Towards Opening the Black Box of Neural Machine Translation: Source and Target Interpretations of the Transformer},
     author = {Ferrando, Javier and Gállego, Gerard I. and Alastruey, Belen and Escolano, Carlos and Costa-jussà, Marta R.},
-    doi = {10.48550/ARXIV.2205.11631},
-    url = {https://arxiv.org/abs/2205.11631},
-    keywords = {Computation and Language (cs.CL), FOS: Computer and information sciences, FOS: Computer and information sciences},
-    publisher = {arXiv},
-    year = {2022},
-    copyright = {arXiv.org perpetual, non-exclusive license}
+    booktitle = {Proc of the EMNLP},
+    url = {https://preview.aclanthology.org/emnlp-22-ingestion/2022.emnlp-main.599.pdf},
+    year = {2022}
 }
 ```
