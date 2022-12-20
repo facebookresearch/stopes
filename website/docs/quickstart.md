@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Getting started with stopes
+# Getting started with mining
 
 Welcome to `stopes`, this is a quickstart guide to discover how to run automated pipelines with `stopes`. In this example, you'll be running
 global mining with the `stopes` toolchain. (Inspired by
@@ -22,7 +22,7 @@ has some interesting monolingual data for some African languages.
 You also need some trained encoder, we usually use `stopes` with LASER and we can
 find such trained encoders for the languages in the WMT22 shared task too.
 
-The `demo/prepare.sh` script will download the monolingual data and LASER encoders
+The `demo/mining/prepare.sh` script will download the monolingual data and LASER encoders
 for you. Start by running this script and wait for the download to finish.
 
 :::tip
@@ -64,7 +64,7 @@ Language codes are important, but not standardized everywhere. The `stopes` libr
 
 You can now start the pipeline with:
 ```bash
-python -m stopes.pipelines.bitext.global_mining_pipeline src_lang=fuv tgt_lang=zul demo_dir=.../stopes-repo/demo +preset=demo output_dir=. embed_text=laser3
+python -m stopes.pipelines.bitext.global_mining_pipeline src_lang=fuv tgt_lang=zul demo_dir=.../stopes-repo/demo/mining +preset=demo output_dir=. embed_text=laser3
 ```
 
 - `src_lang` and `tgt_lang` specify the pair of languages we want to process,
@@ -97,7 +97,7 @@ pip install --user sentence-transformers
 Here is an example to run LaBSE:
 
 ```bash
-python -m stopes.pipelines.bitext.global_mining_pipeline src_lang=fuv tgt_lang=zul demo_dir=.../stopes-repo/demo +preset=demo output_dir=. embed_text=hf_labse lang_configs=null
+python -m stopes.pipelines.bitext.global_mining_pipeline src_lang=fuv tgt_lang=zul demo_dir=.../stopes-repo/demo/mining +preset=demo output_dir=. embed_text=hf_labse lang_configs=null embedding_dimensions=768
 ```
 
 :::tip

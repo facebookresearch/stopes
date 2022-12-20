@@ -6,21 +6,21 @@
 
 from pathlib import Path
 
-import omegaconf
-import pytest
-
 from stopes.core.jobs_registry.registry import JobsRegistry
-from stopes.core.jobs_registry.submitit_slurm_job import RegistryStatuses, SubmititJob
-from stopes.core.launcher import Launcher, SubmititLauncher
+from stopes.core.jobs_registry.submitit_slurm_job import RegistryStatuses
+from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import StopesModule
-
-from . import hello_world
+from stopes.core.tests.hello_world import (
+    HelloWorldArrayConfig,
+    HelloWorldArrayModule,
+    HelloWorldConfig,
+    HelloWorldModule,
+)
 
 
 async def schedule_module_and_check_registry(
     launcher: Launcher,
-    module: StopesModule,
-    config: omegaconf.DictConfig,
+    instantiated_module: StopesModule,
     total_scheduled_jobs: int,
 ):
     """
@@ -36,7 +36,6 @@ async def schedule_module_and_check_registry(
     # Job registry must be empty initially
     assert 0 == jobs_registry.get_total_job_count()
 
-    instantiated_module = module(config)
     job = launcher.schedule(instantiated_module)
     await job
 
@@ -45,50 +44,44 @@ async def schedule_module_and_check_registry(
         assert current_stopes_job.get_status() == RegistryStatuses.COMPLETED.value
 
 
-@pytest.mark.parametrize("distributed", [True, False])
-async def test_successful_single_job(tmp_path: Path, distributed: bool):
+async def test_successful_single_job(tmp_path: Path):
     """
     Tests the registry's functionality on a single module.
     """
-    launcher = SubmititLauncher(
+    launcher = Launcher(
         config_dump_dir=tmp_path / "conf", log_folder=tmp_path / "logs", cluster="local"
     )
 
     await schedule_module_and_check_registry(
         launcher,
-        hello_world.HelloWorldModule,
-        config=omegaconf.OmegaConf.create(
-            {
-                "greet": "hello",
-                "person": "world",
-                "duration": 0.5,
-                "distributed": distributed,
-            }
+        HelloWorldModule(
+            HelloWorldConfig(
+                greet="hello",
+                person="world",
+                duration=0.5,
+            )
         ),
         total_scheduled_jobs=1,
     )
 
 
-@pytest.mark.parametrize("distributed", [True, False])
-async def test_successful_array_jobs(tmp_path: Path, distributed: bool):
+async def test_successful_array_jobs(tmp_path: Path):
     """
     Tests the registry's functionality on an array module
     """
-    launcher = SubmititLauncher(
+    launcher = Launcher(
         config_dump_dir=tmp_path / "conf", log_folder=tmp_path / "logs", cluster="local"
     )
     team = ["Anna", "Bob", "Eve"]
 
     await schedule_module_and_check_registry(
         launcher,
-        hello_world.HelloWorldArrayModule,
-        config=omegaconf.OmegaConf.create(
-            {
-                "greet": "hello",
-                "persons": team,
-                "duration": 0.5,
-                "distributed": distributed,
-            }
+        HelloWorldArrayModule(
+            HelloWorldArrayConfig(
+                greet="hello",
+                persons=team,
+                duration=0.5,
+            )
         ),
         total_scheduled_jobs=len(team),
     )

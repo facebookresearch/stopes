@@ -105,6 +105,7 @@ Because you will most often always use the same data for your runs, there is no 
 
 The pipeline is made of seven main steps:
 
+* split_in_shards (optional)
 * embed_text
 * train_index
 * populate_index
@@ -112,6 +113,7 @@ The pipeline is made of seven main steps:
 * calculate_distances
 * mine_indexes
 * mine_sentences
+* merge_shards (optional)
 
 Each of them is configured as a "group" and their configurations can be overridden by switching groups on the cli as explained above. This override can also completely switch the code/module that is being used to compute this step, without changing the pipeline itself.
 
@@ -143,6 +145,24 @@ embed_text.config.encoder.spm_model=path_to_spm_model
 ```
 
 
+### Splitting and merging languages
+For some large languages, the mining might fail because of out-of-memory errors, especially if the FAISS indexes are stored on GPU. To mitigate this probelm, you can split a language into shards, perform the mining on them in parallel, and then merge the results. 
+
+The first optional module, `split_in_shards`, can randomly split the language (inclusing both text files and metadata files, if they exist) into several shards. 
+To use this option, you should specify the parameter `max_shard_size`, and the languages with more total lines than this number will be automatically split into smaller shards. 
+
+Alternatively, you can manually split the data for the language and configure it as several separate "languages", e.g. `eng0,eng1,eng2`. In this case, you can indicate in the mining config that they should be merged into a single language after mining:
+```
+sharded_langs:
+  eng:
+    - eng0
+    - eng1
+    - eng2
+```
+
+When you provide `max_shard_size` or `sharded_langs`, the module `merge_shards` is called in the end of the pipeline. It merges the mined bitexts for the sharded languages together and sorts the results (both text and meta files) in the order of decreasing alignment score.
+
+**Note** that the mined sentence pairs are filtered by the [margin score](https://aclanthology.org/P19-1309/) that depends not only on the sentences themselves, but also on their nearest neighbours in the dataset. Therefore, when you mine parallel sentences from subsets of a language and then merge them, you may end up with more sentence pairs than if you mined from the whole language at once. This effect may be countered by adjusting the mining threshold or by filtering the sentence pairs after the mining.
 
 # Sweeping (multi-run)
 

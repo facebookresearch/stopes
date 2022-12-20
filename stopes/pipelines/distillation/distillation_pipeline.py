@@ -17,7 +17,7 @@ from omegaconf import MISSING, DictConfig, OmegaConf
 
 from stopes.core import utils
 from stopes.core.launcher import Launcher
-from stopes.core.stopes_module import DistributedRequirements
+from stopes.core.stopes_module import Requirements
 from stopes.modules.preprocess.bitext_processor import BitextProcessorConfig
 from stopes.modules.preprocess.line_processor import LineProcessorModule
 from stopes.modules.preprocess.multiproc_bitext_processor import (
@@ -96,7 +96,7 @@ async def bitext_clean_helper(
     with utils.clone_config(config) as bitext_config:
         bitext_config.custom_name = f"bitext_clean_{lang_pair}.{tgt_lang}"
         bitext_config.shards = [([str(file) for file in file_pair])]
-        bitext_config.requirements = DistributedRequirements(**config.requirements)
+        bitext_config.requirements = Requirements(**config.requirements)
         bitext_config.bitext_processor._target_ = (
             f"{BitextSplitNormalizeFilterLID.__module__}.BitextSplitNormalizeFilterLID"
         )

@@ -8,5 +8,5 @@ max_sentences:
 max_tokens: 12_000
 stable_sort: False
 normalize: False
-fp16_storage: False
+fp16: False
 cpu: False

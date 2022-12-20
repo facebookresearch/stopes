@@ -7,21 +7,22 @@
 import dataclasses
 import logging
 import math
-import os
 import shutil
 import typing as tp
 from pathlib import Path
 
-import faiss
 import numpy as np
 import submitit
 from omegaconf.omegaconf import MISSING
 
 import stopes.core
+from stopes.core.utils import measure
 from stopes.modules.bitext.indexing.train_index import index_to_gpu
+from stopes.utils.data_utils import DataConfig
 from stopes.utils.embedding_utils import Embedding
 
-logger = logging.getLogger("stopes.populate_faiss_index")
+if tp.TYPE_CHECKING:
+    import faiss
 
 
 @dataclasses.dataclass
@@ -31,10 +32,15 @@ class PopulateFAISSIndexConfig:
     index: str = MISSING
     index_type: str = MISSING
     embedding_files: tp.List[str] = MISSING
+    chunk_size: int = 2**14
 
     use_gpu: bool = False
     num_cpu: int = 40
     embedding_dimensions: int = 1024
+    fp16: bool = False
+
+    enable_checkpointing: bool = False
+    data: DataConfig = MISSING
 
 
 @dataclasses.dataclass
@@ -55,7 +61,7 @@ class CheckpointSummary:
         The only difference is the format of storing the index: as a faiss.Index vs as written to a file.
     """
 
-    partial_idx: faiss.Index
+    partial_idx: "faiss.Index"
     partial_idx_file: tp.Optional[Path]
     idx_size_before_populating_embedding: tp.Optional[int]
     is_partial_file_valid: bool
@@ -74,9 +80,8 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
         ).resolve()
         self.lang_output_dir.mkdir(exist_ok=True)
 
-        fp16 = getattr(self.config, "fp16_embeddings", False)
+        fp16 = getattr(self.config, "fp16", False)
         self.dtype = np.float16 if fp16 else np.float32
-        logger.info(f"embedding dtype: {self.dtype}")
         self.checkpoint_summary = (
             CheckpointSummary(
                 partial_idx=None,
@@ -89,16 +94,9 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
             else checkpoint_summary
         )
 
-        # Calculate original size of index (i.e. size of index before we start populating the embedding onto it)
-        self.checkpoint_summary.idx_size_before_populating_embedding = (
-            self.checkpoint_summary.idx_size_before_populating_embedding
-            or faiss.read_index(str(self.config.index)).ntotal
-        )
-
     def requirements(self):
-        return stopes.core.DistributedRequirements(
+        return stopes.core.Requirements(
             nodes=1,
-            # mem_gb=500,
             tasks_per_node=1,
             gpus_per_node=1 if self.config.use_gpu else 0,
             cpus_per_task=self.config.num_cpu,
@@ -108,14 +106,24 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
     def array(self):
         return self.config.embedding_files
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ):
+        import faiss
+
+        logger = logging.getLogger("stopes.populate_faiss_index")
+
+        # Calculate original size of index (i.e. size of index before we start populating the embedding onto it)
+        self.checkpoint_summary.idx_size_before_populating_embedding = (
+            self.checkpoint_summary.idx_size_before_populating_embedding
+            or faiss.read_index(str(self.config.index)).ntotal
+        )
+
         lang_output_dir = Path(self.lang_output_dir)
         file_name = f"populate_index.{self.config.index_type}.{self.config.lang}.{iteration_index:03d}.data.idx"
-        populated_index = lang_output_dir / file_name
+        populated_index_path = lang_output_dir / file_name
 
         if Path(iteration_value).stat().st_size == 0:
             logger.warning(
@@ -133,7 +141,7 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
             and (not self.checkpoint_summary.is_partial_idx_valid)
         ):
             # this means we're entering the job for the very first time (haven't even started the first checkpoint)
-            self.checkpoint_summary.partial_idx_file = populated_index.with_suffix(
+            self.checkpoint_summary.partial_idx_file = populated_index_path.with_suffix(
                 ".checkpoint"
             )
             # since we're going to start the 1st checkpoint, copy the trained index to the partial_idx_file. This will be populated with a single shard
@@ -165,6 +173,8 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
                 self.config.embedding_dimensions,
                 dtype=self.dtype,
                 gpu=self.config.use_gpu,
+                chunk_size=getattr(self.config, "chunk_size", 2**14),
+                enable_checkpointing=self.config.enable_checkpointing,
             )
 
         except Exception as e:
@@ -174,20 +184,17 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
             raise e
 
         # The process is complete: copying completed (checkpointed) index onto return value file
-        shutil.copyfile(
-            str(self.checkpoint_summary.partial_idx_file),
-            str(populated_index),
+        populated_index_path = self.checkpoint_summary.partial_idx_file.replace(
+            populated_index_path
         )
         self.checkpoint_summary.is_partial_file_valid = False
-        self.checkpoint_summary.partial_idx_file.unlink()
-        logger.info(f"Populated index, can be found in output file: {populated_index}")
-        return populated_index
+        logger.info(
+            f"Populated index, can be found in output file: {populated_index_path}"
+        )
+        return populated_index_path
 
     def name(self):
         return f"populate_index.{self.config.index_type}.{self.config.lang}"
-
-    def comment(self):
-        return f"Populating FAISS index {self.config.index} for {self.config.lang}"
 
     def checkpoint(
         self, *args: tp.Any, **kwargs: tp.Any
@@ -195,7 +202,9 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
         return submitit.helpers.DelayedSubmission(
             PopulateFAISSIndexModule(
                 config=self.config,
-                checkpoint_summary=self.checkpoint_summary,
+                checkpoint_summary=self.checkpoint_summary
+                if self.config.enable_checkpointing
+                else None,
             ),
             *args,
             **kwargs,
@@ -207,19 +216,14 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ) -> bool:
+        import faiss
+
         if Path(iteration_value).stat().st_size == 0:
-            logger.info(
-                "Within populate_faiss_index module validate: Embedding shard is empty"
-            )
             assert output is None, "embedding is empty, shouldn't populate anything"
             return True
         assert output.exists(), f"index file {output} is missing"
         idx = faiss.read_index(str(output))
-        nbex = len(
-            Embedding(
-                iteration_value, self.config.embedding_dimensions, dtype=self.dtype
-            )
-        )
+        nbex = len(Embedding(iteration_value))
         assert (
             idx.ntotal == nbex
         ), f"expected {nbex} sentences, only found {idx.ntotal} in index {output} populated from {iteration_value}."
@@ -234,18 +238,22 @@ def add_embedding_to_index(
     dim: int,
     dtype=np.float32,
     gpu: bool = True,
-) -> faiss.Index:
-    assert checkpoint_summary is not None, f"checkpoint_summary must not be None"
-    embedding = Embedding(embeddings_file, dim, dtype=dtype)
+    chunk_size: int = 2**14,
+    enable_checkpointing: bool = False,
+) -> "faiss.Index":
+    import faiss
+
+    logger = logging.getLogger("stopes.populate_faiss_index")
+    assert checkpoint_summary is not None, "checkpoint_summary must not be None"
+    embedding = Embedding(embeddings_file)
     assert isinstance(checkpoint_summary.partial_idx, faiss.Index)
     partial_idx = checkpoint_summary.partial_idx
     n_total_start = partial_idx.ntotal
     if gpu:
-        partial_idx = index_to_gpu(partial_idx)
+        with measure("index on gpu", logger):
+            partial_idx = index_to_gpu(partial_idx)
 
     with embedding.open_for_read(mode="memory") as data:
-        chunk_size = 2**14  # Speed gains are marginal beyond 10k embeddings
-
         # Below, we calculate how much of the embedding is already populated onto the index
         # checkpointed_embedding_starting_row is the starting row to continue on from (every row before this we've already completed/checkpointed)
         checkpointed_embedding_starting_row = (
@@ -266,50 +274,61 @@ def add_embedding_to_index(
             for chunk in np.array_split(
                 data[checkpointed_embedding_starting_row:], num_chunks
             ):
-
                 assert (
                     checkpoint_summary.is_partial_idx_valid
                     and checkpoint_summary.is_partial_file_valid
-                ), f"Both partial idx and partial idx file must be valid before proceeding to work on current checkpoint"
+                ), "Both partial idx and partial idx file must be valid before proceeding to work on current checkpoint"
 
                 embedding_iterator += chunk.shape[0]
+                should_log = embedding_iterator % 50_000 == 0
 
                 # fp16 currently not supported by FAISS
                 if dtype == np.float16:
                     chunk = chunk.astype(np.float32)
-                faiss.normalize_L2(chunk)
+                with measure("normalize", logger, enable_log=should_log):
+                    faiss.normalize_L2(chunk)
 
                 # Add chunk to partial index (and while this happens, keep is_partial_idx_valid as False)
                 checkpoint_summary.is_partial_idx_valid = False
-                partial_idx.add(chunk)
+                with measure(
+                    f"adding {chunk.shape[0]}/{length_of_remaining_embedding}",
+                    logger,
+                    enable_log=should_log,
+                ):
+                    partial_idx.add(chunk)
                 checkpoint_summary.is_partial_idx_valid = True
 
-                # TODO: make optional
-                # this partial checkpointing is needed to protect us from preemption
-                # but is quite slow, and when we aren't afraid of preemption we should skip it.
-                # Write partial index to the partial index file (and while this happens, keep is_partial_file_valid as False)
-                checkpoint_summary.is_partial_file_valid = False
-                partial_cpu_idx = (
-                    faiss.index_gpu_to_cpu(partial_idx) if gpu else partial_idx
-                )
-                faiss.write_index(
-                    partial_cpu_idx,
-                    str(checkpoint_summary.partial_idx_file),
-                )
-                checkpoint_summary.is_partial_file_valid = True
+                if enable_checkpointing:
+                    with measure("checkpointing", logger, enable_log=should_log):
+                        # this partial checkpointing is needed to protect us from preemption
+                        # but is quite slow, and when we aren't afraid of preemption we should skip it.
+                        # Write partial index to the partial index file (and while this happens, keep is_partial_file_valid as False)
+                        checkpoint_summary.is_partial_file_valid = False
+                        partial_cpu_idx = (
+                            faiss.index_gpu_to_cpu(partial_idx) if gpu else partial_idx
+                        )
+                        faiss.write_index(
+                            partial_cpu_idx,
+                            str(checkpoint_summary.partial_idx_file),
+                        )
+                        checkpoint_summary.is_partial_file_valid = True
 
     # Write partial index to the partial index file (and while this happens, keep is_partial_file_valid as False)
     checkpoint_summary.is_partial_file_valid = False
-    if gpu:
-        partial_idx = faiss.index_gpu_to_cpu(partial_idx)
-    faiss.write_index(
-        partial_idx,
-        str(checkpoint_summary.partial_idx_file),
-    )
-    checkpoint_summary.is_partial_file_valid = True
+    with measure("writing index", logger):
+        if gpu:
+            partial_idx = faiss.index_gpu_to_cpu(partial_idx)
+        faiss.write_index(
+            partial_idx,
+            str(checkpoint_summary.partial_idx_file),
+        )
+        checkpoint_summary.is_partial_file_valid = True
 
     assert (
         partial_idx.ntotal == n_total_start + embedding_iterator
     ), f"population with {embeddings_file} didn't succeed"
 
     return partial_idx
+
+    def version(self):
+        "0.1"

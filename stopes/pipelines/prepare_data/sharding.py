@@ -85,4 +85,10 @@ def write_to_all_shards(
         execute_in_shell(
             f"cp {tgt_path_prefix}.idx {shard_dir}/{tgt_basename_prefix}.idx"
         )
+        meta_path_prefix = src_path_prefix.rsplit(".", 1)[0]
+        meta_basename_prefix = os.path.basename(meta_path_prefix)
+        if os.path.exists(f"{meta_path_prefix}.meta"):
+            execute_in_shell(
+                f"cp {meta_path_prefix}.meta {shard_dir}/{meta_basename_prefix}.meta"
+            )
     return

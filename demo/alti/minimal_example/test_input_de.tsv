@@ -1,0 +1,8 @@
+src	mt
+Eine normale Übersetzung.	A normal translation.
+Unvollständige Übersetzung, bei der ein Teil der Eingabe ignoriert wird.	An incomplete translation.
+Übersetzung mit einer Halluzination.	A translation with a hallucination that actually references itself.
+Dieser Eintrag wird ignoriert.	Here is an example of a full hallucination.
+Eine Übersetzung, in der ich keinen Fehler gemacht habe.	A translation in which I have not made an error.
+Übersetzung, in der ich einen Fehler gemacht habe.	A transfer in which I have accessed an error.
+Übersetzung mit zyklischer Halluzination.	A translation with with with with with with a cyclical hallucination.

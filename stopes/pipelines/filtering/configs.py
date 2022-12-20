@@ -31,7 +31,7 @@ class LengthFilterConfig:
 @dataclass
 class LidFilterConfig:
     _target_: str = "stopes.pipelines.filtering.filters.LidFilter"
-    model_path: str = "/data/nllb/lid_models/2022-02-18_ft_model.bin"
+    model_path: str = "/large_experiments/seamless/nllb/mmt/lidruns/lid_models/2022-02-18_ft_model.bin"
     excluded_corpora: Optional[List[str]] = None
     excluded_languages: Optional[List[str]] = None
     default_threshold: float = 0.0
@@ -41,8 +41,12 @@ class LidFilterConfig:
 @dataclass
 class ToxicityFilterConfig:
     _target_: str = "stopes.pipelines.filtering.filters.ToxicityFilter"
-    twl_path_template: str = "/data/nllb/toxicity/{lang}_twl.txt"
-    eng_porn_twl_path: Optional[str] = "/data/nllb/toxicity/eng_twl_short_porn.txt"
+    twl_path_template: str = (
+        "/large_experiments/seamless/nllb/mmt/data/toxicity/{lang}_twl.txt"
+    )
+    eng_porn_twl_path: Optional[
+        str
+    ] = "/large_experiments/seamless/nllb/mmt/data/toxicity/eng_twl_short_porn.txt"
     max_toxicity: Optional[int] = None
     max_toxicity_difference: Optional[int] = 2
 

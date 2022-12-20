@@ -27,8 +27,8 @@ class DedupeWithMergeSort(stopes_module.StopesModule):
     this assumes that the input files in config.shards are already sorted
     """
 
-    def requirements(self) -> stopes_module.DistributedRequirements:
-        return stopes_module.DistributedRequirements(
+    def requirements(self) -> stopes_module.Requirements:
+        return stopes_module.Requirements(
             nodes=1,
             mem_gb=getattr(self.config, "mem_gb", 1),
             tasks_per_node=1,
@@ -42,7 +42,7 @@ class DedupeWithMergeSort(stopes_module.StopesModule):
         print(f"Doing local dedup first: {do_local_dedup}")
         return self.config.shards if do_local_dedup else None
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,

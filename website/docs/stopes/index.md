@@ -138,7 +138,7 @@ embedding_dimensions: 1024
 index_type: ???
 
 launcher:
-    _target_: stopes.core.SubmititLauncher
+    _target_: stopes.core.Launcher
     log_folder: executor_logs
     cluster: local
     partition:
@@ -154,7 +154,7 @@ train_index:
   num_cpu: 40
   use_gpu: True
   embedding_dimensions: ${embedding_dimensions}
-  fp16_storage: True
+  fp16: True
 
 
 populate_index:

@@ -16,7 +16,7 @@ import pytest
 from stopes.modules.bitext.indexing.train_index import train_index
 
 from .test_modules_utils import (
-    generate_embedding,
+    generate_saved_embedding,
     test_dim,
     test_dtype,
     test_idx_type,
@@ -47,7 +47,7 @@ def test_generate_index(tmp_path: Path, gpu: bool):
         # get_num_gpus will crash if you installed faiss-gpu on a server without GPU.
         if os.environ.get("GITHUB_ACTIONS") or faiss.get_num_gpus() == 0:
             pytest.skip("no GPU")
-    embedding_outfile = tmp_path / "embedding.bin"
-    generate_embedding(file=embedding_outfile)
+    embedding_outfile = tmp_path / "embedding.npy"
+    generate_saved_embedding(file=embedding_outfile)
     index_out_file = generate_train_index(tmp_path, gpu, embedding_outfile)
     assert index_out_file.exists(), f"index file {index_out_file} missing"

@@ -252,7 +252,7 @@ async def shard_and_shuffle(
             output_dir=str(config.output_dir),
             outfile_prefix=config.outfile_prefix,
             shards=[config.input_file],
-            requirements=stopes_module.DistributedRequirements(
+            requirements=stopes_module.Requirements(
                 nodes=1,
                 mem_gb=getattr(config, "mem_gb", 1),
                 tasks_per_node=1,

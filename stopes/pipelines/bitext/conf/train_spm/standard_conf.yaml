@@ -1,0 +1,13 @@
+_target_: stopes.modules.preprocess.train_spm.TrainSpmModule
+
+output_dir: ???
+vocab_size: 50_000
+training_lines: 5_000_000
+seed_sentencepiece_size: 5_000_000
+character_coverage: 0.999995
+model_type: "unigram"
+shuffle_input_sentence: True
+num_threads : 20
+train_data_file: ???
+# optional value; if passed as empty, will be auto set based on train_data_file name
+model_prefix_spm: ""

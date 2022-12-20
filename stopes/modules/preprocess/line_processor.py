@@ -15,7 +15,7 @@ import hydra
 from omegaconf import MISSING
 
 import stopes.core
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.utils import ensure_dir
 
 logger = logging.getLogger("text_encoder")
@@ -80,7 +80,7 @@ class LineProcessorConfig:
     outfile_postfix: str = ""
     shards: tp.List[str] = MISSING
     buffer_size: int = 10_000
-    requirements: DistributedRequirements = DistributedRequirements(
+    requirements: Requirements = Requirements(
         nodes=1,
         tasks_per_node=1,
         gpus_per_node=0,
@@ -92,9 +92,18 @@ class LineProcessorConfig:
 
 class LineProcessorModule(StopesModule):
     def __init__(
-        self, config: LineProcessorConfig = LineProcessorConfig(), processed_lines=0
+        self,
+        config: LineProcessorConfig = LineProcessorConfig(),
+        processed_lines=0,
+        validate_config: bool = False,
     ):
-        super().__init__(config)
+        super().__init__(
+            config,
+            # TODO: always validate that config is a LineProcessorConfig
+            # This is not possible currently because several config files add extra args
+            # to make it easier to type the config
+            config_class=LineProcessorConfig if validate_config else None,
+        )
         # we do basic checkpointing with submitit Checkpointable which will store the state of this
         # callable. The basic idea here is to remember the last line processed
         self.processed_lines = processed_lines
@@ -105,9 +114,9 @@ class LineProcessorModule(StopesModule):
 
     def requirements(self):
         reqs = self.config.requirements
-        if not isinstance(reqs, DistributedRequirements):
+        if not isinstance(reqs, Requirements):
             # Performe conversion if needed
-            return DistributedRequirements(**reqs)
+            return Requirements(**reqs)
         return reqs
 
     def run(
@@ -131,13 +140,11 @@ class LineProcessorModule(StopesModule):
             self.config.line_processor,
             **kwargs,
         )
-
         with stopes.core.utils.open(input_file) as filep:
             with processor as enc:
                 for lines_with_numbers in buffered_read(filep, self.config.buffer_size):
                     enc.process_lines(lines_with_numbers)
                     # TODO For checkpointing, keep track of processed lines + slice initial buffer read
-                    # self.processed_lines += 1
         # TODO: this may not point to an existing file, making cache validation
         # impossible. However, the cache validate function can be adjusted accordingly
         return processor.final_result()

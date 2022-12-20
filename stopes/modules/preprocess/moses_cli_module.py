@@ -28,6 +28,8 @@ class MosesPreprocessConfig:
     shards: tp.List[str] = MISSING
     output_dir: str = MISSING
     lowercase: bool = True
+    # shard name, if it is different for lang name (used for naming outputs)
+    lang_shard_name: tp.Optional[str] = None
     normalize_punctuation: bool = True
     remove_non_printing_chars: bool = False
     deescape_special_chars: bool = False
@@ -51,7 +53,7 @@ class MosesPreprocessModule(stopes_module.StopesModule):
         return self.config.shards
 
     def requirements(self):
-        return stopes_module.DistributedRequirements(
+        return stopes_module.Requirements(
             nodes=1,
             tasks_per_node=1,
             gpus_per_node=0,
@@ -68,7 +70,8 @@ class MosesPreprocessModule(stopes_module.StopesModule):
         assert input_file.exists()
         # TODO: find a way to allow the caller to specify output
         output_file = (
-            self.output_dir / f"moses.{iteration_index:0>3}.{self.config.lang}"
+            self.output_dir
+            / f"moses.{iteration_index:0>3}.{self.config.lang_shard_name or self.config.lang}"
         )
 
         cmds = [utils.open_file_cmd(input_file)]
@@ -132,20 +135,20 @@ def resolve_moses_dir() -> Path:
 @functools.lru_cache()
 def get_moses_script(name) -> Path:
     moses_dir = resolve_moses_dir()
+    if "/" not in name:
+        name = "scripts/tokenizer/" + name
     moses_script = moses_dir / name
-    if (moses_script).exists():
+    if moses_script.exists():
         return moses_script
 
     url = "https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/"
-    if "/" not in name:
-        url += "scripts/tokenizer/"
     url += name
-
     try:
         res = requests.get(url)
     except Exception as e:
         log.error(f"Didn't find moses script {name} at {url} ({e})")
         raise
+    moses_script.parent.mkdir(parents=True, exist_ok=True)
     moses_script.write_text(res.text)
     return moses_script
 

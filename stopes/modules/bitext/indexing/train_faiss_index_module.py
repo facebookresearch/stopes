@@ -6,18 +6,14 @@
 
 
 import logging
-import os
 import typing as tp
 from dataclasses import dataclass
 from pathlib import Path
 
-import faiss
 import numpy as np
 from omegaconf.omegaconf import MISSING
 
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
-from stopes.core.utils import ensure_dir
-from stopes.modules.bitext.indexing.train_index import train_index
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.utils.data_utils import DataConfig
 
 logger = logging.getLogger("stopes.train_faiss_index")
@@ -33,25 +29,22 @@ class TrainFAISSIndexConfig:
     num_cpu: int = 40
     embedding_dimensions: int = 1024
     use_gpu: bool = True
-    fp16_storage: bool = True
-    sample_shards: bool = False
-    sample_sz: int = 40_000_000
+    fp16: bool = True
 
 
 class TrainFAISSIndexModule(StopesModule):
     def __init__(self, config: TrainFAISSIndexConfig = TrainFAISSIndexConfig()):
         super().__init__(config, TrainFAISSIndexConfig)
-        self.lang_output_dir = os.path.join(self.config.output_dir, self.config.lang)
-        ensure_dir(self.lang_output_dir)
+        self.lang_output_dir = Path(self.config.output_dir) / self.config.lang
+        self.lang_output_dir.mkdir(parents=True, exist_ok=True)
 
         self.index_type = self.config.index_type
 
         logger.info(f"lang={self.config.lang}, " f"index type={self.index_type}")
 
     def requirements(self):
-        return DistributedRequirements(
+        return Requirements(
             nodes=1,
-            # mem_gb=700,
             tasks_per_node=1,
             gpus_per_node=1 if self.config.use_gpu else 0,
             cpus_per_task=self.config.num_cpu,
@@ -59,44 +52,41 @@ class TrainFAISSIndexModule(StopesModule):
             constraint="ib2",
         )
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ):
-        index_output_file = os.path.abspath(
-            os.path.join(
-                self.lang_output_dir,
-                f"{self.config.data.bname}.{self.index_type}.{self.config.lang}.train.idx",
-            )
-        )
+        import faiss
+
+        from stopes.modules.bitext.indexing.train_index import train_index
+
+        logger = logging.getLogger("stopes.train_faiss_index")
+        index_output_file = (
+            self.lang_output_dir
+            / f"{self.config.data.bname}.{self.index_type}.{self.config.lang}.train.idx"
+        ).resolve()
 
         returned_index = train_index(
             self.config.embedding_file,
             self.index_type,
             self.config.embedding_dimensions,
             self.config.use_gpu,
-            np.float16 if self.config.fp16_storage else np.float32,
+            np.float16 if self.config.fp16 else np.float32,
         )
         if self.config.use_gpu:
             returned_index = faiss.index_gpu_to_cpu(returned_index)
 
         faiss.write_index(returned_index, str(index_output_file))
 
-        index_output_file_path = str(index_output_file)
         logger.info(
-            f"Trained index of type: {self.index_type} and lang: {self.config.lang}, can be found in output file: {index_output_file_path}"
+            f"Trained index of type: {self.index_type} and lang: {self.config.lang}, can be found in output file: {index_output_file}"
         )
 
-        return Path(index_output_file)
+        return index_output_file
 
     def name(self):
         return f"index-train.{self.config.lang}.iteration_{self.config.data.iteration}"
-
-    def comment(self):
-        return (
-            f"Creating FAISS index using student encoder v{self.config.data.iteration}"
-        )
 
     def version(cls):
         return "0.2"

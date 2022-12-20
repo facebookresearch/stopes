@@ -19,7 +19,7 @@ import wandb
 from omegaconf import MISSING, DictConfig, OmegaConf
 
 from stopes.core import Launcher, utils
-from stopes.core.stopes_module import DistributedRequirements
+from stopes.core.stopes_module import Requirements
 from stopes.modules.monolingual.monolingual_sort_dedup import DedupeWithMergeSort
 from stopes.modules.preprocess.multiproc_line_processor import (
     MultiprocLineProcessorConfig,
@@ -63,7 +63,7 @@ class MonoLingualConfig:
     filter: FilterConfig = FilterConfig()
     lid: LIDConfig = LIDConfig()
     preprocess_buffer_size: int = 10_000
-    preproces_requirements: DistributedRequirements = DistributedRequirements()
+    preproces_requirements: Requirements = Requirements()
     # where to find the input files that we care about, useful to debug stuff
     # corpus might be empty if corpus_filter is empty. This uses string.Template
     input_file_glob_template: str = "$lang/$corpus*.$lang.xz"
@@ -130,7 +130,7 @@ async def launch_preprocessor(
             outfile_prefix="",  # TODO from config?
             shards=shards,
             buffer_size=config.preprocess_buffer_size,
-            requirements=DistributedRequirements(**config.preproces_requirements),
+            requirements=Requirements(**config.preproces_requirements),
             tmp_dir=config.local_tmp_dir,
         )
     )

@@ -49,8 +49,8 @@ class TrainSpmModule(stopes_module.StopesModule):
         self.output_dir = Path(self.config.output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-    def requirements(self) -> stopes_module.DistributedRequirements:
-        return stopes_module.DistributedRequirements(
+    def requirements(self) -> stopes_module.Requirements:
+        return stopes_module.Requirements(
             nodes=1,
             tasks_per_node=1,
             gpus_per_node=0,
@@ -63,14 +63,14 @@ class TrainSpmModule(stopes_module.StopesModule):
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ) -> tp.Tuple[Path, Path]:
-        if self.config.model_prefix_spm == "":
+        if not self.config.model_prefix_spm:
             input_file_stem = Path(self.config.train_data_file).stem
             model_prefix_spm = (
                 self.output_dir
-                / f"spm_train.{input_file_stem}.{self.config.vocab_size}.{self.sha_key()}"
+                / f"spm_train.{input_file_stem}.{self.config.vocab_size}"
             )
         else:
-            model_prefix_spm = Path(self.config.model_prefix_spm)
+            model_prefix_spm = self.output_dir / self.config.model_prefix_spm
 
         model_file, vocab_as_fairseq_dict = train_spm(
             self.config, Path(self.config.train_data_file), model_prefix_spm

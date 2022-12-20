@@ -1,0 +1,8 @@
+{
+  "label": "Evaluation Toolkit",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "As part of `stopes`, we are building a number of evaluation tools that you can use to evaluate multimodal translation models."
+  }
+}

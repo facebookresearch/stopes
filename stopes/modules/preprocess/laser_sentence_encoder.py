@@ -149,6 +149,7 @@ class SentenceEncoder:
             yield batch(batch_tokens, batch_lengths, batch_indices)
 
     def encode_sentences(self, sentences):
+        #
         indices = []
         results = []
         for batch, batch_indices in self._make_batches(sentences):
@@ -331,7 +332,7 @@ class LaserSentenceEncoder(EncodeToNPY):
         max_tokens: int = 12_000,
         stable_sort: bool = False,
         normalize: bool = False,
-        fp16_storage: bool = False,
+        fp16: bool = False,
         cpu: bool = False,
     ) -> None:
         super().__init__(
@@ -341,9 +342,9 @@ class LaserSentenceEncoder(EncodeToNPY):
             input_file_idx=input_file_idx,
             output_dir=output_dir,
             normalize=normalize,
-            fp16_storage=fp16_storage,
+            fp16=fp16,
         )
-        spm_model, spm_vocab = self._gather_spm(
+        spm_model, spm_vocab = self.gather_spm(
             encoder_model=encoder_model,
             spm_vocab=spm_vocab,
             spm_model=spm_model,
@@ -359,11 +360,11 @@ class LaserSentenceEncoder(EncodeToNPY):
             cpu=cpu,
         )
 
-    def _gather_spm(
-        self,
+    @staticmethod
+    def gather_spm(
         encoder_model: str,
-        spm_vocab: str,
-        spm_model: str,
+        spm_vocab: tp.Optional[str],
+        spm_model: tp.Optional[str],
     ) -> tp.Tuple[str, str]:
         if not spm_model:
             encoder_path = Path(encoder_model)
@@ -390,6 +391,7 @@ class LaserSentenceEncoder(EncodeToNPY):
     def encode_to_np(
         self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]
     ) -> np.ndarray:
+        # TODO: it's not very efficient to tokenize, then join, then latter split again
         tokenized_sents = [
             " ".join(self.spm_tokenizer.EncodeAsPieces(line))
             for (_, line) in lines_with_number

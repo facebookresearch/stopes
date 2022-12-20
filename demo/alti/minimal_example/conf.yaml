@@ -1,0 +1,15 @@
+input_filename: ???
+metrics_filename: ???
+src_lang: ???
+tgt_lang: ???
+
+alignment_filename: null
+DATADIR: null
+
+is_multilingual: ???
+checkpoint: ???
+data_dir: ???
+spm: ???
+src_col: src
+tgt_col: mt
+use_cuda: True

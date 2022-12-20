@@ -23,7 +23,13 @@ class Alignments:
     arrays to be kept in sync.
     """
 
-    def __init__(self, scores: np.ndarray, src_idx: np.ndarray, trg_idx: np.ndarray):
+    def __init__(
+        self,
+        scores: np.ndarray,
+        src_idx: np.ndarray,
+        trg_idx: np.ndarray,
+        bwd_pos: tp.List[int],
+    ):
         self.scores: np.ndarray = scores
         self.src_idx: np.ndarray = src_idx
         # TODO: mine_indexes module saves this as "trg", but we are using
@@ -31,12 +37,17 @@ class Alignments:
         self.tgt_idx: np.ndarray = trg_idx
         self.src_texts, self.tgt_texts = None, None
         self.src_meta, self.tgt_meta = None, None
+        self.bwd_pos = set(bwd_pos)
+
+    @property
+    def has_meta(self) -> bool:
+        return bool(self.src_meta and self.tgt_meta)
 
     @staticmethod
     def from_npz(file: Path, score_min: float, score_max: float) -> "Alignments":
         # loading into memory the alignments arrays jointly saved into a single npz
         # file by the mine_indexes module
-        als = Alignments(**np.load(str(file)))
+        als = Alignments(**np.load(file))
 
         # keeping only alignments within a window and sorting by score
         als._filter_and_sort(score_min, score_max)
@@ -54,6 +65,11 @@ class Alignments:
         self.scores = self.scores[sorting]
         self.src_idx = self.src_idx[sorting]
         self.tgt_idx = self.tgt_idx[sorting]
+        new_bwd_pos = set()  # reorder bwd positions
+        for new_pos, old_pos in enumerate(sorting):
+            if old_pos in self.bwd_pos:
+                new_bwd_pos.add(new_pos)
+        self.bwd_pos = new_bwd_pos
 
     def _load_data(self, indices, data_files) -> tp.Dict[int, str]:
         ids = set(indices)
@@ -104,10 +120,7 @@ class Alignments:
 
         # initializing output tsvs
         texts_tsv_cm = utils.open(texts_out_path, mode="wt")
-        if self.src_meta and self.tgt_meta:
-            meta_tsv_cm = utils.open(meta_out_path, mode="wt")
-        else:
-            meta_tsv_cm = nullcontext(meta_out_path)
+        meta_tsv_cm = utils.open(meta_out_path, mode="wt")
 
         # keeping track of bitexts to deduplicate if needed
         seen = set()
@@ -115,10 +128,11 @@ class Alignments:
         # iterating over all bitext indices, saving corresponding texts/meta
         with texts_tsv_cm as texts_tsv, meta_tsv_cm as meta_tsv:
             texts_w = csv.writer(texts_tsv, delimiter="\t")
-            if self.src_meta and self.tgt_meta:
-                meta_w = csv.writer(meta_tsv, delimiter="\t")
+            meta_w = csv.writer(meta_tsv, delimiter="\t")
 
-            for score, i_src, i_tgt in zip(self.scores, self.src_idx, self.tgt_idx):
+            for pos_score, (score, i_src, i_tgt) in enumerate(
+                zip(self.scores, self.src_idx, self.tgt_idx)
+            ):
                 # preventively checking if a given key is missing: technically
                 # there might be a mistmatch between the faiss index and the texts
                 if i_src not in self.src_texts or i_tgt not in self.tgt_texts:
@@ -139,5 +153,11 @@ class Alignments:
                 texts_w.writerow([score, self.src_texts[i_src], self.tgt_texts[i_tgt]])
 
                 # saving the corresponding metadata if it exists
-                if self.src_meta and self.tgt_meta:
-                    meta_w.writerow([score, self.src_meta[i_src], self.tgt_meta[i_tgt]])
+                meta_w.writerow(
+                    [
+                        score,
+                        self.src_meta[i_src] if self.src_meta else "",
+                        self.tgt_meta[i_tgt] if self.tgt_meta else "",
+                        "bwd" if pos_score in self.bwd_pos else "fwd",
+                    ]
+                )

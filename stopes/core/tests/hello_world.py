@@ -12,29 +12,22 @@ from dataclasses import dataclass
 from omegaconf.omegaconf import MISSING, OmegaConf
 
 from stopes.core.launcher import Launcher
-from stopes.core.stopes_module import (
-    DistributedRequirements,
-    LocalOnlyRequirements,
-    StopesModule,
-)
+from stopes.core.stopes_module import Requirements, StopesModule
 
 
 @dataclass
 class HelloWorldConfig:
     greet: str = "hello"
     person: str = "world"
-    duration: float = 0.1
-    distributed: bool = True
+    duration: tp.Optional[float] = 0.1
 
 
 class HelloWorldModule(StopesModule):
     def __init__(self, config):
-        self.config = config
+        super().__init__(config, HelloWorldConfig)
 
     def requirements(self):
-        if not self.config.distributed:
-            return LocalOnlyRequirements()
-        return DistributedRequirements(
+        return Requirements(
             nodes=1,
             mem_gb=10,
             tasks_per_node=1,
@@ -43,7 +36,7 @@ class HelloWorldModule(StopesModule):
             timeout_min=60,
         )
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
@@ -52,7 +45,8 @@ class HelloWorldModule(StopesModule):
         print(OmegaConf.to_yaml(self.config))
         res = " ".join([self.config.greet, self.config.person, "!"])
         # Let the job sleep for a bit to simulate the module doing work
-        time.sleep(self.config.duration)
+        if self.config.duration:
+            time.sleep(self.config.duration)
         return res
 
 
@@ -61,7 +55,6 @@ class HelloWorldArrayConfig:
     greet: str = "hello"
     persons: tp.List[str] = MISSING
     duration: float = 0.1
-    distributed: bool = True
 
 
 class HelloWorldArrayModule(StopesModule):
@@ -69,13 +62,11 @@ class HelloWorldArrayModule(StopesModule):
         self,
         config: HelloWorldArrayConfig = HelloWorldArrayConfig(),
     ):
-        super().__init__(config)
+        super().__init__(config, HelloWorldArrayConfig)
         self.logger = logging.getLogger("hello_world_array_module")
 
     def requirements(self):
-        if not self.config.distributed:
-            return LocalOnlyRequirements()
-        return DistributedRequirements(
+        return Requirements(
             nodes=1,
             mem_gb=10,
             tasks_per_node=1,
@@ -87,7 +78,7 @@ class HelloWorldArrayModule(StopesModule):
     def array(self):
         return self.config.persons
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,

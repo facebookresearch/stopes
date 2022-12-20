@@ -8,4 +8,4 @@ config:
   num_cpu: 40
   use_gpu: True
   embedding_dimensions: 1024
-  fp16_storage: True
+  fp16: True

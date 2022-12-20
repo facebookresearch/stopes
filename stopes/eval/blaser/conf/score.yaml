@@ -1,0 +1,15 @@
+src_emb_files:
+  - ???
+ref_emb_files:
+  - ???
+mt_emb_files:
+  - ???
+label_files:
+  - ???
+model:
+  config_file: ???.config
+  model_checkpoint: ???.pt
+
+batch_size: 100
+use_gpu: True
+output_dir: test

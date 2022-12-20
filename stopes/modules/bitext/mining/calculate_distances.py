@@ -16,15 +16,10 @@ from pathlib import Path
 import numpy as np
 from omegaconf.omegaconf import MISSING
 
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.utils import ensure_dir
-from stopes.modules.bitext.mining.calculate_distances_utils import (  # noqa
-    compute_distances,
-    load_index,
-    save_to_disk,
-)
-
-logger = logging.getLogger("calculate_distances")
+from stopes.modules.bitext.mining.mine_bitext_indexes_utils import read_array_metadata
+from stopes.utils.embedding_utils import Embedding
 
 
 class DistanceType(Enum):
@@ -39,6 +34,7 @@ class CalculateDistancesConfig:
     lang_embeddings: tp.List[str] = MISSING  # list of embedding files
     distance_type: DistanceType = MISSING  # mostly for logging
     index_other_lang: str = MISSING  # "path/to/index"
+    index_other_lang_type: str = MISSING  # type of the index
 
     output_dir: tp.Optional[
         str
@@ -46,11 +42,13 @@ class CalculateDistancesConfig:
 
     num_probe: int = 128
     knn: int = 16
-    gpu_type: tp.Optional[str] = "fp16-shard"
+    gpu_type: str = "fp16-shard"
     gpu_memory_gb: int = 32
     save_dists_as_fp16: bool = True
     embedding_dimensions: int = 1024
     normalize_query_embeddings: bool = True
+    fp16: bool = False
+    batch_size: int = 8192
 
 
 class CalculateDistancesModule(StopesModule):
@@ -68,9 +66,12 @@ class CalculateDistancesModule(StopesModule):
         )
         ensure_dir(self.output_dir)
 
-        fp16 = getattr(self.config, "fp16_embeddings", False)
+        fp16 = getattr(self.config, "fp16", False)
         self.embedding_dtype = np.float16 if fp16 else np.float32
 
+        assert os.path.exists(
+            self.config.index_other_lang
+        ), f"index file missing: {self.config.index_other_lang}"
         index_size = os.path.getsize(self.config.index_other_lang) >> 30  # size in GB
         # TODO: add gpu_memory_gb to either a preset or this module's config
         num_gpu = math.ceil(index_size / self.config.gpu_memory_gb)
@@ -78,10 +79,8 @@ class CalculateDistancesModule(StopesModule):
         self.num_gpu = 8 if num_gpu > 8 else 1 if num_gpu < 1 else num_gpu
 
     def requirements(self):
-        return DistributedRequirements(
+        return Requirements(
             nodes=1,
-            # TODO make this be the size of the index
-            mem_gb=self.num_gpu * 80,
             tasks_per_node=1,
             gpus_per_node=self.num_gpu,
             cpus_per_task=10,
@@ -92,26 +91,33 @@ class CalculateDistancesModule(StopesModule):
     def array(self):
         return self.config.lang_embeddings
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,  # the embedding shard
         iteration_index: int = 0,
     ) -> tp.Tuple[Path, Path]:
-        # loading the index in memory
-        current_index = load_index(
-            self.config.index_other_lang,
-            self.config.num_probe,
-            self.config.gpu_type,
+        from stopes.modules.bitext.mining.calculate_distances_utils import (
+            compute_distances,
+            load_index,
+            save_to_disk,
         )
 
-        # computing distances
+        current_index = load_index(
+            idx_name=self.config.index_other_lang,
+            nprobe=self.config.num_probe,
+            gpu_type=self.config.gpu_type,
+            index_type=self.config.index_other_lang_type,
+        )
+
         distances, indices = compute_distances(
-            iteration_value,
-            current_index,
-            self.config.embedding_dimensions,
-            self.embedding_dtype,
-            self.config.knn,
-            self.config.normalize_query_embeddings,
+            query_embeddings_file=iteration_value,
+            idx=current_index,
+            embedding_dimensions=self.config.embedding_dimensions,
+            embedding_dtype=self.embedding_dtype,
+            knn=self.config.knn,
+            normalize_query_embeddings=self.config.normalize_query_embeddings,
+            batch_size=self.config.batch_size,
+            save_as_fp16=self.config.save_dists_as_fp16,
         )
 
         # persisting to disk
@@ -138,4 +144,38 @@ class CalculateDistancesModule(StopesModule):
         return "Calculating distances between embeddings and FAISS index"
 
     def version(self):
-        return "0.4"
+        return "0.7"
+
+    def validate(
+        self,
+        output: tp.Any,
+        iteration_value: tp.Optional[tp.Any] = None,
+        iteration_index: int = 0,
+    ) -> bool:
+        # output should be a tuple of Path
+        dist_path, index_path = output
+
+        # files should still exist
+        assert (
+            isinstance(dist_path, Path) and dist_path.exists()
+        ), f"{dist_path} is missing"
+
+        assert (
+            isinstance(index_path, Path) and index_path.exists()
+        ), f"{index_path} is missing"
+
+        # sizes should match
+        dist_meta = read_array_metadata(dist_path)
+        index_meta = read_array_metadata(index_path)
+
+        assert (
+            dist_meta.nb_elements == index_meta.nb_elements
+        ), f"{index_path} and {dist_path} sizes do not match"
+
+        # should have the same size as the query embedding
+        q_embs = Embedding(iteration_value)
+        assert (
+            len(q_embs) == dist_meta.nb_elements
+        ), "dist/indices have different sizes from query embedding"
+
+        return True

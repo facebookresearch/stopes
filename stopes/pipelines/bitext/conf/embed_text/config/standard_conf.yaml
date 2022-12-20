@@ -2,7 +2,8 @@ lang: ???
 shards: ???
 encoder: ???
 output_dir: ???
-launcher: ${launcher} # reuse the global launcher config (but we'll get a new instance)
+
+lang_shard_name: None
 
 encode:
   _target_: stopes.modules.preprocess.line_processor.LineProcessorModule

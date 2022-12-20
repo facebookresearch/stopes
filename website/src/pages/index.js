@@ -7,13 +7,13 @@
  * @format
  */
 
-import React from 'react';
-import clsx from 'clsx';
-import Layout from '@theme/Layout';
-import CodeBlock from '@theme/CodeBlock';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import CodeBlock from '@theme/CodeBlock';
+import Layout from '@theme/Layout';
+import clsx from 'clsx';
+import React from 'react';
 import styles from './styles.module.css';
 
 function Stopes() {
@@ -25,7 +25,8 @@ const features = [
     title: 'Easy to Use',
     description: (
       <>
-        <Stopes /> was designed to provide a modular API to build and reproduce data mining pipelines.
+        <Stopes /> was designed to provide a modular API to build and reproduce pipelines core to large translation work.
+        In particular data mining and evaluation.
         Where you run your pipeline and how you scale it is independent of its core logic.
         Everything is config-driven so you can easily reproduce and track results.
       </>
@@ -38,7 +39,7 @@ const features = [
     title: 'Batteries Included',
     description: (
       <>
-        <Stopes /> lets you focus on your core data mining needs by providing common modules
+        <Stopes /> lets you focus on your core data and evaluation needs by providing common modules
         used for this task and letting you write your pipelines with idiomatic python.
         Common optimizations have also been built-in to help you scale your work.
       </>
@@ -52,11 +53,11 @@ const features = [
     description: (
       <>
         <Stopes /> was developed as part of the Meta AI No Language Left Behind research project.
-        It comes with state-of-the-art pipelines out of the box. You can run our global mining
-         pipeline and reproduce our research with just a few command lines.
+        It comes with state-of-the-art pipelines out of the box. You can run our global mining and distillation
+        pipelines and reproduce our research with just a few command lines.
       </>
     ),
-    buttonTxt: "Start Mining",
+    buttonTxt: "E.g. Start Data Mining",
     buttonUrl: 'docs/pipelines/global_mining',
     imageUrl: 'img/pipelines.svg',
   },
@@ -76,10 +77,10 @@ const sections = [
    embed_text=laser3`,
     content: (
       <p><Stopes />  comes with the Global Mining Pipeline that was used by the NLLB team.
-      You can use it out of the box without extra coding. You will need to setup an
+        You can use it out of the box without extra coding. You will need to setup an
         environment and create a config file to point to your data,
-         but you can start mining (locally or on a slurm cluster) without any coding.
-         Check out the <Link to="docs/quickstart">Quickstart guide</Link>.</p>
+        but you can start mining (locally or on a slurm cluster) without any coding.
+        Check out the <Link to="docs/quickstart">Quickstart guide</Link>.</p>
     )
   },
   {
@@ -146,7 +147,7 @@ config:
         </p>
         <p>
           You will find in this repository some implementations of a number of
-          modules that are useful for translation data mining, Neural Machine Translation data pre-processing
+          modules that are useful for translation data mining and evaluation, Neural Machine Translation data pre-processing
           and model training. For example, we provide modules to build <Link to="https://faiss.ai/">faiss</Link> indexes, encode
           text with <Link to="https://github.com/facebookresearch/LASER">LASER</Link> and <Link to="https://huggingface.co/sentence-transformers">HuggingFace Transformers</Link>,
           mine bitext or train and evaluate <Link to="https://github.com/facebookresearch/fairseq">FAIRSEQ</Link> models.
@@ -232,7 +233,6 @@ function Banner() {
   const nllb = useBaseUrl('img/banner_bits/nllb.png');
   const driving = useBaseUrl('img/banner_bits/driving.png');
   const stopes = useBaseUrl('img/banner_bits/stopes.png');
-  const large = useBaseUrl('img/banner_bits/large.png');
   const meta = useBaseUrl('img/banner_bits/meta.png');
   const logo = useBaseUrl('img/logo.svg');
 
@@ -255,7 +255,7 @@ function Banner() {
           <img alt="Driving inclusion through machine translation" src={driving} /></div>
         <h1><img alt="logo" src={logo} className="logo" /><img alt="stopes" src={stopes} /></h1>
         <div className="banner3" >
-          <img alt="Large-Scale Translation Data Mining" src={large} />
+          <h2>Large-Scale Translation Tooling</h2>
         </div>
       </div>
       <div className="bottom">
@@ -265,7 +265,7 @@ function Banner() {
               'button button--secondary button--lg',
             )}
             to={useBaseUrl('docs/quickstart')}>
-            Quickstart
+            Mining Quickstart
           </Link>
         </div>
         <div className="banner-meta" >
@@ -283,7 +283,7 @@ export default function Home() {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="Large-scale Translation Data Mining">
+      description="Large-scale Translation Tooling">
       <Banner />
       <main className="container smain">
         {features && features.length > 0 && (

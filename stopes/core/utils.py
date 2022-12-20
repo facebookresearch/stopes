@@ -8,11 +8,13 @@ import builtins
 import contextlib
 import gzip
 import hashlib
+import json
 import lzma
 import os
 import shlex
 import subprocess
 import tempfile
+import time
 import typing as tp
 from pathlib import Path
 
@@ -27,11 +29,19 @@ class InputOutput(tp.NamedTuple):
     output: Path
 
 
+def config_sha(_parent_=None) -> str:
+    conf = str(_parent_)
+    assert (
+        ": '???'" not in conf
+    ), "${config_sha:} can only be used for config where you specified all the fields"
+    return sha_key(conf)
+
+
 def sha_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 
-def ensure_dir(path: str):
+def ensure_dir(path: tp.Union[str, Path]):
     os.makedirs(path, exist_ok=True)
 
 
@@ -62,24 +72,35 @@ def test_bash_pipefail():
     )
 
 
-def open_file_cmd(filename: str) -> str:
+def open_file_cmd(filename: tp.Union[Path, str]) -> str:
+    if isinstance(filename, Path):
+        filename = str(filename)
+    filename = shlex.quote(filename)
+    cat = "cat"
+    if filename.endswith(".xz"):
+        cat = "xzcat"
+    if filename.endswith(".gz"):
+        cat = "zcat"
+
+    return shlex.join((cat, filename))
+
+
+def set_file_compression(filename: str) -> tp.List[str]:
+    """Produce a list of commant to write a file (a partial inverse of `open_file_cmd`)"""
+    commands = []
     if isinstance(filename, Path):
         filename = shlex.quote(str(filename))
-    cat = ["cat"]
     if filename.endswith(".xz"):
-        cat = ["xzcat"]
+        commands.append("xz")
     if filename.endswith(".gz"):
-        import platform
-        if platform.system() == 'Darwin':
-            cat = ["gunzip","--to-stdout"]
-        else:
-            cat = ["zcat"]
-
-    return shlex.join(cat + [filename])
+        commands.append("gzip")
+    return commands
 
 
 def open(
-    filename: Path, mode: str = "rt", encoding: tp.Optional[str] = "utf-8"
+    filename: tp.Union[Path, str],
+    mode: str = "rt",
+    encoding: tp.Optional[str] = "utf-8",
 ) -> tp.IO:
     if len(mode) == 1:
         mode += "t"
@@ -98,7 +119,12 @@ def tmp_file(output: Path) -> Path:
     suffix = "".join(output.suffixes)
     prefix = output.name[: -len(suffix) + 1]
     suffix = ".tmp" + suffix
-    _, tmp_path = tempfile.mkstemp(dir=output.parent, prefix=prefix, suffix=suffix)
+    slurm_jobid = os.environ.get("SLURM_JOB_ID", None)
+    if slurm_jobid:
+        tmpdir = Path("/scratch") / slurm_jobid
+    else:
+        tmpdir = output.parent
+    _, tmp_path = tempfile.mkstemp(dir=tmpdir, prefix=prefix, suffix=suffix)
     return Path(tmp_path)
 
 
@@ -111,6 +137,27 @@ def open_write(output: Path, mode: str = "wt", **kwargs) -> tp.Iterator[tp.IO]:
         yield o
     # No try/catch we are only renaming in case of success
     tmp.rename(output)
+
+
+def audio_duration(file: Path) -> float:
+    """audio file duration in seconds"""
+
+    duration = None
+
+    # use M2C2 metadata if available
+    json_file = file.with_suffix(".json")
+    if json_file.exists():
+        json_info = json.load(open(json_file, "r"))
+        duration = json_info.get("duration", None)
+
+    if duration is None:
+        import torchaudio
+
+        torchaudio.set_audio_backend("sox_io")
+        wav, sample_rate = torchaudio.load(file)
+        duration = wav.shape[1] / sample_rate
+
+    return duration
 
 
 def xz_size(file: Path) -> int:
@@ -193,7 +240,7 @@ def split_large_files(
                 spl.unlink()
             subprocess.run(
                 bash_pipefail(
-                    open_file_cmd(str(f)),
+                    open_file_cmd(f),
                     shlex.join(["split", "-C", max_size, "-", file_prefix]),
                 ),
                 shell=True,
@@ -239,6 +286,29 @@ def expand_if_compressed(input_file: Path, tmp_dir: Path) -> tp.Optional[Path]:
         return None
 
 
+TConfig = tp.TypeVar("TConfig")
+
+
+def promote_config(
+    config: omegaconf.DictConfig, config_class: tp.Type[TConfig]
+) -> TConfig:
+    if hasattr(config, "_target_"):
+        # Remove magic Hydra config fields.
+        # At this point, Hydra already did its job.
+        read_only = config._get_flag("readonly")
+        omegaconf.OmegaConf.set_readonly(config, False)
+        del config._target_
+        omegaconf.OmegaConf.set_readonly(config, read_only)
+
+    # Note: we don't use config._promote since it merges the other way around:
+    # the proto into the config.
+    proto = omegaconf.OmegaConf.structured(config_class)
+    proto.merge_with(config)
+    if hasattr(config, "_parent"):
+        proto._set_parent(config._parent)
+    return proto
+
+
 @contextlib.contextmanager
 def clone_config(config: omegaconf.DictConfig):
     with omegaconf.open_dict(config.copy()) as cfg:
@@ -253,3 +323,24 @@ def path_append_suffix(path: Path, suffix: str) -> Path:
     want one).
     """
     return path.with_suffix("".join(path.suffixes) + suffix)
+
+
+@contextlib.contextmanager
+def measure(start_msg, logger, end_msg="done in ", enable_log=True):
+    if enable_log:
+        logger.info(start_msg)
+    start = time.perf_counter()
+    yield lambda: time.perf_counter() - start
+    if enable_log:
+        logger.info(f"{start_msg} {end_msg}: {time.perf_counter() - start:.3f} secs")
+
+
+def batch(items: tp.List[tp.Any], batch_size: int):
+    batch = []
+    for item in items:
+        batch.append(item)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch

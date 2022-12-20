@@ -220,7 +220,7 @@ class SubmititJob(StopesJob):
         For a couple of them (FINISHED, CANCELLED, INTERRUPTED) we have to deal with them in a bit of a special way.
         """
         # First, handle "FINISHED" status:
-        if slurm_status == "FINISHED":
+        if slurm_status in ("FINISHED", "DONE"):
             # Now determine if (local) job finished due to success or failure
             # If the job doesn't raise an exception, it succeeded. Else, it failed (failed on its own; wasn't killed by launcher)
             job_failed = self.launcher_specific_job_object.exception()

@@ -15,9 +15,9 @@ import joblib
 import numpy as np
 from omegaconf.omegaconf import MISSING
 
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.utils.data_utils import DataConfig
-from stopes.utils.embedding_utils import Embedding
+from stopes.utils.embedding_utils import Embedding, EmbeddingConcatenator
 
 
 @dataclass
@@ -36,24 +36,18 @@ class SampleEmbeddingModuleConfig:
 def _sample_single(
     embedded_file: str,
     out_file: Path,
-    embed_dim: int = 1024,
-    fp16: bool = True,
     sample_size: int = 40_000_000,
+    fp16: bool = False,
 ) -> Path:
-    dtype = np.float16 if fp16 else np.float32
-    emb = Embedding(embedded_file, embed_dim, dtype)
+    # use fp16 variable to
+    # force rewriting to correct storage
+    emb = Embedding(embedded_file)
     samples = (
         np.random.choice(len(emb), sample_size, replace=False)
         if len(emb) > sample_size
         else None  # only sample if file is over the sample_size
     )
-    with emb.open_for_read(mode="memory") as data:
-        with out_file.open("wb") as outfp:
-            if samples is not None:
-                data[samples].tofile(outfp)
-            else:
-                # otherwise take all the content
-                data.tofile(outfp)
+    emb.save(out_file, samples, fp16=fp16, mode="mmap")
     return out_file
 
 
@@ -68,7 +62,7 @@ class SampleEmbeddingModule(StopesModule):
         )
 
     def requirements(self):
-        return DistributedRequirements(
+        return Requirements(
             nodes=1,
             tasks_per_node=1,
             gpus_per_node=0,
@@ -76,7 +70,7 @@ class SampleEmbeddingModule(StopesModule):
             timeout_min=24 * 60,
         )
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
@@ -98,9 +92,8 @@ class SampleEmbeddingModule(StopesModule):
 
         sample_cb = functools.partial(
             _sample_single,
-            embed_dim=self.config.embedding_dimensions,
-            fp16=self.config.fp16,
             sample_size=shard_sample_size,
+            fp16=self.config.fp16,
         )
 
         sample_shards = joblib.Parallel(n_jobs=self.num_workers)(
@@ -114,15 +107,12 @@ class SampleEmbeddingModule(StopesModule):
         out_dir.mkdir(parents=True, exist_ok=True)
         out_file = out_dir / f"index_training_sample.{self.config.lang}"
 
-        dtype = np.float16 if self.config.fp16 else np.float32
-
-        with out_file.open("wb") as combined_fp:
-            for f in sample_shards:
-                emb = Embedding(f, self.config.embedding_dimensions, dtype)
-                with emb.open_for_read(mode="memory") as in_data:
-                    in_data.tofile(combined_fp)
-
-        return str(out_file)
+        with EmbeddingConcatenator(out_file, self.config.fp16) as combined_fp:
+            combined_fp.append_files(sample_shards)
+        return out_file.resolve()
 
     def name(self):
         return f"sample_emb.{self.config.lang}-{len(self.config.embedded_files)}"
+
+    def version(self):
+        "0.2"

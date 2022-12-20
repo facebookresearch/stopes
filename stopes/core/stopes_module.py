@@ -4,24 +4,22 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import asyncio
 import dataclasses
 import logging
 import typing as tp
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 import hydra
+import submitit
 from omegaconf import DictConfig, OmegaConf
 
 import stopes.core
+from stopes.core import utils
 
+# Set up a default logging handler.
 logger = logging.getLogger("stopes.module")
-
-################################################################################
-#  Module definition
-################################################################################
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(process)d:%(name)s - %(message)s",
@@ -29,49 +27,50 @@ logging.basicConfig(
 )
 
 
-class Requirements(ABC):
-    pass
-
-
 @dataclasses.dataclass
-class DistributedRequirements(Requirements):
+class Requirements:
     nodes: int = 1
     mem_gb: tp.Optional[int] = None
     tasks_per_node: int = 1
-    gpus_per_node: int = 1
+    gpus_per_node: int = 0
     cpus_per_task: int = 5
     timeout_min: int = 720
     constraint: tp.Optional[str] = None
 
 
-class LocalOnlyRequirements(Requirements):
-    pass
-
-
 class StopesModule(ABC):
+    # list of retries per index
+    retry_counts: tp.List[int]
+
     @staticmethod
     def build(config: tp.Any, **kwargs):
-        """
-        given a loaded config with a _target_ and a config entry, build the
-        correct module.
-        """
-        merged_conf = OmegaConf.merge(config, {"config": kwargs})
+        """Builds the correct module given a loaded config with a _target_ entry."""
+        assert hasattr(
+            config, "_target_"
+        ), "You need to specify the module to create in the yaml file with _target_"
+        target = config._target_
 
-        # hydra is good at that.
-        return hydra.utils.instantiate(
-            merged_conf,
-            _recursive_=False,
-        )
+        if hasattr(config, "config"):
+            # nested config
+            warnings.warn(
+                f"Nested configs are deprecated. Received nested config for {target}",
+                DeprecationWarning,
+            )
+            merged_conf = OmegaConf.merge(config, {"config": kwargs})
+            return hydra.utils.instantiate(merged_conf, _recursive_=False)
+
+        if kwargs:
+            config = OmegaConf.merge(config, kwargs)
+        # Hydra will detach `config` from its parent in `instantiate`.
+        # We need to resolve before that.
+        OmegaConf.resolve(config)
+        return hydra.utils.instantiate({"_target_": target}, config, _recursive_=False)
 
     def __init__(self, config: tp.Any, config_class: tp.Type = None):
         if dataclasses.is_dataclass(config):
             config = OmegaConf.structured(config)
         if config_class is not None:
-            # Note: don't use ._promote since it merges the other way around:
-            # the proto into the config.
-            proto = OmegaConf.structured(config_class)
-            proto.merge_with(config)
-            self.config = proto
+            self.config = utils.promote_config(config, config_class)
         else:
             assert isinstance(config, DictConfig), (
                 "stopes module configs must be either a dataclass or a omega.DictConfig."
@@ -80,6 +79,7 @@ class StopesModule(ABC):
             self.config = config
         OmegaConf.resolve(self.config)
         OmegaConf.set_readonly(self.config, True)
+        self.retry_counts = [0]
 
     def __call__(
         self,
@@ -92,35 +92,12 @@ class StopesModule(ABC):
         please implement `run` instead as we might need to add generic stuff in here
         """
         res = self.run(iteration_value=iteration_value, iteration_index=iteration_index)
-        if not isinstance(res, tp.Coroutine):
-            # Return result value in case of synchronous method call
-            if cache is not None:
-                cache.save_cache(self, res, iteration_value, iteration_index)
-            return res
-
-        # Handle async `run` implementation
-        have_event_loop = True
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            # 'RuntimeError: There is no current event loop.
-            have_event_loop = False
-
-        # TODO: Explain more when we can return a coroutine
-        # This is weird: depending on the context we either return a result
-        # or a coroutine.
-        if have_event_loop:
-            # this should be awaited by whoever is calling the raw module
-            return res
-        else:
-            # We are in a separate process, run it with asyncio
-            actual_result = asyncio.run(res)
-            if cache is not None:
-                cache.save_cache(self, actual_result, iteration_value, iteration_index)
-            return actual_result
+        if cache is not None:
+            cache.save_cache(self, res, iteration_value, iteration_index)
+        return res
 
     @abstractmethod
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
@@ -144,12 +121,12 @@ class StopesModule(ABC):
         """
         return None
 
+    @abstractmethod
     def requirements(self) -> Requirements:
         """
         return a set of Requirements for your module, like num of gpus etc.
-        If you return None, this will be launched "inline" without scheduling any new job.
         """
-        return LocalOnlyRequirements()
+        ...
 
     def name(self):
         """
@@ -170,7 +147,7 @@ class StopesModule(ABC):
     # This is only safe if cache_key is not allowed to change, in particular if config is frozen.
     # Can we guarantee that ?
     def sha_key(self):
-        return stopes.core.utils.sha_key(repr(self.cache_key()))
+        return utils.sha_key(repr(self.cache_key()))
 
     def comment(self):
         """
@@ -203,8 +180,25 @@ class StopesModule(ABC):
         """
         if isinstance(output, Path) and not output.exists():
             logger.warning(
-                f"Cache for: {self.name()} iteration {iteration_index}"
-                f"points to missing file {output}, will invalidate it."
+                f"{self.name()} iteration {iteration_index}"
+                f" points to missing file {output}, will invalidate it."
             )
             return False
         return True
+
+    def should_retry(
+        self,
+        ex: Exception,
+        attempt: int,
+        iteration_value: tp.Optional[tp.Any] = None,
+        iteration_index: int = 0,
+    ) -> bool:
+        """
+        decide if an exception is worth retrying. This will also depend on the retry
+        settings of the launcher.
+        """
+        # by default, retry on missing output errors
+        # they usually mean that there was a problem in slurm
+        if type(ex) == submitit.core.utils.UncompletedJobError:
+            return "has not produced any output" in str(ex)
+        return False
