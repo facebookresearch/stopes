@@ -13,16 +13,16 @@ from pathlib import Path
 import hydra
 import torch
 import torch.nn.functional as F
-from blaser.model import BLASER
-from blaser.utils import (
+from omegaconf import DictConfig
+
+from stopes.core import utils as core_utils
+from stopes.eval.blaser.model import BLASER
+from stopes.eval.blaser.utils import (
     get_linear_schedule_with_warmup,
     get_pearson_corr,
     load_emb,
     shuffle_data,
 )
-from omegaconf import DictConfig
-
-from stopes.core import utils as core_utils
 
 logger = logging.getLogger(__name__)
 

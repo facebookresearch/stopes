@@ -11,11 +11,16 @@ from pathlib import Path
 
 import hydra
 import torch
-from blaser.model import BLASER, unsupervised_blaser
-from blaser.utils import batchify, get_model_pred, get_pearson_corr, load_emb
 from omegaconf import DictConfig
 
 from stopes.core import utils as core_utils
+from stopes.eval.blaser.model import BLASER, unsupervised_blaser
+from stopes.eval.blaser.utils import (
+    batchify,
+    get_model_pred,
+    get_pearson_corr,
+    load_emb,
+)
 
 logger = logging.getLogger(__name__)
 
