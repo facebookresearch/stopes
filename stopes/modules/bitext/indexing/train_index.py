@@ -26,7 +26,7 @@ def train_index(
     gpu: bool = False,
     dtype=np.float32,
 ) -> faiss.Index:
-    emb = Embedding(train_embeddings, dim, dtype=dtype)
+    emb = Embedding(train_embeddings)
     idx = faiss.index_factory(dim, idx_type)
     if gpu:
         idx = index_to_gpu(idx)

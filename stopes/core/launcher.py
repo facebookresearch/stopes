@@ -4,24 +4,22 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import asyncio
+import dataclasses
 import logging
-import os
-import pickle
 import typing as tp
-from abc import ABC, abstractmethod
 from pathlib import Path
 
 import submitit
 import tqdm
-from omegaconf import DictConfig
-from omegaconf.omegaconf import OmegaConf
+from omegaconf import OmegaConf
 from submitit import AutoExecutor
 from tqdm.contrib.logging import logging_redirect_tqdm
 
+from stopes.core import utils
+from stopes.core.cache import Cache, MissingCache, NoCache
 from stopes.core.jobs_registry.registry import JobsRegistry
 from stopes.core.jobs_registry.submitit_slurm_job import SubmititJob
-from stopes.core.stopes_module import DistributedRequirements, LocalOnlyRequirements
-from stopes.core.utils import sha_key
 
 if tp.TYPE_CHECKING:
     from stopes.core import StopesModule
@@ -29,419 +27,211 @@ if tp.TYPE_CHECKING:
 logger = logging.getLogger("stopes.launcher")
 
 
-################################################################################
-#  Caching definition
-################################################################################
+@dataclasses.dataclass
+class Task:
+    module: "StopesModule"
+    iteration_index: int
+    iteration_value: tp.Any
+    launcher: "Launcher"
 
+    # private stuff
+    _done: bool = dataclasses.field(init=False)
+    _job: tp.Optional[submitit.Job] = dataclasses.field(init=False)
+    _result: tp.Any = dataclasses.field(init=False, repr=False)
+    # _job keeps the current inflight job, _tries keeps the past tries
+    _tries: tp.List[submitit.Job] = dataclasses.field(default_factory=list, init=False)
 
-class MissingCache(Exception):
-    """Raised when we do not find the cache"""
-
-    pass
-
-
-class Cache(ABC):
-    def get_cache_key(
+    def done_from_cache(
         self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ) -> str:
-        return sha_key(
-            self._raw_key(
-                module,
-                iteration_value,
-                iteration_index,
-            )
-        )
-
-    def _raw_key(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ) -> str:
-        local_key = ".".join(
-            [self.__class__.__module__, self.__class__.__qualname__, self.version()]
-        )
-        cache_key = module.cache_key() + (iteration_value, iteration_index, local_key)
-        k = repr(cache_key)
-        return k
-
-    @abstractmethod
-    def get_cache(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-        validate: bool = True,
-    ) -> tp.Optional[tp.Any]:
-        """
-        gets the cached value for this module. If no cache is found
-        raise MissingCache.
-        """
-        ...
-
-    @abstractmethod
-    def save_cache(
-        self,
-        module: "StopesModule",
-        value: tp.Any,
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ):
-        ...
-
-    @abstractmethod
-    def invalidate_cache(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ):
-        ...
-
-    def invalidate_module_cache(
-        self,
-        module: "StopesModule",
-    ) -> None:
-        array = module.array()
-        if array is None:
-            array = [None]
-        for idx, val in enumerate(array):
-            self.invalidate_cache(module, val, idx)
-
-    def version(self):
-        return "0.0"
-
-
-class NoCache(Cache):
-    """
-    cache that doesn't cache. Useful to keep the same logic even
-    if we don't use caching
-    """
-
-    def get_cache(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-        validate: bool = True,
-    ) -> tp.Optional[tp.Any]:
-        raise MissingCache()
-
-    def save_cache(
-        self,
-        module: "StopesModule",
-        value: tp.Any,
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ):
-        pass
-
-    def invalidate_cache(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ):
-        pass
-
-
-# TODO add LRU
-class FileCache(Cache):
-    def __init__(self, caching_dir: Path):
-        self.caching_dir = Path(caching_dir)
-        self.caching_dir.mkdir(exist_ok=True)
-
-    def get_cache_file_path(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ) -> Path:
-        cache_key = self.get_cache_key(
-            module, iteration_value=iteration_value, iteration_index=iteration_index
-        )
-        return self.caching_dir / f"{cache_key}.pickle"
-
-    def get_config_file_path(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ) -> Path:
-        cache_key = self.get_cache_key(
-            module, iteration_value=iteration_value, iteration_index=iteration_index
-        )
-        return (
-            self.caching_dir / f"{module.name()}.{cache_key}.{iteration_index:03d}.yaml"
-        )
-
-    def get_cache(
-        self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-        validate: bool = True,
-    ) -> tp.Optional[tp.Any]:
-        cache_file_path = self.get_cache_file_path(
-            module, iteration_value=iteration_value, iteration_index=iteration_index
-        )
-
-        if not cache_file_path.is_file():
-            raise MissingCache()
-
-        try:
-            with cache_file_path.open("rb") as cache_file:
-                cached = pickle.load(cache_file)
-        except Exception as e:
-            logger.warning(
-                f"couldn't load cache from {cache_file_path} for: "
-                f"{module.name()} iteration {iteration_index}",
-                exc_info=e,
-            )
-            cache_file_path.unlink()
-            raise MissingCache()
-
-        if validate:
-            try:
-                valid_result = module.validate(cached, iteration_value, iteration_index)
-            except Exception as e:
-                logger.warning(f"cache is invalid for {module.name()}", exc_info=e)
-                valid_result = False
-            if not valid_result:
-                self.invalidate_cache(module, iteration_value, iteration_index)
-                raise MissingCache()
-
-        return cached
-
-    def save_cache(
-        self,
-        module: "StopesModule",
         result: tp.Any,
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ):
-        try:
-            cache_file_path = self.get_cache_file_path(
-                module, iteration_value=iteration_value, iteration_index=iteration_index
-            )
-            with cache_file_path.open("wb") as cache_file:
-                pickle.dump(result, cache_file)
-            cache_cfg_path = self.get_config_file_path(
-                module, iteration_value=iteration_value, iteration_index=iteration_index
-            )
-            OmegaConf.save(config=module.config, f=cache_cfg_path)
-            logger.info(f"written cache for {module.name()}:{iteration_index}")
-        except Exception as e:
-            logger.warning(
-                f"couldn't write cache for {cache_file_path} for: {module.name()}:{iteration_index}",
-                exc_info=e,
-            )
+    ) -> "Task":
+        self._done = True
+        self._result = result
+        self._job = None
+        return self
 
-    def invalidate_cache(
+    def waiting_on_job(
         self,
-        module: "StopesModule",
-        iteration_value: tp.Optional[tp.Any] = None,
-        iteration_index: int = 0,
-    ) -> None:
-        try:
-            logger.info(f"removing cache for {module.name()}:{iteration_index}")
-            cache_file_path = self.get_cache_file_path(
-                module, iteration_value=iteration_value, iteration_index=iteration_index
+        job: submitit.Job,
+    ) -> "Task":
+        self._done = False
+        self._job = job
+        self._result = None
+
+        return self
+
+    async def wait(self) -> "Task":
+        if self.done:
+            return self
+        assert self._job is not None, "No _job on pending task."
+        for attempt in range(
+            # 1 initial run + max_retries extra tries
+            (1 + self.launcher.max_retries)
+            + 1  # + 1 for range
+        ):  # this finishes either with a raise or a return
+            try:
+                # for a multi-task job, get all results
+                results = await self._job.awaitable().results()
+                # but because they are all identical, just return the first
+                self._result = results[0]
+                self._done = True
+                return self
+            except Exception as ex:
+                self._handle_exception(ex, attempt)
+
+        assert False, f"Too many retries {attempt} and that wasn't handled"
+
+    def _handle_exception(self, ex, attempt):
+        """
+        deal with retries. If we see an exception while waiting on the result from submitit, then
+        something bad has happenened, we need to decide if we retry or not.
+        """
+        if (  # one first try + n retries = too many tries
+            attempt >= (1 + self.launcher.max_retries)
+        ) or not self.module.should_retry(
+            ex=ex,
+            attempt=attempt,
+            iteration_index=self.iteration_index,
+            iteration_value=self.iteration_value,
+        ):  # we should fail hard here
+            raise ex
+
+        assert self._job is not None, "No _job on pending task."
+        self._tries.append(self._job)
+        self._job = self.launcher.submit_job(
+            self.module,
+            iteration_index=self.iteration_index,
+            iteration_value=self.iteration_value,
+        )
+        self.module.retry_counts[self.iteration_index] = len(self._tries) - 1
+
+    async def wait_and_validate(self):
+        if self.done:
+            return self._result
+        await self.wait()
+        self.validate()
+
+    def validate(self) -> None:
+        if not self.module.validate(
+            self._result,
+            iteration_value=self.iteration_value,
+            iteration_index=self.iteration_index,
+        ):
+            raise ValueError(
+                f"invalid result for {self.module.name()}:{self.iteration_index}"
             )
-            cache_file_path.unlink()
-        except Exception as e:
-            logger.warning(
-                f"couldn't invalidate cache for {cache_file_path} for: {module.name()}:{iteration_index}",
-                exc_info=e,
-            )
+
+    @property
+    def final_result(self) -> tp.Any:
+        """
+        you need to call `wait` on the task before calling final_result, unless you are sure it's a cached result, otherwise it will not work
+        """
+        assert (
+            self._done
+        ), "you need to make sure that Task is done before inspecting results"
+        return self._result
+
+    @property
+    def done(self) -> bool:
+        return self._done
 
 
-################################################################################
-#  Launchers definition
-################################################################################
-
-
-async def await_second_arg(idx, task):
-    return idx, await task
-
-
-class Launcher(ABC):
+class Launcher:
     def __init__(
-        self, cache: tp.Optional[Cache], config_dump_dir: tp.Optional[str] = None
+        self,
+        cache: tp.Optional[Cache] = None,
+        config_dump_dir: tp.Optional[Path] = None,
+        log_folder: tp.Union[Path, str] = Path("executor_logs"),
+        cluster: str = "local",
+        partition: tp.Optional[str] = None,
+        supports_mem_spec: bool = True,  # some slurm clusters do not support mem_gb, if you set this to False, the Requirements.mem_gb coming from the module will be ignored
+        disable_tqdm: bool = False,  # if you don't want tqdm progress bars
+        max_retries: int = 0,
+        max_jobarray_jobs: int = 1000,
     ):
         """
         If this was started by another launcher, it will be passed down, other launcher is None.
         """
         self.cache = NoCache() if cache is None else cache
         self.config_dump_dir = (
-            config_dump_dir
+            Path(config_dump_dir)
             if config_dump_dir is not None
-            else os.path.join(os.getcwd(), "config_logs")
+            else Path.cwd() / "config_logs"
         )
-        os.makedirs(self.config_dump_dir, exist_ok=True)
+        self.config_dump_dir.mkdir(parents=True, exist_ok=True)
         self.jobs_registry: JobsRegistry = JobsRegistry()
+
+        self.log_folder = Path(log_folder)
+        self.cluster = cluster
+        self.partition = partition
+        self.supports_mem_spec = supports_mem_spec
+        self.disable_tqdm = disable_tqdm
+        self.progress_bar: tqdm.tqdm = None
+        self.cluster = cluster
+        self.max_retries = max_retries
+        self.max_jobarray_jobs = max_jobarray_jobs
 
     def dump_config(self, module: "StopesModule") -> Path:
         config_file = Path(self.config_dump_dir) / f"{module.name()}.yaml"
         OmegaConf.save(config=module.config, f=config_file)
         return config_file
 
+    def progress_start_jobs(self, n: int) -> None:
+        if self.disable_tqdm:
+            return
+        if self.progress_bar is None:
+            self.progress_bar = tqdm.tqdm(total=n)
+            return
+
+        self.progress_bar.total += n
+        self.progress_bar.refresh()
+
+    def progress_job_end(self) -> None:
+        if self.disable_tqdm:
+            return
+        self.progress_bar.update(1)
+
     async def schedule(self, module: "StopesModule"):
         with logging_redirect_tqdm():
             self.dump_config(module)
             value_array = module.array()
             if value_array is not None:
+                self.progress_start_jobs(len(value_array))
                 result = await self._schedule_array(module, value_array)
+                # progress has already been incremented inside _schedule_array
+                # once every job finishes
             else:
+                self.progress_start_jobs(1)
                 result = await self._schedule_single(module)
+                self.progress_job_end()
             self.jobs_registry.log_progress()
             return result
 
-    async def _await_and_cache(
-        self,
-        module: "StopesModule",
-        not_cached: tp.List[tp.Tuple[int, tp.Any]],
-        value_array: tp.List[tp.Any],
-    ) -> tp.AsyncIterator[tp.Tuple[int, tp.Any]]:
+    #######################################
+    # setup the executor
+    #######################################
+
+    def _get_executor(self, module: "StopesModule") -> submitit.Executor:
+        # we create a separate folder, under log_folder for each module so that logs are more organized
+        name = module.name()
+        module_log_folder = self.log_folder / name
+        module_log_folder.mkdir(parents=True, exist_ok=True)
+        executor = AutoExecutor(folder=module_log_folder, cluster=self.cluster)
+
+        # setup parameters
         reqs = module.requirements()
-        # it is an iterator of awaitables that we can wait for in as_completed
-        it = (
-            [
-                await_second_arg(
-                    idx,
-                    module(iteration_value=val, iteration_index=idx, cache=self.cache),
-                )
-                for (idx, val) in not_cached
-            ]  # if we are only running locally, let's just call module directly here
-            if isinstance(reqs, LocalOnlyRequirements)
-            else self.uncached_schedule_iterator(
-                module, not_cached
-            )  # otherwise delegate to the real scheduler
-        )
-
-        # now await for the results of each iteration, use tqdm to show a progress bar
-        for completed_result in tqdm.asyncio.tqdm.as_completed(
-            it,
-            desc=module.name(),
-            total=len(not_cached),
-        ):
-            # we cache as they complete
-            idx, result = await completed_result
-            if not module.validate(
-                result, iteration_value=value_array[idx], iteration_index=idx
-            ):
-                raise ValueError(f"invalid result for {module.name()}:{idx}")
-            yield (idx, result)
-
-    async def _schedule_array(
-        self, module: "StopesModule", value_array: tp.List[tp.Any]
-    ) -> tp.List[tp.Any]:
-        """
-        check if any item is in the cache, for the rest compute it
-        """
-        not_cached = []
-        already_cached = []
-        for idx, val in enumerate(value_array):
-            try:
-                cached_result = self.cache.get_cache(
-                    module, iteration_value=val, iteration_index=idx
-                )
-                already_cached.append((idx, cached_result))
-            except MissingCache:
-                not_cached.append((idx, val))
-
-        logger.info(
-            f"for {module.name()} found {len(already_cached)} already cached array results,"
-            f"{len(not_cached)} left to compute out of {len(value_array)}"
-        )
-
-        computed = (
-            [r async for r in self._await_and_cache(module, not_cached, value_array)]
-            if len(not_cached) > 0
-            else []
-        )
-        return [
-            result
-            for _, result in sorted(already_cached + list(computed), key=lambda r: r[0])
-        ]
-
-    async def _schedule_single(self, module: "StopesModule") -> tp.Any:
-        try:
-            cached_result = self.cache.get_cache(module)
-            logger.info(f"{module.name()} done from cache")
-            return cached_result
-        except MissingCache:
-            pass
-
-        reqs = module.requirements()
-        result = (
-            # if we are only running locally, let's just call module directly here
-            await module(cache=self.cache)
-            if isinstance(reqs, LocalOnlyRequirements)
-            else await self.uncached_schedule_single(module)
-        )
-        if not module.validate(result):
-            raise ValueError(f"invalid result for {module.name()}")
-        logger.info(f"{module.name()} done after full execution")
-        return result
-
-    @abstractmethod
-    def uncached_schedule_iterator(
-        self,
-        module: "StopesModule",
-        array_with_indexes: tp.Iterable[tp.Tuple[int, tp.Any]],
-    ) -> tp.Iterable[tp.Coroutine[tp.Tuple[int, tp.Any], None, None]]:
-        """
-        this should execute a module for an array of values,
-        wait for all results to execute and return all results.
-
-        The values and their index is passed in and the return should be the values and their index as tupples.
-        This is because with caching, this function might receive a parse array to execute.
-
-        returns an iterator of coroutines that can be awaited
-        """
-        ...
-
-    @abstractmethod
-    async def uncached_schedule_single(self, module: "StopesModule"):
-        """
-        this should execute a module in the non array case (single execution),
-        wait for it to execute and return its results.
-        """
-        ...
-
-
-class SubmititLauncher(Launcher):
-    def __init__(
-        self,
-        cache: tp.Optional[Cache] = None,
-        config_dump_dir: tp.Union[Path, str, None] = None,
-        log_folder: tp.Union[Path, str] = Path("logs"),
-        cluster: str = "local",
-        partition: str = "devaccel",
-    ):
-        super().__init__(cache, config_dump_dir)
-        self.log_folder = log_folder
-        self.cluster = cluster
-        self.partition = partition
-
-        self.executor = AutoExecutor(folder=self.log_folder, cluster=cluster)
-
-    def _setup_parameters(self, module: "StopesModule"):
-        reqs = module.requirements()
-        assert isinstance(
-            reqs, DistributedRequirements
-        ), "unsupported requirement type."
-        self.executor.update_parameters(
+        executor.update_parameters(
             name=module.name(),
             slurm_partition=self.partition,
         )
+        if self.partition and self.cluster == "slurm":
+            executor.update_parameters(
+                slurm_partition=self.partition,
+            )
+
         comment = module.comment()
         if comment is not None:
-            self.executor.update_parameters(
+            executor.update_parameters(
                 slurm_comment=comment,
             )
         if reqs is not None:
@@ -453,18 +243,128 @@ class SubmititLauncher(Launcher):
                 "cpus_per_task": reqs.cpus_per_task,
                 "timeout_min": reqs.timeout_min,
             }
-            if getattr(reqs, "mem_gb", None):
-                mapped_reqs["mem_gb"] = reqs.mem_gb
+            executor.update_parameters(**mapped_reqs)
+            if hasattr(reqs, "mem_gb") and self.supports_mem_spec:
+                executor.update_parameters(mem_gb=reqs.mem_gb)
             if hasattr(reqs, "contraints"):
-                mapped_reqs["slurm_constraint"] = (reqs.constraint,)
-            self.executor.update_parameters(**mapped_reqs)
+                executor.update_parameters(slurm_constraint=reqs.constraint)
 
-    async def _wrap_jobindex(self, job, idx):
-        return (idx, await job.awaitable().result())
+        return executor
 
-    def _instantiate_and_register_submitit_job(
-        self, submitit_job: submitit.Job, module: "StopesModule"
-    ):
+    ########################################
+    # schedule a single (non-array) job
+    ########################################
+
+    async def _schedule_single(self, module: "StopesModule") -> tp.Any:
+        try:
+            cached_result = self.cache.get_cache(module)
+            logger.info(f"{module.name()} done from cache")
+            return cached_result
+        except MissingCache:
+            pass
+
+        job = self.submit_job(module)
+        logger.info(f"submitted single job for {module.name()}: {job.job_id}")
+
+        self._track_job(job, module)
+        task = Task(module, 0, None, launcher=self).waiting_on_job(job)
+        await task.wait_and_validate()
+
+        logger.info(f"{module.name()} done after full execution")
+        return task.final_result
+
+    def submit_job(
+        self,
+        module: "StopesModule",
+        iteration_index: int = 0,
+        iteration_value: tp.Any = None,
+    ) -> submitit.Job:
+        executor = self._get_executor(module)
+        job = executor.submit(
+            module,
+            iteration_index=iteration_index,
+            iteration_value=iteration_value,
+            cache=self.cache,
+        ).cancel_at_deletion()
+        self._track_job(job, module)
+        return job
+
+    ########################################
+    # schedule multiple jobs at once
+    ########################################
+
+    async def _schedule_array(
+        self, module: "StopesModule", value_array: tp.List[tp.Any]
+    ) -> tp.List[tp.Any]:
+        """
+        check if any item is in the cache, for the rest compute it
+        """
+        module.retry_counts = [0] * len(value_array)
+        executor = self._get_executor(module)
+        tasks = []
+        tasks_to_submit = []
+
+        for idx, val in enumerate(value_array):
+            task = Task(module, idx, val, launcher=self)
+            # first, look up if this iteration has already been cached
+            try:
+                cached_result = self.cache.get_cache(
+                    module,
+                    iteration_index=idx,
+                    iteration_value=val,
+                )
+
+                task = task.done_from_cache(cached_result)
+                self.progress_job_end()
+            except MissingCache:
+                tasks_to_submit.append(task)
+            tasks.append(task)
+
+        for task_batch in utils.batch(tasks_to_submit, self.max_jobarray_jobs):
+            with executor.batch():
+                for task in task_batch:
+                    job = executor.submit(
+                        task.module,
+                        iteration_index=task.iteration_index,
+                        iteration_value=task.iteration_value,
+                        cache=self.cache,
+                    ).cancel_at_deletion()
+                    task = task.waiting_on_job(job)
+
+        not_cached = len(tasks_to_submit)
+        already_cached = len(tasks) - not_cached
+        logger.info(
+            f"for {module.name()} found {already_cached} already cached array results,"
+            f"{not_cached} left to compute out of {len(value_array)}"
+        )
+        if not_cached == 0:
+            return [task.final_result for task in tasks]
+
+        logger.info(
+            f"submitted job array for {module.name()}: {[task._job.job_id for task in tasks if task._job is not None]}"
+        )
+        # keep tasks in the register, I'm not sure why we aren't tracking everything
+        for task in tasks:
+            if task._job is not None:
+                self._track_job(task._job, module)
+
+        # now await for the results of each iteration.
+        # we want to show progress as soon as a result returns. Jobs might not return
+        # in order, so we use asyncio.as_completed to catch them as they arrive
+        # we do this over an iterator of awaitables.
+        for _res in asyncio.as_completed(
+            [task.wait_and_validate() for task in tasks if not task.done]
+        ):
+            try:
+                await _res
+            # TODO: handle exception, eg we could decide to cancel the full job array
+            finally:
+                self.progress_job_end()
+
+        # return the results that were already cached with the ones that just got computed
+        return [task.final_result for task in tasks]
+
+    def _track_job(self, submitit_job: submitit.Job, module: "StopesModule"):
         """
         Takes parameters: submitit_job object and module
         Instantiates submitit_job as an StopesJob (specifically as a SubmititJob)
@@ -479,52 +379,4 @@ class SubmititLauncher(Launcher):
         # Registering job into registry
         self.jobs_registry.register_job(stopes_job)
         logger.debug(stopes_job.get_job_info_log())
-
-    def uncached_schedule_iterator(
-        self,
-        module: "StopesModule",
-        array_with_indexes: tp.Iterable[tp.Tuple[int, tp.Any]],
-    ) -> tp.List[tp.Coroutine[tp.Tuple[int, tp.Any], None, None]]:
-        jobs = []
-        self._setup_parameters(module)
-        with self.executor.batch():
-            for idx, v in array_with_indexes:
-                jobs.append(
-                    (
-                        idx,  # we need to keep the true index for mixing with cached results later
-                        self.executor.submit(
-                            module,
-                            iteration_value=v,
-                            iteration_index=idx,
-                            cache=self.cache,
-                        ).cancel_at_deletion(),
-                    )
-                )
-        logger.info(
-            f"submitted job array for {module.name()}: {[j.job_id for _, j in jobs]}"
-        )
-        # Once jobs have been submitted, must add them to registry
-        for _, submitit_job in jobs:
-            self._instantiate_and_register_submitit_job(submitit_job, module)
-
-        try:
-            return [self._wrap_jobindex(j, idx) for idx, j in jobs]
-        except Exception as e:
-            # one job at least failed, kill everything else
-            logger.warning(
-                f"Exception while gathering job array for {module.name()}, cancelling all job array."
-            )
-            for _, j in jobs:
-                j.cancel(
-                    check=False  # it's ok if cancelling fails, in particular we probably can't cancel the job that failed
-                )
-            raise e
-
-    async def uncached_schedule_single(self, module: "StopesModule"):
-        self._setup_parameters(module)
-        job = self.executor.submit(module, cache=self.cache).cancel_at_deletion()
-        logger.info(f"submitted single job for {module.name()}: {job.job_id}")
-
-        self._instantiate_and_register_submitit_job(job, module)
-
-        return await job.awaitable().result()
+        logger.debug(stopes_job.get_job_info_log())

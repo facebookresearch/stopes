@@ -14,7 +14,7 @@ from pathlib import Path
 
 from omegaconf.omegaconf import MISSING
 
-from stopes.core.stopes_module import StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.utils import bash_pipefail, open_file_cmd
 
 logger = logging.getLogger("count_lines")
@@ -35,12 +35,22 @@ class CountLinesModule(StopesModule):
     def array(self):
         return self.config.shards
 
-    async def run(
+    def requirements(self):
+        return Requirements(
+            nodes=1,
+            tasks_per_node=1,
+            gpus_per_node=0,
+            cpus_per_task=1,
+            timeout_min=24 * 60,
+        )
+
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
-    ) -> tp.Tuple[Path, Path]:
+    ) -> int:
         filename = iteration_value
+        assert filename is not None, f"iteration value is null"
         result = subprocess.run(
             bash_pipefail(
                 open_file_cmd(filename),

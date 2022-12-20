@@ -64,19 +64,24 @@ def retrieve_direction_step(
     source_lang, target_lang = split_direction(direction)
     source_output = f"{output_prefix}.{direction}.{source_lang}"
     target_output = f"{output_prefix}.{direction}.{target_lang}"
-    if os.path.exists(source_output):
-        execute_in_shell(f"rm {source_output}")
-    if os.path.exists(target_output):
-        execute_in_shell(f"rm {target_output}")
+    metadata_output = f"{output_prefix}.{direction}.meta"
+    for filename in [source_output, target_output, metadata_output]:
+        if os.path.exists(filename):
+            execute_in_shell(f"rm {filename}")
+
+    has_metadata = None
     jobs = []
     for corpus, corpus_paths in all_corpora_map[direction]["values"].items():
         if os.path.exists(f"{source_output}.{corpus}"):
             execute_in_shell(f"rm {source_output}.{corpus}")
         if os.path.exists(f"{target_output}.{corpus}"):
             execute_in_shell(f"rm {target_output}.{corpus}")
+        if os.path.exists(f"{metadata_output}.{corpus}"):
+            execute_in_shell(f"rm {metadata_output}.{corpus}")
         is_gzip = corpus_paths["is_gzip"]
         local_source = corpus_paths["source"]
         local_target = corpus_paths["target"]
+        local_metadata = corpus_paths["metadata"]
         data_tag = corpus_paths["data_tag"]
         cat_cmd = "zcat" if is_gzip else "cat"
         src_preprocess_cmds = (
@@ -97,6 +102,20 @@ def retrieve_direction_step(
         )
         execute_in_shell(src_command)
         execute_in_shell(tgt_command)
+
+        # Check if some corpora have metadata and others don't => avoid losing sync
+        if has_metadata is None:
+            has_metadata = True if local_metadata else False
+        elif (has_metadata is True and local_metadata is None) or (
+            has_metadata is False and local_metadata
+        ):
+            assert (
+                False
+            ), f"Inconsistent metadata for {direction}.{tag} (some corpora with metadata and some without)"
+
+        if local_metadata:
+            meta_command = f"{cat_cmd} {local_metadata} >> {metadata_output}"
+            execute_in_shell(meta_command)
     return f"Done {tag} {direction}"
 
 
@@ -140,6 +159,10 @@ async def retrieve_data(
             source_lang, target_lang = direction.split("-")
             source_output = f"{output_prefix}.{direction}.{source_lang}"
             target_output = f"{output_prefix}.{direction}.{target_lang}"
+            metadata_output = None
+            if os.path.exists(f"{output_prefix}.{direction}.meta"):
+                metadata_output = f"{output_prefix}.{direction}.meta"
+
             for corpus, corpus_paths in all_corpora_map[direction]["values"].items():
                 if os.path.exists(f"{source_output}.{corpus}") and os.path.exists(
                     f"{target_output}.{corpus}"
@@ -152,7 +175,7 @@ async def retrieve_data(
                     os.remove(f"{target_output}.{corpus}")
 
             concatenated_paths[direction] = data_types.ParallelDataset(
-                source=source_output, target=target_output
+                source=source_output, target=target_output, metadata=metadata_output
             )
 
     if tag.split("_")[0] == "train":
@@ -172,8 +195,24 @@ async def retrieve_data(
                 )
                 execute_in_shell(src_command)
                 execute_in_shell(tgt_command)
+                # Deal with metadata here
+                sampled_metadata_output = None
+                if os.path.exists(f"{output_prefix}.{direction}.meta"):
+                    metadata_output = f"{output_prefix}.{direction}.meta"
+                    sampled_metadata_output = (
+                        f"{output_prefix.replace('train', 'sampled_train')}.{direction}.meta"
+                        if metadata_output
+                        else None
+                    )
+                    meta_command = (
+                        f'sed -e "1000q" {metadata_output} > {sampled_metadata_output}'
+                    )
+                    execute_in_shell(meta_command)
+
                 sampled_concatenated_paths[direction] = data_types.ParallelDataset(
-                    source=sampled_source_output, target=sampled_target_output
+                    source=sampled_source_output,
+                    target=sampled_target_output,
+                    metadata=sampled_metadata_output,
                 )
         return (concatenated_paths, sampled_concatenated_paths)
     else:

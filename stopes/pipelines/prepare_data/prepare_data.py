@@ -30,6 +30,7 @@ from stopes.pipelines.prepare_data.utils import (
     execute_in_shell,
     hash_parallel_data,
     setup_config,
+    split_direction,
 )
 from stopes.pipelines.prepare_data.validation import validate_data_config
 
@@ -133,6 +134,7 @@ def prepare_valid_test_direction(
             all_num_shards[direction],
             f"{output_dir}/data_bin",
         )
+
     if binarized_sampled_train_dict:
         for _, binarized_sampled_train in binarized_sampled_train_dict.items():
             write_to_all_shards(
@@ -200,7 +202,7 @@ def prepare_train_direction(
             )
             for i, shard in enumerate(train_shards)
         )
-
+    source, target = split_direction(direction)
     # Copy over train_{fold}.bin/idx files from /tmp/temp_binarized to data_bin/
     for train_fold, binarized_train_data in binarized_train_data_shards.items():
         if train_fold != "train":
@@ -226,6 +228,11 @@ def prepare_train_direction(
                 execute_in_shell(
                     f"cp {tgt_path_prefix}.idx {shard_dir}/{tgt_basename_prefix}.idx"
                 )
+                meta_path_prefix = f"{src_path_prefix.rsplit('.',1)[0]}.meta"
+                if os.path.exists(meta_path_prefix):
+                    execute_in_shell(
+                        f"cp {meta_path_prefix} {shard_dir}/{src_basename_prefix}.meta"
+                    )
 
 
 def prepare_data_direction(
@@ -432,7 +439,6 @@ async def main(data_config: data_types.DataConfig, output_dir: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-config", default=None)
-    parser.add_argument("--data-path", default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--log-file", default="prepare_data.log")
     parser.add_argument("rest", nargs=argparse.REMAINDER)
@@ -450,5 +456,5 @@ if __name__ == "__main__":
     fh = logging.FileHandler(filename=os.path.join(output_dir, args.log_file))
     logger.addHandler(fh)
 
-    data_config = setup_config(args.data_path, args.data_config)
+    data_config = setup_config(args.data_config)
     asyncio.run(main(data_config, output_dir))

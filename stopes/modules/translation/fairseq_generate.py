@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import base64
 import collections
 import dataclasses
@@ -109,8 +115,8 @@ class FairseqGenerateModule(stopes.core.StopesModule):
 
         return [(self.config.src_text_file, self.config.src_lang, self.config.tgt_lang)]
 
-    def requirements(self) -> stopes.core.DistributedRequirements:
-        return stopes.core.DistributedRequirements(
+    def requirements(self) -> stopes.core.Requirements:
+        return stopes.core.Requirements(
             nodes=1,
             mem_gb=20,
             tasks_per_node=1,

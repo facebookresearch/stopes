@@ -13,6 +13,8 @@ from stopes.pipelines.filtering.filters.base import Filter, FilteringCounts
 
 
 class LaserFilter(Filter):
+    """Uses pre-computed LASER scores to filter bitext."""
+
     def __init__(self, threshold: float):
         self.threshold = threshold
 

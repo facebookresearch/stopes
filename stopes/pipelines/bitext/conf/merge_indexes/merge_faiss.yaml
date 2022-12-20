@@ -4,4 +4,6 @@ config:
   index_type: ???
   indexes: ???
   data: ???
-  output_dir: index.${module.config.data.data_version}
+  expected_line_count: ???
+  output_dir: index.${.data.data_version}
+  enable_checkpointing: False

@@ -84,6 +84,12 @@ const config = {
             label: 'State-of-the-art Pipelines',
           },
           {
+            type: 'doc',
+            docId: '/category/evaluation-toolkit',
+            position: 'left',
+            label: 'Evaluation Toolkit',
+          },
+          {
             href: 'https://github.com/facebookresearch/fairseq/tree/nllb',
             position: 'left',
             label: 'NLLB',

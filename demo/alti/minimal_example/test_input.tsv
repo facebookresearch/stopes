@@ -1,0 +1,8 @@
+src	mt
+Traduction normale.	A normal translation.
+Traduction incomplète, dans laquelle une partie de l'entrée est ignorée.	An incomplete translation.
+Traduction avec une hallucination.	A translation with a hallucination that actually references itself.
+Cette entrée sera ignorée.	Here is an example of a full hallucination.
+Traduction dans laquelle je ne me suis pas trompé.	A translation in which I have not made an error.
+Traduction dans laquelle j'ai fait une erreur.	A transfer in which I have accessed an error.
+Traduction avec hallucination cyclique.	A translation with with with with with with a cyclical hallucination.

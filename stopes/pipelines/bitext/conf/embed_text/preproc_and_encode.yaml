@@ -6,7 +6,6 @@ defaults:
 
 config:
   preprocess:
-    config:
-      output_dir: ${...output_dir}/moses_preprocess
-      shards: ${...shards}
-      lang: ${...lang}
+    output_dir: ${..output_dir}/moses_preprocess
+    shards: ${..shards}
+    lang: ${..lang}

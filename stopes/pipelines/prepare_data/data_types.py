@@ -16,12 +16,14 @@ class ParallelDataset:
 
     Features:
         source (str): file path of source language corpora
-        target (Str): file path of target language corpora
+        target (str): file path of target language corpora
+        metadata (Optional[str]): optional path to metadata for this corpus
         data_tag (Optional[str]): optional string to tag source sentences from specific corpora
     """
 
     source: str = MISSING
     target: str = MISSING
+    metadata: Optional[str] = None
     num_lines: Optional[int] = None
     is_gzip: Optional[bool] = False
     data_tag: Optional[str] = None

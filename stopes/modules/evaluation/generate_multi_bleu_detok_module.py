@@ -14,7 +14,7 @@ from pathlib import Path
 
 from omegaconf import MISSING
 
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.utils import ensure_dir
 from stopes.modules.preprocess import moses_cli_module
 
@@ -90,17 +90,16 @@ class GenerateMultiBleuDetokModule(StopesModule):
         return array
 
     def requirements(self):
-        return DistributedRequirements(
+        return Requirements(
             tasks_per_node=1,
             nodes=1,
             gpus_per_node=1,
             cpus_per_task=8,
-            mem_gb=self.config.batch_size * self.config.batch_memory,
             timeout_min=1000,
             constraint="volta32gb",
         )
 
-    async def run(
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,

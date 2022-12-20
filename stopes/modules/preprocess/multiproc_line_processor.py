@@ -24,7 +24,7 @@ from joblib import Parallel, delayed
 from omegaconf import MISSING, DictConfig
 
 from stopes.core import utils
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.modules.preprocess.line_processor import (
     LineProcessorCallback,
     LineProcessorConfig,
@@ -113,9 +113,9 @@ class MultiprocLineProcessorModule(StopesModule):
 
     def requirements(self):
         reqs = self.config.requirements
-        if not isinstance(reqs, DistributedRequirements):
+        if not isinstance(reqs, Requirements):
             # Performe conversion if needed
-            return DistributedRequirements(**reqs)
+            return Requirements(**reqs)
         return reqs
 
     def name(self):
@@ -316,7 +316,7 @@ def test_multiproc_line_processor():
                 output_dir=tmpdirname,
                 outfile_prefix="",
                 shards=[input_file],
-                requirements=DistributedRequirements(
+                requirements=Requirements(
                     cpus_per_task=num_splits,
                 ),
                 tmp_dir=tmpdirname,

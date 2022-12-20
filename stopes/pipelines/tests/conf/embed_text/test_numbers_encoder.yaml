@@ -1,0 +1,23 @@
+_target_: stopes.modules.preprocess.preprocess_encode_module.PreprocessEncodeModule
+
+config:
+  encode:
+    _target_: stopes.modules.preprocess.line_processor.LineProcessorModule
+    config:
+      output_dir: ${...output_dir}/${...encoder._name}
+      shards: ${...shards}
+      line_processor: ${...encoder}
+      outfile_prefix: encf
+      buffer_size: 10000
+      requirements: {}
+  encoder:
+    _target_: stopes.pipelines.tests.test_global_mining.ToyNumbersEncoder
+    _name: number_encoder
+    encoder_model: null
+    spm_model: null
+    spm_vocab: null
+    fp16: False
+  lang: ???
+  shards: ???
+  lang_shard_name: None
+  launcher: ${launcher} 

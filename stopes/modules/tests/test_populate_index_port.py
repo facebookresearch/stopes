@@ -27,7 +27,7 @@ from stopes.modules.bitext.indexing.populate_faiss_index import (
 from stopes.utils.embedding_utils import Embedding
 
 from .test_modules_utils import (
-    generate_embedding,
+    generate_saved_embedding,
     test_dim,
     test_dtype,
     test_idx_type,
@@ -63,7 +63,7 @@ def test_generate_populated_index(tmp_path: Path):
     use_gpu = True
 
     embedding_outfile = tmp_path / "embedding.bin"
-    generate_embedding(file=embedding_outfile)
+    generate_saved_embedding(file=embedding_outfile)
 
     trained_index_out_file = generate_train_index(tmp_path, use_gpu, embedding_outfile)
     assert (
@@ -135,13 +135,13 @@ def test_population_checkpointing(tmp_path: Path):
 
     # first generate an embedding and index
     embedding_outfile = tmp_path / "embedding.bin"
-    generate_embedding(file=embedding_outfile)
+    generate_saved_embedding(file=embedding_outfile)
     index_out_file = generate_train_index(tmp_path, True, embedding_outfile)
     populate_test_config.config.index = str(index_out_file)
 
     # generate new embedding to populate onto the index
     generated_embedding_file = tmp_path / "generated_embedding_to_populate.bin"
-    generate_embedding(
+    generate_saved_embedding(
         file=generated_embedding_file, emb_length=test_chkpt_embedding_length
     )
     populate_test_config.config.embedding_files.append(str(generated_embedding_file))

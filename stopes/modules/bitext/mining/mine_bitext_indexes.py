@@ -8,22 +8,15 @@
 import logging
 import os
 import typing as tp
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 from omegaconf import MISSING
 
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.utils import ensure_dir
-from stopes.modules.bitext.mining.mine_bitext_indexes_utils import (  # noqa
-    DISTANCES_FILE_SUFFIX,
-    INDICES_FILE_SUFFIX,
-    mine,
-)
-from stopes.utils.mining_utils import extract_shard_id
-
-logger = logging.getLogger("mine_bitext_indexes")
+from stopes.modules.bitext.mining.mine_bitext_indexes_utils import MineType, mine
 
 
 @dataclass
@@ -48,45 +41,57 @@ class MineBitextConfig:
     src_k: int = 16
     tgt_k: int = 16
     k_extract: int = 1
-    margin: str = "ratio"
+    margin_type: str = "ratio"
+    mine_type: str = "union"
+    sort_neighbors: bool = False
     margin_norm: str = "mean"
     num_probe: int = 128
     gpu_type: str = "fp16-shard"
     mine_threshold: float = 1.06
-
-
-class MineBitextIndexesModule(StopesModule):
-    def __init__(self, config):
-        super().__init__(config, MineBitextConfig)
-        ensure_dir(self.config.output_dir)
-
-    def requirements(self):
-        return DistributedRequirements(
+    requirements: Requirements = field(
+        default=Requirements(
             nodes=1,
             tasks_per_node=1,
             gpus_per_node=0,
             cpus_per_task=40,
             timeout_min=600,
         )
+    )
 
-    async def run(
+
+class MineBitextIndexesModule(StopesModule):
+    def __init__(self, config):
+        super().__init__(config, MineBitextConfig)
+        ensure_dir(self.config.output_dir)
+        assert MineType.has_value(
+            self.config.mine_type
+        ), f"mine type: {self.config.mine_type} not supported"
+
+    def requirements(self):
+        return self.config.requirements
+
+    def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ):
-        # TODO: use Path to build path names
-        out_base_name = os.path.abspath(
-            os.path.join(
-                self.config.output_dir,
-                f"{self.config.src_lang}-{self.config.tgt_lang}"
-                f".{self.config.index_type}.k{self.config.src_k}-{self.config.tgt_k}"
-                f".{self.config.margin_norm}.np{self.config.num_probe}"
-                f".{self.config.gpu_type}",
-            )
-        )
+        logger = logging.getLogger("stopes.mine_bitext_indexes")
+
+        assert all(
+            [os.path.exists(f) for f in self.config.src2tgt_dist_files]
+        ), "src2tgt distance file missing"
+        assert all(
+            [os.path.exists(f) for f in self.config.src2tgt_index_files]
+        ), "src2tgt index file missing"
+        assert all(
+            [os.path.exists(f) for f in self.config.tgt2src_dist_files]
+        ), "tgt2src distance file missing"
+        assert all(
+            [os.path.exists(f) for f in self.config.tgt2src_index_files]
+        ), "tgt2src index file missing"
 
         # mining, extracting sentence indices
-        scores, src_idx, trg_idx = mine(
+        scores, src_idx, trg_idx, bwd_pos = mine(
             self.config.src2tgt_dist_files,
             self.config.tgt2src_dist_files,
             self.config.src2tgt_index_files,
@@ -96,17 +101,32 @@ class MineBitextIndexesModule(StopesModule):
             self.config.k_extract,
             self.config.mine_threshold,
             self.config.margin_norm == "last",
+            self.config.margin_type,
+            self.config.mine_type,
+            self.config.sort_neighbors,
             logger,
         )
 
+        meta = Path(self.config.output_dir) / (
+            f"{self.config.src_lang}-{self.config.tgt_lang}"
+            f".{self.config.index_type}.k{self.config.src_k}-{self.config.tgt_k}"
+            f".{self.config.margin_norm}.np{self.config.num_probe}"
+            f".{self.config.gpu_type}.align.npz"
+        )
         # persisting results to disk
-        meta = f"{out_base_name}.align"
-        np.savez(meta, scores=scores, src_idx=src_idx, trg_idx=trg_idx)
+        np.savez(
+            meta,
+            scores=scores,
+            src_idx=src_idx,
+            trg_idx=trg_idx,
+            bwd_pos=bwd_pos,
+        )
+        logger.info(f"written results to {meta}")
 
-        return meta
+        return meta.resolve()
 
     def version(self):
-        return "0.1"
+        return "0.3"
 
     def name(self):
         return (

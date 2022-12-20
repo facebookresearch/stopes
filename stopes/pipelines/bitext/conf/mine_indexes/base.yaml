@@ -15,7 +15,9 @@ config:
     src_k: 16
     tgt_k: 16
     k_extract: 1
-    margin: ratio
+    margin_type: ratio
+    mine_type: union
+    sort_neighbors: False
     margin_norm: mean
     num_probe: 128
     gpu_type: fp16-shard

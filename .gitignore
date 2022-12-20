@@ -132,3 +132,7 @@ ENV/
 
 # Website
 node_modules/
+demo/*.gz
+demo/models/
+demo/mining/*.gz
+demo/mining/models/

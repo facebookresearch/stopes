@@ -1,0 +1,11 @@
+# @package _global_
+demo_dir: ???
+DATADIR: ${demo_dir}
+
+is_multilingual: True
+checkpoint:  ${demo_dir}/checkpoint.pt
+data_dir: ${demo_dir}
+spm: ${demo_dir}/flores200_sacrebleu_tokenizer_spm.model
+src_col: src
+tgt_col: mt
+use_gpu: False

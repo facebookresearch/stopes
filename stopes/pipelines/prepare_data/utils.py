@@ -5,20 +5,24 @@
 # LICENSE file in the root directory of this source tree.
 
 import asyncio
+import errno
 import gzip
 import hashlib
 import logging
 import os
 import pickle
+import re
 import subprocess
-from copy import deepcopy
+from contextlib import ExitStack
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Set, Tuple, TypeVar
 
 import numpy as np
 from omegaconf import OmegaConf
 from submitit import AutoExecutor, Job
 
+import stopes.core.utils as utils
 import stopes.pipelines.prepare_data.data_types as data_types
 from stopes.pipelines.prepare_data.cache import cache_step_sync
 
@@ -33,41 +37,8 @@ def split_direction(direction: str) -> Tuple[str, str]:
     return (source, target)
 
 
-def setup_config(data_path: str, config_path: str) -> data_types.DataConfig:
+def setup_config(config_path: str) -> data_types.DataConfig:
     data_config = OmegaConf.load(config_path)
-    for key in data_config:
-        if key.split("_")[-1] == "corpora":
-            corpora_list = deepcopy(data_config[key])
-            data_config[key] = {}
-            for corpus_str in corpora_list:
-                lang_dir, corpus_name = corpus_str.split("/")
-                src, tgt = lang_dir.split("-")
-                reversed_lang_dir = f"{tgt}-{src}"
-                if lang_dir not in data_config[key]:
-                    data_config[key][lang_dir] = {"values": {}}
-                dir_exists = False
-                if os.path.isdir(os.path.join(data_path, lang_dir)):
-                    dir_exists = True
-                    src_file = os.path.join(
-                        data_path, lang_dir, f"{corpus_name}.{src}.gz"
-                    )
-                    tgt_file = os.path.join(
-                        data_path, lang_dir, f"{corpus_name}.{tgt}.gz"
-                    )
-                elif os.path.isdir(os.path.join(data_path, reversed_lang_dir)):
-                    dir_exists = True
-                    src_file = os.path.join(
-                        data_path, reversed_lang_dir, f"{corpus_name}.{src}.gz"
-                    )
-                    tgt_file = os.path.join(
-                        data_path, reversed_lang_dir, f"{corpus_name}.{tgt}.gz"
-                    )
-                if dir_exists and os.path.isfile(src_file) and os.path.isfile(tgt_file):
-                    data_config[key][lang_dir]["values"][
-                        corpus_name
-                    ] = data_types.ParallelDataset(
-                        source=src_file, target=tgt_file, is_gzip=True
-                    )
     schema = OmegaConf.structured(data_types.DataConfig)
     return OmegaConf.merge(schema, data_config)
 
@@ -135,9 +106,13 @@ def dedup_sharding(
         os.makedirs(sharding_output_dir, exist_ok=True)
     src, tgt = direction.split("-")
 
+    has_metadata = train_parallel.metadata is not None
+
     # sharding prepare
     source_shards = []
     target_shards = []
+    metadata_shards = []
+
     for i in range(num_shards):
         execute_in_shell(f"mkdir -p {sharding_output_dir}/shard{i:03d}")
         source_shards.append(
@@ -152,6 +127,13 @@ def dedup_sharding(
                 "wb",
             )
         )
+        if has_metadata:
+            metadata_shards.append(
+                open(
+                    f"{sharding_output_dir}/shard{i:03d}/{train_fold}.shard{i:03d}.{src}-{tgt}.meta",
+                    "w",
+                )
+            )
     np.random.seed(binarization_config.random_seed)
     num_lines = count_lines(
         train_parallel.source, train_parallel.is_gzip
@@ -160,10 +142,14 @@ def dedup_sharding(
     eval_hash_seen = set()
 
     idx = 0
+    meta_f = open(train_parallel.metadata, "r") if has_metadata else None
+
     with open(train_parallel.source, "rb") as src_f, open(
         train_parallel.target, "rb"
     ) as tgt_f:
         for source_line, target_line in zip(src_f, tgt_f):
+            if has_metadata:
+                meta_line = meta_f.readline()
             # dedup
             source_hash = hash_sentence(source_line)
             target_hash = hash_sentence(target_line)
@@ -178,13 +164,19 @@ def dedup_sharding(
                 pass
             else:
                 seen.add(hashed)
+                eval_hash_seen.add(source_hash)
+                eval_hash_seen.add(target_hash)
                 # sharding
                 shard_id = idx_to_shards[idx]
                 source_shards[shard_id].write(source_line)
                 target_shards[shard_id].write(target_line)
+                if has_metadata:
+                    metadata_shards[shard_id].write(meta_line)
             idx += 1
 
-    for fi in source_shards + target_shards:
+    if has_metadata:
+        meta_f.close()
+    for fi in source_shards + target_shards + metadata_shards:
         fi.flush()
         fi.close()
 
@@ -192,9 +184,117 @@ def dedup_sharding(
         data_types.ParallelDataset(
             source=f"{sharding_output_dir}/shard{i:03d}/{train_fold}.shard{i:03d}.{src}-{tgt}.{src}",
             target=f"{sharding_output_dir}/shard{i:03d}/{train_fold}.shard{i:03d}.{src}-{tgt}.{tgt}",
+            metadata=f"{sharding_output_dir}/shard{i:03d}/{train_fold}.shard{i:03d}.{src}-{tgt}.meta"
+            if has_metadata
+            else None,
         )
         for i in range(num_shards)
     ]
+
+
+def clean_corpus_n(
+    corpus: str,
+    l1: str,
+    l2: str,
+    out: str,
+    minc: int,
+    maxc: int,
+    meta: str = None,
+    ratio: int = 9,
+    retained: str = None,
+    lc: bool = False,
+    ignore_ratio: bool = False,
+    ignore_xml: bool = False,
+):
+    """
+    Filter a bitext by removing sentence pairs where a side is shorter than minc, longer than maxc or length ratio is larger than ratio
+
+    Python port of the clean-corpus-n.perl script from Moses with some changes:
+        - does not take factors into account
+
+    Parameters:
+        corpus (str): corpus name. The function will process corpus.{l1,l2}[.gz]
+        l1 and l2 (str): the two languages
+        out (str): output directory
+        minc and maxc (int): min and max size for a segment
+        ratio (int): length ratio between source and target lengths
+        retained (str): file containing the retained lines numbers
+        lc: should we lowercase the data? (default False)
+        ignore_ratio and ignore_xml: ignore ratio or xml tags
+    Outputs:
+        Processed files are put in out/corpus.{l1,l2}[.gz]
+    Returns:
+        Nothing
+    """
+    logger.info(
+        f"clean_corpus_n: processing {corpus}.{l1} & .{l2} to {out}, cutoff {minc}-{maxc}, ratio {ratio}, {'without' if meta is None else 'with'} metadata"
+    )
+
+    # Compile useful patterns
+    space_pat = re.compile(r"\s+")
+
+    with ExitStack() as stack:
+        meta_file = (
+            stack.enter_context(utils.open(Path(f"{corpus}.{meta}"))) if meta else None
+        )
+        l1_out = stack.enter_context(utils.open(f"{out}.{l1}", "w"))
+        l2_out = stack.enter_context(utils.open(f"{out}.{l2}", "w"))
+        meta_out = (
+            stack.enter_context(utils.open(f"{out}.{meta}", "w")) if meta_file else None
+        )
+        retained_file = (
+            stack.enter_context(utils.open(retained, "w")) if retained else None
+        )
+        innr = 0
+        outnr = 0
+        l1_file = stack.enter_context(utils.open(Path(f"{corpus}.{l1}")))
+        l2_file = stack.enter_context(utils.open(Path(f"{corpus}.{l2}")))
+        for l1_line, l2_line in zip(l1_file, l2_file):
+            if meta_file:
+                meta_line = meta_file.readline().strip()
+            innr += 1
+            # logger.info(".") if (innr%1000 == 0)
+            # if lowercasing, lowercase
+            if lc is True:
+                l1_line = l1_line.lower()
+                l2_line = l2_line.lower()
+
+            l1_line = space_pat.sub(" ", l1_line)
+            l1_line = l1_line.strip()
+            l2_line = space_pat.sub(" ", l2_line)
+            l2_line = l2_line.strip()
+
+            if not l1_line or not l2_line:
+                continue
+
+            def word_count(line: str, ignore_xml=False):
+                if ignore_xml is True:
+                    line = re.sub(r"<\S[^>]*\S>", " ", line)
+                    line = space_pat.sub(" ", line)
+                    line = line.strip()
+                words = line.split(" ")
+                return len(words)
+
+            l1_count = word_count(l1_line, ignore_xml=ignore_xml)
+            l2_count = word_count(l2_line, ignore_xml=ignore_xml)
+            if (l1_count < minc or l1_count > maxc) or (
+                l2_count < minc or l2_count > maxc
+            ):
+                continue
+            if (
+                (ignore_ratio is False)
+                and (l1_count / l2_count > ratio)
+                or (l2_count / l1_count > ratio)
+            ):
+                continue
+
+            outnr += 1
+            l1_out.write(f"{l1_line}\n")
+            l2_out.write(f"{l2_line}\n")
+            if meta_out is not None:
+                meta_out.write(f"{meta_line}\n")
+            if retained_file is not None:
+                retained_file.write(f"{innr}\n")
 
 
 async def awaitable_job(job: Job[JT], poll_s: int = 1) -> JT:

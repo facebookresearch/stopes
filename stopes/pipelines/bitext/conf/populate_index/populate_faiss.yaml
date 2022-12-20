@@ -4,6 +4,8 @@ config:
   index: ???
   index_type: ???
   embedding_files: ???
-  output_dir: index.${module.config.data.data_version}
+  data: ???
+  output_dir: index.${.data.data_version}
   num_cpu: 40
   embedding_dimensions: 1024
+  enable_checkpointing: False

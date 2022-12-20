@@ -15,7 +15,7 @@ import hydra
 from omegaconf import DictConfig
 
 from stopes.core.launcher import Launcher
-from stopes.core.stopes_module import DistributedRequirements
+from stopes.core.stopes_module import Requirements
 from stopes.modules.preprocess.multiproc_line_processor import (
     MultiprocLineProcessorCallback,
     MultiprocLineProcessorConfig,
@@ -103,7 +103,7 @@ async def launch_processor(
     raw_files: tp.List[Path],
     out_dir: Path,
     text_starts_at_col: int,
-    requirements: DistributedRequirements,
+    requirements: Requirements,
     tmp_dir: Path,
 ) -> tp.List[Path]:
     """
@@ -143,7 +143,7 @@ def main(config: DictConfig) -> None:
             raw_files=files,
             out_dir=config.out_dir,
             text_starts_at_col=config.text_starts_at_col,
-            requirements=DistributedRequirements(**config.requirements),
+            requirements=Requirements(**config.requirements),
             tmp_dir=config.tmp_dir,
         )
     )

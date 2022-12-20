@@ -17,7 +17,9 @@ class DataConfig:
     data_shard_dir: str = MISSING
     shard_type: str = MISSING
     bname: str = MISSING
+    shard_list: tp.Optional[tp.List[str]] = MISSING
     shard_glob: tp.Optional[str] = MISSING
     meta_glob: tp.Optional[str] = MISSING
-    # TODO we should compute the nl as part of the pipeline instead of relying on it being precomputed
-    nl_file_template: str = MISSING
+    # we can compute the number of lines as part of the pipeline instead of relying on it being precomputed
+    # however, it is still possible to provide .nl files (one file per language, one line per shard in the file)
+    nl_file_template: tp.Optional[str] = None

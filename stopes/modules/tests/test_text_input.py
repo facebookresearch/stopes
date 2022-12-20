@@ -1,7 +1,13 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import gzip
 from pathlib import Path
 
-from stopes.core.launcher import SubmititLauncher
+from stopes.core.launcher import Launcher
 from stopes.modules.bitext.mining.count_lines import CountLinesConfig, CountLinesModule
 
 test_input_str = """This is a sentence.
@@ -14,7 +20,7 @@ async def test_line_count_with_launcher(tmp_path: Path):
     file_path = tmp_path / "lines.tsv.gz"
     with gzip.open(file_path, mode="wt") as f:
         f.write(test_input_str)
-    launcher = SubmititLauncher(
+    launcher = Launcher(
         config_dump_dir=tmp_path / "conf",
         log_folder=tmp_path / "logs",
         cluster="local",
@@ -29,5 +35,5 @@ async def test_line_count(tmp_path: Path):
     with gzip.open(file_path, mode="wt") as f:
         f.write(test_input_str)
     counter = CountLinesModule(CountLinesConfig(shards=[file_path]))
-    result = await counter.run(file_path, 0)
+    result = counter.run(file_path, 0)
     assert result == 3

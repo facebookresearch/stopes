@@ -41,14 +41,14 @@ test_corpora:
   ...
 
 source_vocab_config:
-    pretrained:
-        model_file: <PATH_TO_SRC_MODEL_FILE>
-        vocab_file: <PATH_TO_SRC_VOCAB_FILE>
+  pretrained:
+      model_file: <PATH_TO_SRC_MODEL_FILE>
+      vocab_file: <PATH_TO_SRC_VOCAB_FILE>
 
 target_vocab_config:
-    pretrained:
-        model_file: <PATH_TO_TGT_MODEL_FILE>
-        vocab_file: <PATH_TO_TGT_VOCAB_FILE>
+  pretrained:
+      model_file: <PATH_TO_TGT_MODEL_FILE>
+      vocab_file: <PATH_TO_TGT_VOCAB_FILE>
 
 binarization_config:
   max_examples_per_shard: <MAX_EXAMPLES_PER_SHARD>

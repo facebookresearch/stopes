@@ -11,7 +11,7 @@ dynamic = ["version", "description"]
 
 dependencies = [
   "hydra-core>=1.2.0",
-  "submitit>=1.4.2",
+  "submitit>=1.4.5",
   "tqdm",
   "joblib",
 ]
@@ -43,10 +43,13 @@ classifiers=[
 #    "fairseq==0.12.1",
     "faiss-cpu",
     "sentencepiece",
-    "numpy",
+    "numpy>=1.21",
   ]
   mining_gpu = [
     "faiss-gpu",
+  ]
+  speech_mining = [
+    "torchaudio",
   ]
   dev = [
       # Test
@@ -71,6 +74,19 @@ classifiers=[
     "pandas",
     "scipy",
     "sklearn",
+    "xxhash",
+  ]
+  blaser = [
+    "spicy",
+    "numpy",
+    "torch",
+  ]
+  alti = [
+    "einops",
+    "numpy",
+    "omegaconf",
+    "torch",
+    # fairseq is also a dependency, but it must be installed separately
   ]
 
 [tool.black]
@@ -79,7 +95,7 @@ classifiers=[
 [tool.isort]
 profile = "black"
 skip_gitignore = true
-skip_glob = ["*.pyx"]
+skip_glob = ["website/*", "*.pyx"]
 
 [tool.mypy]
 python_version = "3.8"
@@ -96,9 +112,13 @@ module = [
   "botocore",
   "fairseq.*",
   "faiss",
+  "fasttext",
+  "omegaconf",
   "sagemaker",
   "sentencepiece",
   "tqdm.*",
+  "wandb",
+  "xxhash",
 ]
 ignore_missing_imports = true
 

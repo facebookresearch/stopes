@@ -31,7 +31,7 @@ class HFTextEncoder(EncodeToNPY):
         outfile_prefix: str = "encf",
         outfile_postfix: str = "",
         normalize: bool = False,
-        fp16_storage: bool = False,
+        fp16: bool = False,
         # ignored
         spm_vocab: str = "",
         spm_model: str = "",
@@ -43,7 +43,7 @@ class HFTextEncoder(EncodeToNPY):
             input_file_idx=input_file_idx,
             output_dir=output_dir,
             normalize=normalize,
-            fp16_storage=fp16_storage,
+            fp16=fp16,
         )
         self.model = SentenceTransformer(encoder_model)
 

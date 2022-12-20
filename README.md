@@ -38,7 +38,6 @@ pip install fairseq==0.12.1
 
 You can then install stopes with pip:
 ```
-cd ..
 git clone https://github.com/facebookresearch/stopes.git
 cd stopes
 pip install -e '.[dev,mono,mining]'
@@ -70,6 +69,8 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
   from two monolingual datasets. (inspired by
   [CCMatric](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
 - `distilation` to run our sequence-level knowledge distillation pipeline which trains a small student model from a pre-trained large teacher model (approach based on https://arxiv.org/abs/1606.07947)
+4. `eval` provides a set of evaluation tools, including ALTI+ and BLASER for text-free speech translation evaluation.
+5. `demo` contains applications of stopes, including a quickstart demo that you can run at home of mining as well as a example usage of ALTI+ for toxicity and hallucination analysis.
 
 **Full documentation**: see https://facebookresearch.github.io/stopes
 or the `websites/docs` folder.
@@ -82,6 +83,8 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
 
 - [Pierre Andrews](https://github.com/Mortimerp9)
 - [Onur Çelebi](https://github.com/Celebio)
+- [David Dale](https://github.com/avidale)
+- [Paul Deveau](https://github.com/DeveauP)
 - [Angela Fan](https://github.com/huihuifan)
 - [Vedanuj Goswami](https://github.com/vedanuj)
 - [Alex Guo](https://github.com/aguo71)
@@ -96,7 +99,22 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
 (in alphabetical order)
 
 ## Citation
-If you use `stopes` in your work or any models/datasets/artifacts published in NLLB, please cite :
+If you use `stopes` in your work, please cite:
+
+```bibtex
+@inproceedings{andrews-etal-2022-stopes,
+    title = "stopes - Modular Machine Translation Pipelines",
+    author = "Pierre Andrews, Guillaume Wenzek, Kevin Heffernan, Onur Çelebi, Anna Sun, Ammar Kamran, Yingzhe Guo, Alexandre Mourachko, Holger Schwenk, Angela Fan",
+    booktitle = "Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+    month = dec,
+    year = "2022",
+    publisher = "Association for Computational Linguistics",
+}
+```
+
+Some of the tools in stopes, like BLASER and ALTI have their own publications, please see in the specific readme for the correct citation to use for these specific tools.
+
+`stopes` was originally built as part of the NLLB project, if you use any models/datasets/artifacts published in NLLB, please cite :
 
 ```bibtex
 @article{nllb2022,

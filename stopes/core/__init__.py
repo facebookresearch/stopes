@@ -4,5 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-from .launcher import Cache, FileCache, Launcher, NoCache, SubmititLauncher
-from .stopes_module import DistributedRequirements, LocalOnlyRequirements, StopesModule
+from .cache import Cache, FileCache
+from .launcher import Launcher
+from .stopes_module import Requirements, StopesModule

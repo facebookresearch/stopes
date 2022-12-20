@@ -19,12 +19,13 @@ from joblib import Parallel, delayed
 from omegaconf import MISSING, DictConfig
 
 from stopes.core import utils
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.modules.preprocess.bitext_processor import (
     BitextProcessorCallback,
     BitextProcessorConfig,
 )
 from stopes.pipelines.filtering.dataset import Dataset, DatasetReader
+from stopes.pipelines.monolingual.utils import slurm_tmp_maybe
 
 
 class MultiprocBitextProcessorCallback(BitextProcessorCallback):
@@ -128,18 +129,21 @@ class MultiprocBitextProcessorConfig(BitextProcessorConfig):
 
 class MultiprocBitextProcessorModule(StopesModule):
     def __init__(
-        self, config: BitextProcessorConfig = BitextProcessorConfig(), processed_lines=0
+        self,
+        config: MultiprocBitextProcessorConfig = MultiprocBitextProcessorConfig(),
+        processed_lines=0,
     ):
-        super().__init__(config)
+        super().__init__(config, MultiprocBitextProcessorConfig)
+        self.config: MultiprocBitextProcessorConfig
 
     def array(self):
         return self.config.shards
 
     def requirements(self):
         reqs = self.config.requirements
-        if not isinstance(reqs, DistributedRequirements):
+        if not isinstance(reqs, Requirements):
             # Performe conversion if needed
-            return DistributedRequirements(**reqs)
+            return Requirements(**reqs)
         return reqs
 
     def name(self):
@@ -168,11 +172,7 @@ class MultiprocBitextProcessorModule(StopesModule):
         reqs = self.requirements()
         num_workers = reqs.cpus_per_task
 
-        slurm_env = os.environ.get("SLURM_JOB_ID", None)
-        tmp_dir = Path(self.config.local_tmp_dir)
-        if slurm_env:
-            tmp_dir = tmp_dir / slurm_env
-        tmp_dir.mkdir(parents=True, exist_ok=True)
+        tmp_dir = slurm_tmp_maybe(Path(self.config.tmp_dir))
 
         decompressed_tmp = {}
         input_files = [src_input_file, tgt_input_file]
@@ -184,8 +184,6 @@ class MultiprocBitextProcessorModule(StopesModule):
                 decompressed_tmp[idx] = decompressed_output
                 line_offsets = find_line_offsets(str(decompressed_tmp[0]), num_workers)
                 read_from = decompressed_tmp
-            else:
-                decompressed_tmp[idx] = input_file
         if read_from is None:
             line_offsets = find_line_offsets(str(input_files[0]), num_workers)
             read_from = input_files

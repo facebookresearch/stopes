@@ -1,0 +1,27 @@
+embedding_dimension: 1024
+output_dim: 1
+batch_size: 16
+norm_emb: true
+input_form: comet
+learning_rate: 5e-5
+learning_rate_scheduler: true
+output_act: false
+train_epoch: 20
+nhid:
+  - 3072
+  - 1536
+dropout: 0.1
+use_gpu: True
+activation: TANH
+
+train_files:
+  - src_emb_file: ???
+    ref_emb_file: ???
+    mt_emb_file: ???
+    label_file: ???
+val_files:
+  - src_emb_file: ???
+    ref_emb_file: ???
+    mt_emb_file: ???
+    label_file: ???
+output_dir: test

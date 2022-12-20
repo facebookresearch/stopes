@@ -14,7 +14,7 @@ from pathlib import Path
 import hydra
 from omegaconf import MISSING
 
-from stopes.core.stopes_module import DistributedRequirements, StopesModule
+from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.utils import ensure_dir
 from stopes.pipelines.filtering.dataset import Dataset, DatasetLine, DatasetReader
 
@@ -70,8 +70,9 @@ class BitextProcessorConfig:
     output_dir: str = MISSING
     outfile_prefix: str = "embed"
     outfile_postfix: str = ""
-    shards: tp.List[tp.Tuple[str, str]] = MISSING  # list of pairs of filenames
-    requirements: DistributedRequirements = DistributedRequirements(
+    shards: tp.List[tp.Any] = MISSING  # list of pairs of filenames
+    # (it is actually tp.List[tp.Tuple[str, str]], see https://github.com/omry/omegaconf/issues/427)
+    requirements: Requirements = Requirements(
         nodes=1,
         tasks_per_node=1,
         gpus_per_node=0,
@@ -100,9 +101,9 @@ class BitextProcessorModule(StopesModule):
 
     def requirements(self):
         reqs = self.config.requirements
-        if not isinstance(reqs, DistributedRequirements):
+        if not isinstance(reqs, Requirements):
             # Performe conversion if needed
-            return DistributedRequirements(**reqs)
+            return Requirements(**reqs)
         return reqs
 
     def run(

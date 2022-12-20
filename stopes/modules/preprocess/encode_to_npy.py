@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from stopes.modules.preprocess.line_processor import LineProcessorCallback
+from stopes.utils.embedding_utils import EmbeddingConcatenator
 
 
 class EncodeToNPY(LineProcessorCallback):
@@ -27,7 +28,7 @@ class EncodeToNPY(LineProcessorCallback):
         output_dir: str,
         outfile_postfix: str = "",
         normalize: bool = False,
-        fp16_storage: bool = False,
+        fp16: bool = False,
     ) -> None:
         super().__init__(
             outfile_prefix=outfile_prefix,
@@ -37,8 +38,11 @@ class EncodeToNPY(LineProcessorCallback):
             output_dir=output_dir,
         )
         self.normalize = normalize
-        self.fp16_storage = fp16_storage
+        self.fp16 = fp16
         self.output_file = self.name_output_file()
+        self.concat = EmbeddingConcatenator(
+            output_file=self.output_file, fp16=self.fp16
+        )
 
     @abstractmethod
     def name_output_file(self) -> str:
@@ -48,15 +52,16 @@ class EncodeToNPY(LineProcessorCallback):
         pass
 
     def __enter__(self):
-        self.output_file_pointer = open(self.output_file, "wb")
+        self.concat.__enter__()
+        self.output_file_pointer = self.concat.output_file_pointer
         return self
 
-    def __exit__(self, *_exc):
-        self.output_file_pointer.close()
+    def __exit__(self, *_exc) -> None:
+        self.concat.__exit__(*_exc)
 
     def process_lines(self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]) -> None:
         array = self.encode_to_np(lines_with_number)
-        self._append_to_outfile(array)
+        self.concat.append_embedding_from_array(self._normalize(array))
 
     def final_result(self) -> Path:
         return Path(self.output_file)
@@ -70,15 +75,10 @@ class EncodeToNPY(LineProcessorCallback):
         """
         pass
 
-    def _append_to_outfile(
-        self,
-        embeddings: np.ndarray,
-    ) -> None:
+    def _normalize(self, embeddings: np.ndarray) -> np.ndarray:
         if isinstance(embeddings, np.ndarray) and self.normalize:
-            assert embeddings.dtype == np.float32, "cannot normalize {embeddings.dtype}"
-            norm = np.linalg.norm(embeddings)
-            self.embeddings = embeddings / norm
-        if self.fp16_storage:
-            embeddings.astype(np.float16).tofile(self.output_file_pointer)
-        else:
-            embeddings.tofile(self.output_file_pointer)
+            assert (
+                embeddings.dtype == np.float32
+            ), f"cannot normalize {embeddings.dtype}"
+            embeddings /= np.linalg.norm(embeddings, axis=1, keepdims=True)
+        return embeddings

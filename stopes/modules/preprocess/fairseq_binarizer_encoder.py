@@ -28,6 +28,7 @@ class FairSeqBinarizerEncoder(LineProcessorCallback):
         input_file_idx: int,
         output_dir: str,
         vocab_file_path: str,
+        outfile_postfix: str = "",
         spm_model_path: tp.Optional[str] = None,
         dataset_impl: str = "mmap",
         append_eos: bool = True,
@@ -39,6 +40,7 @@ class FairSeqBinarizerEncoder(LineProcessorCallback):
             input_file=input_file,
             input_file_idx=input_file_idx,
             output_dir=output_dir,
+            outfile_postfix=outfile_postfix,
         )
         self.output_file = self.final_result()
         self.spm_tokenizer = None
@@ -63,7 +65,8 @@ class FairSeqBinarizerEncoder(LineProcessorCallback):
     def final_result(self) -> Path:
         shard_idx = extract_shard_id(self.input_file, default=self.input_file_idx)
         outfile = (
-            Path(self.output_dir).resolve() / f"{self.outfile_prefix}.{shard_idx:03d}"
+            Path(self.output_dir).resolve()
+            / f"{self.outfile_prefix}.{shard_idx:03d}{self.outfile_postfix}"
         )
         outfile = Path(indexed_dataset.data_file_path(str(outfile)))
         return outfile

@@ -11,7 +11,11 @@ from typing import Optional, Tuple
 import stopes.pipelines.prepare_data.data_types as data_types
 from stopes.pipelines.prepare_data.cache import cache_step_sync
 from stopes.pipelines.prepare_data.spm_tokenizer import SPMTokenizer
-from stopes.pipelines.prepare_data.utils import execute_in_shell, split_direction
+from stopes.pipelines.prepare_data.utils import (
+    clean_corpus_n,
+    execute_in_shell,
+    split_direction,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +62,11 @@ def _length_based_filtering(
     encoded_outdir: str,
     output_dir: str,
     custom_step_name: str,
+    metadata_ext: str = None,
 ) -> str:
-    logger.info(f"Length based filtering for {tag} {spm_path} {src_lang} {tgt_lang}")
+    logger.info(
+        f"Length based filtering for {tag} {spm_path} {src_lang} {tgt_lang} {'without' if metadata_ext is None else 'with'} metadata"
+    )
     if not os.path.exists(encoded_outdir):
         os.makedirs(encoded_outdir, exist_ok=True)
     if os.path.exists(
@@ -74,17 +81,17 @@ def _length_based_filtering(
         os.remove(
             f"{encoded_outdir}/spm_length_filtered_{tag}.{src_lang}-{tgt_lang}.{tgt_lang}"
         )
-    command = (
-        "perl examples/nllb/modeling/preprocessing/moses/clean-corpus-n.perl "
-        "--ratio 3 "
-        f"{spm_path} "
-        f"{src_lang} "
-        f"{tgt_lang} "
-        f"{encoded_outdir}/spm_length_filtered_{tag}.{src_lang}-{tgt_lang} "
-        "1 "
-        "250 "
+
+    clean_corpus_n(
+        spm_path,
+        src_lang,
+        tgt_lang,
+        f"{encoded_outdir}/spm_length_filtered_{tag}.{src_lang}-{tgt_lang}",
+        1,
+        250,
+        meta=metadata_ext,
     )
-    execute_in_shell(command)
+
     return f"{encoded_outdir}/spm_length_filtered_{tag}.{src_lang}-{tgt_lang}"
 
 
@@ -179,6 +186,7 @@ def encode_and_binarize(
         return None
     # encode source, target
     source, target = split_direction(direction)
+    has_metadata = parallel_data.metadata is not None
 
     (encoded_src_path, encoded_tgt_path) = _encode_spm_step(
         output_dir=output_dir,
@@ -190,6 +198,8 @@ def encode_and_binarize(
     )
 
     encoded_prefix = encoded_src_path.rsplit(".", 1)[0]
+    if has_metadata:
+        execute_in_shell(f"cp {parallel_data.metadata} {encoded_prefix}.meta")
 
     # length based filtering
     if encoded_filtered_outdir is not None:
@@ -201,6 +211,7 @@ def encode_and_binarize(
             encoded_outdir=encoded_filtered_outdir,
             output_dir=output_dir,
             custom_step_name=f"length_filtered_{tag}.{direction}.shard{shard_id}",
+            metadata_ext="meta" if has_metadata else None,
         )
 
     binarize_results = _binarize_step(
@@ -214,5 +225,9 @@ def encode_and_binarize(
         binarize_workers=binarize_workers,
         custom_step_name=f"binarize_{tag}.{direction}.shard{shard_id}",
     )
+    if has_metadata:
+        execute_in_shell(
+            f"cp {encoded_prefix}.meta {binarize_results.source.rsplit('.',1)[0]}.meta"
+        )
 
     return binarize_results

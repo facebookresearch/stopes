@@ -1,0 +1,5 @@
+field: hello
+my_module:
+  _target_: stopes.pipelines.tests.test_configs.MyModule
+  config:
+    field: ${field}_world
