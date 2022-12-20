@@ -14,6 +14,14 @@ BLASER relies on [SpeechLASER embeddings](https://github.com/facebookresearch/fa
 
 The train and score scripts are configured using [hydra](https://hydra.cc/), you can look at the base configurations in `blaser/conf/score.yaml` and `blaser/conf/train.yaml`, you will have to specify the `???` fields, either in your own configs, or over the CLI. Both scripts take pre-embedded files.
 
+## Install
+
+```
+git clone https://github.com/facebookresearch/stopes.git
+cd stopes
+pip install -e '.[blaser]'
+```
+
 ## Citation
 If you use `blaser` in your work or any of its models, please cite:
 
