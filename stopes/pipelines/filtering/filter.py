@@ -25,9 +25,8 @@ from stopes.pipelines.filtering.configs import (
 )
 from stopes.pipelines.filtering.dataset import Dataset, DatasetLine, DatasetReader
 from stopes.pipelines.filtering.filters import FilteringCounts
-from stopes.pipelines.filtering.utils import normalize_unicode
+from stopes.pipelines.filtering.utils import cache_step_sync, normalize_unicode
 from stopes.pipelines.monolingual.utils.text_normalizer import replace_unicode_punct
-from stopes.pipelines.prepare_data.cache import cache_step_sync
 
 logger = logging.getLogger(__name__)
 

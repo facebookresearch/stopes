@@ -95,13 +95,7 @@ class ShardAndShuffleMC(MultiprocLineProcessorCallback):
 
         if self.min_lines_per_shard is not None:
             if self.total_file_lines is None:
-                self.total_file_lines = int(
-                    subprocess.run(
-                        ["wc", "-l", self.input_file], stdout=subprocess.PIPE
-                    )
-                    .stdout.decode("utf-8")
-                    .split()[0]
-                )
+                self.total_file_lines = utils.count_lines(self.input_file)
             else:
                 self.total_file_lines = total_file_lines
 
@@ -231,11 +225,7 @@ async def shard_and_shuffle(
     )
 
     if min_lines_per_shard is not None:
-        total_file_lines = int(
-            subprocess.run(["wc", "-l", config.input_file], stdout=subprocess.PIPE)
-            .stdout.decode("utf-8")
-            .split()[0]
-        )
+        total_file_lines = utils.count_lines(config.input_file)
 
     file_processor = MultiprocLineProcessorModule(
         config=MultiprocLineProcessorConfig(

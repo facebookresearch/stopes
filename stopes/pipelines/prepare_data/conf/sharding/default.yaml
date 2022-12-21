@@ -1,0 +1,3 @@
+max_examples_per_shard: 5_000_000
+smallest_shard: 250000
+binarize_num_workers: 30

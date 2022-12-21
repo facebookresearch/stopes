@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import asyncio
 import builtins
 import contextlib
 import gzip
@@ -325,6 +326,24 @@ def path_append_suffix(path: Path, suffix: str) -> Path:
     return path.with_suffix("".join(path.suffixes) + suffix)
 
 
+def count_lines(filename: str) -> int:
+    """
+    Count the number of lines in a file.
+    """
+    result = subprocess.run(
+        bash_pipefail(
+            open_file_cmd(filename),
+            shlex.join(["wc", "-l"]),
+        ),
+        capture_output=True,
+        shell=True,
+    )
+    out = result.stdout.decode("utf-8")
+    lines_numbers = [int(line) for line in out.split() if line]
+    assert len(lines_numbers) == 1
+    return lines_numbers[0]
+
+
 @contextlib.contextmanager
 def measure(start_msg, logger, end_msg="done in ", enable_log=True):
     if enable_log:
@@ -344,3 +363,30 @@ def batch(items: tp.List[tp.Any], batch_size: int):
             batch = []
     if batch:
         yield batch
+
+
+TAwaitReturn = tp.TypeVar("TAwaitReturn")
+
+
+async def _wrap_opt(
+    opt: tp.Optional[tp.Awaitable[TAwaitReturn]],
+) -> tp.Optional[TAwaitReturn]:
+    if opt is None:
+        return None
+    return await opt
+
+
+async def gather_optionals(
+    *awaitables: tp.Optional[tp.Awaitable[TAwaitReturn]],
+) -> tp.List[tp.Optional[TAwaitReturn]]:
+    """
+    sometimes we don't know if we'll really have an awaitable for all our params,
+    but asyncio.gather wants only awaitables, so we end up building awkwards lists with conditional
+    appends. But it would be a lot nicer if we could just write:
+    x, y, z = gather_optionals(
+        do_x(),
+        do_y(),
+        do_z() if cond else None
+    )
+    """
+    return await asyncio.gather(*[_wrap_opt(opt) for opt in awaitables])

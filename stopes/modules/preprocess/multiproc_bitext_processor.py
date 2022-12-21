@@ -77,12 +77,7 @@ def find_line_offsets(filename: str, num_chunks: int) -> tp.List[int]:
     given a file and a number of chuncks, find the line offsets in the file
     to be able to chunk around full lines.
     """
-
-    total_file_lines = int(
-        subprocess.run(["wc", "-l", filename], stdout=subprocess.PIPE)
-        .stdout.decode("utf-8")
-        .split()[0]
-    )
+    total_file_lines = utils.count_lines(filename)
 
     chunk_size = total_file_lines // num_chunks
     offsets = [chunk_size * x for x in range(num_chunks + 1)]

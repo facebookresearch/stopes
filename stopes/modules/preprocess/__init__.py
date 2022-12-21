@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-from .laser_speech_embedding import LaserEmbeddingConfig
 from .line_processor import (
     LineProcessorCallback,
     LineProcessorConfig,
@@ -12,3 +11,4 @@ from .line_processor import (
 )
 from .moses_cli_module import MosesPreprocessConfig, MosesPreprocessModule
 from .train_spm import TrainSpmConfig, TrainSpmModule
+from .wav2vec_laser_speech_encoder import LaserEmbeddingConfig

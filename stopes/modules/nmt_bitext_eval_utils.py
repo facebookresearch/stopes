@@ -311,7 +311,8 @@ async def spm_train_encode_binarize(
         spm_config.train_data_file = str(infile)
         spm_config.model_prefix_spm = f"spm.{spm_config.vocab_size}.{lang}"
 
-    spm, dict_file = await launcher.schedule(TrainSpmModule(spm_config))
+    spm_vocab = await launcher.schedule(TrainSpmModule(spm_config))
+    spm, dict_file = spm_vocab.model_file, spm_vocab.dict_file
     log.info(f"Lang {lang}: trained SentencePiece model {spm} with {dict_file} dict.")
 
     binarize_jobs = []

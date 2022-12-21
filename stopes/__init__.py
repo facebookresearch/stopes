@@ -14,4 +14,4 @@ This toolkit contains code for several key parts of the stopes multilingual data
 
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

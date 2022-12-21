@@ -50,6 +50,26 @@ def load_conf(file: Path, overrides: tp.Tuple[str, ...] = ()):
     return cfg
 
 
+def validate_prepare_data_configs(conf_dir: Path):
+    from stopes.pipelines.prepare_data.configs import (
+        DedupConfig,
+        PrepareDataConfig,
+        PreprocessingConfig,
+        ShardingConfig,
+        VocabConfig,
+        VocabParams,
+    )
+
+    validate_conf(conf_dir / "prepare_data.yaml", PrepareDataConfig)
+    validate_conf(conf_dir / "dedup" / "both.yaml", DedupConfig)
+    validate_conf(conf_dir / "dedup" / "neither.yaml", DedupConfig)
+    validate_conf(conf_dir / "preprocessing" / "default.yaml", PreprocessingConfig)
+    validate_conf(conf_dir / "sharding" / "default.yaml", ShardingConfig)
+    validate_conf(conf_dir / "vocab" / "default.yaml", VocabConfig)
+    validate_conf(conf_dir / "vocab" / "src_vocab" / "default.yaml", VocabParams)
+    validate_conf(conf_dir / "vocab" / "tgt_vocab" / "default.yaml", VocabParams)
+
+
 def validate_conf(conf_file: Path, conf_cls: type, *overrides: str):
     """Validates a config file against a dataclass type."""
     cfg = load_conf(conf_file, overrides)
@@ -74,8 +94,8 @@ def validate_nested_conf(conf_file: Path, conf_cls: type, *overrides: str):
 def instantiate_conf(conf_file: Path, *overrides: str):
     """Instantiates a class from a config file.
 
-    This is typically harder because most module will check
-    that some files specified in the config actually exists on disk.
+    This is typically harder because most modules will check
+    whether some files specified in the config actually exist on disk.
     """
     cfg = load_conf(conf_file, overrides)
     module = stopes.core.StopesModule.build(cfg)
@@ -108,6 +128,8 @@ def test_configs(tmp_path):
         STOPES / "pipelines" / "speech" / "conf" / "compute_laser_embeddings.yaml",
         stopes.modules.preprocess.LaserEmbeddingConfig,
     )
+    validate_prepare_data_configs(STOPES / "pipelines" / "prepare_data" / "conf")
+
     instantiate_conf(
         CONF / "train_spm" / "standard_conf.yaml",
         f"train_spm.output_dir={tmp_path}",
@@ -121,7 +143,7 @@ def test_configs(tmp_path):
         f"train_fairseq.output_dir={tmp_path}",
     )
     validate_conf(
-        CONF / "eval/generate_multi_bleu_detok.yaml",
+        CONF / "eval" / "generate_multi_bleu_detok.yaml",
         stopes.modules.evaluation.generate_multi_bleu_detok_module.GenerateMultiBleuDetokConfig,
     )
 
@@ -153,12 +175,11 @@ def test_configs(tmp_path):
         )
     )
     validated_configs = normalize_path(VALIDATED_CONFS)
-
     unvalidated = all_configs - validated_configs
     # If you're seeing this error it means you either:
     # * added a new config file, please add a test for it.
     # * added a new config test, please decrement the counter
-    assert len(unvalidated) == 50
+    assert len(unvalidated) == 53
 
 
 def normalize_path(files: tp.Iterable[Path]) -> tp.Set[Path]:

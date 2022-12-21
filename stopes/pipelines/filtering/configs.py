@@ -10,7 +10,12 @@ from typing import Dict, List, Optional
 
 from hydra.core.config_store import ConfigStore
 
-from stopes.pipelines.prepare_data.data_types import ExecutorConfig
+
+@dataclass
+class ExecutorConfig:
+    log_folder: str = "executor_logs"
+    cluster: str = "local"
+    slurm_partition: Optional[str] = None
 
 
 @dataclass

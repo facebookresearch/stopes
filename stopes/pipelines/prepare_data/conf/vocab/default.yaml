@@ -1,0 +1,5 @@
+defaults:
+  - src_vocab: default
+  - tgt_vocab: default
+
+use_joined_data: True

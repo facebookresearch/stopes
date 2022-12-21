@@ -13,14 +13,19 @@ import numpy as np
 import torch
 from scipy.stats import pearsonr
 
+from stopes.utils.embedding_utils import Embedding
+
 logger = logging.getLogger(__name__)
 
 
-def load_emb(files: tp.List[Path]) -> torch.tensor:
+def load_emb(
+    files: tp.List[Path],
+) -> torch.Tensor:
     emb_npy = None
     for f in files:
         logger.info(f"loading {f}")
-        shard = np.load(f)
+        with Embedding(f).open_for_read() as data:
+            shard = data.astype(np.float32)
         if emb_npy is None:
             emb_npy = shard
         else:
@@ -28,30 +33,32 @@ def load_emb(files: tp.List[Path]) -> torch.tensor:
     return torch.from_numpy(emb_npy)
 
 
-def batchify(emb: torch.tensor, batch_size: int):
+def batchify(emb: torch.Tensor, batch_size: int) -> tp.List[torch.Tensor]:
     return [emb[s_idx : s_idx + batch_size] for s_idx in range(0, len(emb), batch_size)]
 
 
-def shuffle_data(datalists: tp.List[torch.tensor], batch_size: int):
+def shuffle_data(datalists: tp.List[torch.Tensor], batch_size: int):
     idxlist = list(range(len(datalists[0])))
     random.shuffle(idxlist)
-    return [batchify(datalist[idxlist], batch_size) for datalist in datalists]
+    return [batchify(d[idxlist], batch_size) for d in datalists]
 
 
-def get_model_pred(model, src, ref, mt):
+def get_model_pred(model, src, ref, mt, use_gpu: bool):
     with torch.no_grad():
         if isinstance(model, torch.nn.Module):
             model.train(mode=False)
             pred = model(src, ref, mt)
             model.train(mode=True)
         else:
-            pred = model(src, ref, mt)
+            pred = model(src, ref, mt, use_gpu)
     return pred
 
 
-def get_pearson_corr(model, src, ref, mt, label, model_pred=None):
+def get_pearson_corr(
+    model, src, ref, mt, label, use_gpu: bool, model_pred=None
+) -> float:
     if model_pred is None:
-        model_pred = get_model_pred(model, src, ref, mt)
+        model_pred = get_model_pred(model, src, ref, mt, use_gpu)
     pearson_score = pearsonr(model_pred.tolist(), label.tolist())[0]
     return pearson_score
 

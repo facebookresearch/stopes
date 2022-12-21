@@ -1,0 +1,12 @@
+_target_: stopes.modules.preprocess.laser_sentence_encoder.LaserSentenceEncoder
+
+_name: laser3_encoder
+encoder_model: ???
+spm_model: null
+spm_vocab: null
+max_sentences:
+max_tokens: 12_000
+stable_sort: False
+normalize: False
+fp16: True
+cpu: False
