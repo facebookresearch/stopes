@@ -6,6 +6,7 @@
 
 import functools
 import logging
+import shlex
 import subprocess
 import tempfile
 import typing as tp
@@ -75,25 +76,13 @@ class MosesPreprocessModule(stopes_module.StopesModule):
         )
 
         cmds = [utils.open_file_cmd(input_file)]
-
-        if self.config.remove_non_printing_chars:
-            rm_non_printing = get_moses_script("remove-non-printing-char.perl")
-            cmds.append(f"perl {rm_non_printing}")
-        if self.config.normalize_punctuation:
-            norm_punct = get_moses_script("normalize-punctuation.perl")
-            cmds.append(f"perl {norm_punct} -l {self.punc_lang}")
-        if self.config.deescape_special_chars:
-            deescape = get_moses_script("deescape-special-chars.perl")
-            cmds.append(f"perl {deescape}")
-        if self.config.lowercase:
-            lowercase = get_moses_script("lowercase.perl")
-            cmds.append(f"perl {lowercase}")
+        cmds.extend(get_moses_commands(self.config, self.punc_lang))
 
         command = utils.bash_pipefail(*cmds)
         log.info(f"moses command: ${command}")
         try:
             subprocess.run(
-                f"{command} > {output_file}",
+                f"{command} > {shlex.quote(str(output_file))}",
                 shell=True,
                 check=True,
             )
@@ -101,7 +90,7 @@ class MosesPreprocessModule(stopes_module.StopesModule):
             if output_file.is_file():
                 output_file.unlink()
             log.error(
-                f"ERROR during encoding of {input_file}; removed dirty output.",
+                f"ERROR during encoding of {input_file}. Deleted corrupted output file.",
                 exc_info=e,
             )
             raise e
@@ -115,6 +104,23 @@ class MosesPreprocessModule(stopes_module.StopesModule):
 
     def version(cls):
         return "0.2"
+
+
+def get_moses_commands(config, lang):
+    cmds = []
+    if config.remove_non_printing_chars:
+        rm_non_printing = get_moses_script("remove-non-printing-char.perl")
+        cmds.append(f"perl {rm_non_printing}")
+    if config.normalize_punctuation:
+        norm_punct = get_moses_script("normalize-punctuation.perl")
+        cmds.append(f"perl {norm_punct} -l {lang}")
+    if config.deescape_special_chars:
+        deescape = get_moses_script("deescape-special-chars.perl")
+        cmds.append(f"perl {deescape}")
+    if config.lowercase:
+        lowercase = get_moses_script("lowercase.perl")
+        cmds.append(f"perl {lowercase}")
+    return cmds
 
 
 @functools.lru_cache()

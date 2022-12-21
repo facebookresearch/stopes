@@ -132,8 +132,12 @@ class BLASER(nn.Module):
 
 
 def unsupervised_blaser(
-    src: torch.tensor, ref: tp.Optional[torch.tensor], mt: torch.tensor
+    src: torch.tensor, ref: tp.Optional[torch.tensor], mt: torch.tensor, use_gpu: bool
 ):
+    if use_gpu:
+        mt = mt.cuda()
+        ref = ref.cuda() if ref is not None else None
+        src = src.cuda()
     if ref is not None:
         return (F.cosine_similarity(mt, ref) + F.cosine_similarity(mt, src)).unsqueeze(
             1

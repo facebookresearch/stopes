@@ -1,0 +1,16 @@
+defaults:
+  - launcher: local
+  - preprocessing: default
+  - vocab: default
+  - dedup: neither
+  - sharding: default
+  - _self_
+
+output_dir: ???
+
+launcher:
+  partition: ??? # set as null if running locally
+  cache:
+    caching_dir: ${output_dir}/cache  # Cache won't be re-used if you change the output_dir.
+
+corpora: ???

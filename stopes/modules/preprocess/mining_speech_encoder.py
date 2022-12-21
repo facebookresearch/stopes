@@ -18,7 +18,7 @@ from stopes.modules.preprocess.encode_to_npy import EncodeToNPY
 from stopes.utils.mining_utils import extract_shard_id
 
 
-class LaserSpeechEncoder(EncodeToNPY):
+class MiningSpeechEncoder(EncodeToNPY):
     def __init__(
         self,
         _name: str,

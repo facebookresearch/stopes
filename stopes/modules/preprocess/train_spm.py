@@ -9,11 +9,10 @@ import logging
 import typing as tp
 from pathlib import Path
 
-import omegaconf
 import sentencepiece as spm
 from omegaconf import MISSING
 
-from stopes.core import launcher, stopes_module
+from stopes.core.stopes_module import Requirements, StopesModule
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +31,35 @@ class TrainSpmConfig:
     model_prefix_spm: str = ""  # optional value; if passed as empty, will be auto set based on train_data_file name
 
 
-class TrainSpmModule(stopes_module.StopesModule):
+@dataclasses.dataclass()
+class Vocab:
+    model_file: Path
+    vocab_file: Path
+
+    @property
+    def dict_file(self):
+        dict_file = Path(f"{self.model_file.parent}/{self.model_file.stem}.dict.txt")
+        if not dict_file.exists():
+            # Convert .vocab file into a fairseq dictionary
+            # Note: name scheme is expected like this strictly;
+            # its a hardcoded requirement in fairseq/tasks/translation.py
+            with open(dict_file, "w", encoding="utf-8") as o:
+                with open(self.vocab_file, encoding="utf-8") as f:
+                    for line in f:
+                        word = line.split("\t", 1)[0]
+                        # Those special tokens are added by fairseq
+                        if word in ["<unk>", "<s>", "</s>"]:
+                            continue
+                        print(word, 1, file=o)
+        return dict_file
+
+
+class TrainSpmModule(StopesModule):
     """
     Train a SPM model using module API.
 
     python -m pdb launch_module.py train_spm.config.train_data_file=/checkpoint/guw/hmine/align/bel.v2.sents.bel.xz train_spm.config.output_dir=<output_dir> launcher.cluster=debug
     """
-
-    config: TrainSpmConfig
 
     def __init__(
         self,
@@ -49,21 +69,21 @@ class TrainSpmModule(stopes_module.StopesModule):
         self.output_dir = Path(self.config.output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-    def requirements(self) -> stopes_module.Requirements:
-        return stopes_module.Requirements(
+    def requirements(self) -> Requirements:
+        return Requirements(
             nodes=1,
             tasks_per_node=1,
             gpus_per_node=0,
             cpus_per_task=self.config.num_threads,
-            timeout_min=360,
+            timeout_min=2 * 24 * 60,
         )
 
     def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
-    ) -> tp.Tuple[Path, Path]:
-        if not self.config.model_prefix_spm:
+    ) -> Vocab:
+        if self.config.model_prefix_spm == "":
             input_file_stem = Path(self.config.train_data_file).stem
             model_prefix_spm = (
                 self.output_dir
@@ -72,10 +92,9 @@ class TrainSpmModule(stopes_module.StopesModule):
         else:
             model_prefix_spm = self.output_dir / self.config.model_prefix_spm
 
-        model_file, vocab_as_fairseq_dict = train_spm(
+        return train_spm(
             self.config, Path(self.config.train_data_file), model_prefix_spm
         )
-        return Path(model_file).resolve(), Path(vocab_as_fairseq_dict).resolve()
 
     def validate(
         self,
@@ -83,8 +102,12 @@ class TrainSpmModule(stopes_module.StopesModule):
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
     ) -> bool:
-        model_file, vocab_file = output
-        return model_file.exists() and vocab_file.exists()
+        vocab = output
+        return (
+            vocab.model_file.exists()
+            and vocab.vocab_file.exists()
+            and vocab.dict_file.exists()
+        )
 
     def version(cls):
         return "0.3"
@@ -98,7 +121,7 @@ def train_spm(
     spm_config: TrainSpmConfig,
     train_data_file: Path,
     model_prefix_spm: Path,
-) -> tp.Tuple[Path, Path]:
+) -> Vocab:
     logger.info(
         f"train_data_file: {train_data_file}, model_prefix_spm: {model_prefix_spm}; "
     )
@@ -115,24 +138,6 @@ def train_spm(
     )
 
     logger.info(f"SPM Training completed")
-
-    # Convert .vocab file into a fairseq dictionary
-    # Note: name scheme for vocab_as_fairseq_dict is expected like this strictly;
-    # its a hardcoded requirement in fairseq/tasks/translation.py
-    model_file = Path(f"{model_prefix_spm}.model")
-    model_vocab = Path(f"{model_prefix_spm}.vocab")
-    fairseq_dict = Path(f"{model_prefix_spm}.dict.txt")
-
-    convert_spm_vocab_to_fairseq_dict(model_vocab, fairseq_dict)
-    return model_file, fairseq_dict
-
-
-def convert_spm_vocab_to_fairseq_dict(vocab_file: Path, fairseq_dict: Path) -> None:
-    with open(fairseq_dict, "w", encoding="utf-8") as o:
-        with open(vocab_file, encoding="utf-8") as f:
-            for line in f:
-                word = line.split("\t", 1)[0]
-                # Those special tokens are added by fairseq
-                if word in ["<unk>", "<s>", "</s>"]:
-                    continue
-                print(word, 1, file=o)
+    model_file = Path(f"{model_prefix_spm}.model").resolve()
+    vocab_file = Path(f"{model_prefix_spm}.vocab").resolve()
+    return Vocab(model_file=model_file, vocab_file=vocab_file)

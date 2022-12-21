@@ -63,12 +63,13 @@ class BitextEvalPipeline(stopes.core.StopesModule):
         # TODO: handle reading from tsv files
         lang_file = bitext.with_suffix(f".{lang}")
 
-        with clone_config(self.config.spm.config) as spm_config:
+        with utils.clone_config(self.config.spm.config) as spm_config:
             spm_config.train_data_file = str(lang_file)
             spm_config.output_dir = str(self.output_dir / "spm")
 
         train_spm_module = preprocess.TrainSpmModule(spm_config)
-        spm, spm_dict = await self.launcher.schedule(train_spm_module)
+        spm_vocab = await self.launcher.schedule(train_spm_module)
+        spm, spm_dict = spm_vocab.model_file, spm_vocab.dict_file
 
         train_bin_ = self.binarize(
             lang_file, spm, spm_dict, f"train.{self.langpair}.{lang}"
@@ -131,7 +132,7 @@ class BitextEvalPipeline(stopes.core.StopesModule):
                 input_file = data / (prefix + ".000" + ext)
             utils.symlink(data / (prefix + ext), input_file)
 
-        with clone_config(self.config.train_fairseq.config) as nmt_config:
+        with utils.clone_config(self.config.train_fairseq.config) as nmt_config:
             # Create a unique directory since Fairseq automatically resume existing
             # checkpoints.
             outdir = self.output_dir / "nmt" / f"checkpoints_{self.sha_key()}"

@@ -186,4 +186,6 @@ def normalize_for_dedup(line: str) -> str:
     # numbers
     line = DIGIT_RE.sub("0", line)
     line = PUNCT_OR_NON_PRINTING_CHARS_RE.sub("", line)
+    # tab
+    line = line.replace("\t", "")
     return line

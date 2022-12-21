@@ -1,0 +1,11 @@
+pretrained: null
+sampling_config:
+  sampled_data_size: 10_000_000
+  sampling_temperature: 1.0
+spm_config:
+  vocab_size: 50_000
+  character_coverage: 0.99995
+  shuffle_input_sentence: true
+  model_type: bpe
+  seed_sentencepiece_size: 1_000_000
+  num_threads: 20

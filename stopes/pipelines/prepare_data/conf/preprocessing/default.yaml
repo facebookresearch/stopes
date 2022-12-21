@@ -1,0 +1,4 @@
+lowercase: False
+normalize_punctuation: True
+remove_non_printing_chars: False
+deescape_special_chars: False

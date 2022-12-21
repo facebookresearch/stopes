@@ -6,16 +6,13 @@
 
 
 import logging
-import shlex
-import subprocess
 import typing as tp
 from dataclasses import dataclass
-from pathlib import Path
 
 from omegaconf.omegaconf import MISSING
 
 from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.core.utils import bash_pipefail, open_file_cmd
+from stopes.core.utils import count_lines
 
 logger = logging.getLogger("count_lines")
 
@@ -50,20 +47,10 @@ class CountLinesModule(StopesModule):
         iteration_index: int = 0,
     ) -> int:
         filename = iteration_value
-        assert filename is not None, f"iteration value is null"
-        result = subprocess.run(
-            bash_pipefail(
-                open_file_cmd(filename),
-                shlex.join(["wc", "-l"]),
-            ),
-            capture_output=True,
-            shell=True,
-        )
-        out = result.stdout.decode("utf-8")
-        lines_numbers = [int(line) for line in out.split() if line]
-        logger.info(f"line count for {iteration_value} is {lines_numbers}")
-        assert len(lines_numbers) == 1
-        return lines_numbers[0]
+        assert filename is not None, "iteration value is null"
+        line_count = count_lines(filename)
+        logger.info(f"line count for {iteration_value} is {line_count}")
+        return line_count
 
     def comment(self):
         return "Counting number of sentences in the text input"

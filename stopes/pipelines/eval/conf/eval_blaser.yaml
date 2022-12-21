@@ -1,0 +1,38 @@
+defaults:
+  - launcher: submitit
+  # TODO this is just for testing
+  - blaser_model: fb_fair
+  - _self_
+
+output_dir: ???
+use_gpu: true
+batch_size: 16
+
+
+src_manifest: ???
+tgt_manifest: ???
+ref_manifest: null
+
+src_lang: ???
+tgt_lang: ???
+# by default tgt and ref are the same lang
+ref_lang: ${tgt_lang}
+
+checkpoint_dir: ???
+
+max_tokens: 2_560_000
+
+checkpoints:
+  en: english.pt
+  ru: slavic.pt
+  cs: slavic.pt
+  pl: slavic.pt
+  sk: slavic.pt
+  hr: slavic.pt
+  ca: romance.pt
+  es: romance.pt
+  fr: romance.pt
+  it: romance.pt
+  pt: romance.pt
+  ro: romance.pt
+  de: germanic.pt

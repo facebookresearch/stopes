@@ -1,0 +1,13 @@
+_target_: stopes.modules.preprocess.mining_speech_encoder.MiningSpeechEncoder
+
+_name: mining_speech_encoder
+encoder_model: ???
+spm_model: null
+spm_vocab: null
+max_sentences: null
+max_tokens: 12_000
+stable_sort: False
+normalize: False
+fp16: True
+cpu: False
+fp16_model: True

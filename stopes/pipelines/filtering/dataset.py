@@ -28,13 +28,22 @@ class Dataset:
     """A dataset, represented as a set of paths.
 
     This can be:
-    - a monolingual corpus, in which case only the `src` path is set;
-    - a standard bitext corpus, in which case both `src` and `tgt` are set;
-    - a mined TSV corpus, in which case only the `tsv` path is set."""
+        - a monolingual corpus, in which case only the `src` path is set;
+        - a standard bitext corpus, in which case both `src` and `tgt` are set;
+        - a mined TSV corpus, in which case only the `tsv` path is set.
+
+    Additional args:
+        - metadata (str): Optional path to metadata for this corpus
+        - lang_dir (str): Language direction, eg: eng-wol
+        - fold (str): Type of dataset, eg: train, train_mining, valid, test
+    """
 
     src: Optional[str] = None
     tgt: Optional[str] = None
     tsv: Optional[str] = None
+    metadata: Optional[str] = None
+    lang_dir: Optional[str] = None
+    fold: Optional[str] = None
 
     def __post_init__(self):
         # mined

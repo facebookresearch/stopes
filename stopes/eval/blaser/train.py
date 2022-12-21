@@ -162,7 +162,15 @@ def train_iterations(
             if val_dset is not None and (
                 (step + 1) % 200 == 0 or step + 1 == len(train_dset[0]) // batch_size
             ):
-                curr_corr = get_pearson_corr(model, val_dset)
+                [val_src, val_ref, val_mt, val_label] = val_dset
+                curr_corr = get_pearson_corr(
+                    model,
+                    src=val_src,
+                    ref=val_ref,
+                    mt=val_mt,
+                    label=val_label,
+                    use_gpu=use_gpu,
+                )
                 logger.info(
                     f"curr val corr: {curr_corr:.4f}. best val corr: {best_corr:.4f}"
                 )
