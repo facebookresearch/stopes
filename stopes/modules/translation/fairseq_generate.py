@@ -66,13 +66,15 @@ class FairseqGenerateConfig:
     output_dir: tp.Optional[Path] = None
     # Should be formatted as: List[(src_file, src_lang, tgt_lang)]
     file_list: tp.List[tp.Any] = dataclasses.field(default_factory=list)
-    lang_code_mapping: dict = dataclasses.field(default_factory=dict)
+    preserve_filenames: bool = False
+    lang_code_mapping: tp.Dict = dataclasses.field(default_factory=dict)
     beam_search: BeamSearchConfig = BeamSearchConfig()
     use_gpu: bool = True
     fp16: bool = True
     batch_size: int = 32
     torchscript: bool = False
-    arg_overrides: dict = dataclasses.field(default_factory=dict)
+    encoder_langtok: str = "src"
+    arg_overrides: tp.Dict = dataclasses.field(default_factory=dict)
     cache_size: int = 1_000_000
     max_sentence_len: int = 256
 
@@ -87,7 +89,7 @@ class FairseqGenerateModule(stopes.core.StopesModule):
         if self.config.file_list:
             for file in self.config.file_list:
                 assert Path(
-                    file
+                    file[0]
                 ).exists(), f"Source file {file} from 'file_list' not found"
         else:
             assert Path(
@@ -135,7 +137,11 @@ class FairseqGenerateModule(stopes.core.StopesModule):
             src_file = self.config.src_text_file
             src_lang = self.config.src_lang
             tgt_lang = self.config.tgt_lang
-        output_file = self.output_dir / f"{src_lang}-{tgt_lang}.gen"
+        if self.config.preserve_filenames:
+            name = Path(src_file).name
+            output_file = self.output_dir / f"{src_lang}-{tgt_lang}.{name}"
+        else:
+            output_file = self.output_dir / f"{src_lang}-{tgt_lang}.gen"
         translator = FairseqGenerator(self.config, src_lang=src_lang, tgt_lang=tgt_lang)
         with stopes.core.utils.open(output_file, mode="w") as o:
             with stopes.core.utils.open(src_file) as f:
@@ -171,9 +177,13 @@ class FairseqGenerator:
         self.task = task
         tgt_lang = tgt_lang or config.tgt_lang
         self.vocab = resolve_task_vocab(task, tgt_lang)
-        self.default_src_token = (
-            self.lang_token(self.config.src_lang) if self.config.src_lang else None
-        )
+
+        assert self.config.encoder_langtok in ("src", "tgt")
+        if self.config.encoder_langtok == "src":
+            encoder_lang = src_lang or config.src_lang
+        else:
+            encoder_lang = tgt_lang
+        self.default_src_token = self.lang_token(encoder_lang) if encoder_lang else None
         self.default_tgt_token = self.lang_token(tgt_lang)
 
         self.spm = sentencepiece.SentencePieceProcessor()

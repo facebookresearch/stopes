@@ -6,6 +6,7 @@
 
 import asyncio
 import dataclasses
+import hashlib
 import logging
 import typing as tp
 from pathlib import Path
@@ -172,7 +173,9 @@ class Launcher:
         self.max_jobarray_jobs = max_jobarray_jobs
 
     def dump_config(self, module: "StopesModule") -> Path:
-        config_file = Path(self.config_dump_dir) / f"{module.name()}.yaml"
+        config_folder = Path(self.config_dump_dir) / module.name()
+        config_folder.mkdir(exist_ok=True, parents=True)
+        config_file = config_folder / f"{module.sha_key()}.yaml"
         OmegaConf.save(config=module.config, f=config_file)
         return config_file
 
