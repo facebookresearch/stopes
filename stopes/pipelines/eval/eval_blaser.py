@@ -53,7 +53,13 @@ class BlaserEvalPipelineConfig:
 
 async def eval_blaser(
     launcher: Launcher, config: BlaserEvalPipelineConfig
-) -> tp.Tuple[tp.Optional[float], Path]:
+) -> tp.Tuple[tp.Optional[float], Path, float]:
+    """
+    compute embeddings and return:
+    - pearson score if requested
+    - path of score per segment/sentence
+    - average score
+    """
 
     src_enc = getattr(config.checkpoints, config.src_lang, None)
     tgt_enc = getattr(config.checkpoints, config.tgt_lang, None)
@@ -78,7 +84,7 @@ async def eval_blaser(
             ComputeEmbedding(
                 ComputeEmbeddingConfig(
                     checkpoint_file=src_enc,
-                    in_manifest=config.src_manifest,
+                    manifest_file=config.src_manifest,
                     out_file=emb_out_dir / f"source-{config.src_lang}-emb.npy",
                     checkpoint_dir=config.checkpoint_dir,
                     max_tokens=config.max_tokens,
@@ -89,7 +95,7 @@ async def eval_blaser(
             ComputeEmbedding(
                 ComputeEmbeddingConfig(
                     checkpoint_file=tgt_enc,
-                    in_manifest=config.tgt_manifest,
+                    manifest_file=config.tgt_manifest,
                     out_file=emb_out_dir / f"target-{config.tgt_lang}-emb.npy",
                     checkpoint_dir=config.checkpoint_dir,
                     max_tokens=config.max_tokens,
@@ -100,7 +106,7 @@ async def eval_blaser(
             ComputeEmbedding(
                 ComputeEmbeddingConfig(
                     checkpoint_file=ref_enc,
-                    in_manifest=config.ref_manifest,
+                    manifest_file=config.ref_manifest,
                     out_file=emb_out_dir / f"reference-{config.ref_lang}-emb.npy",
                     checkpoint_dir=config.checkpoint_dir,
                     max_tokens=config.max_tokens,
@@ -126,13 +132,23 @@ async def eval_blaser(
         )
     )
 
-    logger.info(f"scores can be found in {score_file}")
+    with core_utils.open(score_file, "r") as scores:
+        tot = 0.0
+        cnt = 0
+        for line in scores:
+            tot += float(line.strip())
+            cnt += 1
 
-    return correlation, score_file
+    avg = tot / cnt
+
+    logger.info(f"scores can be found in {score_file}")
+    logger.info(f"average score: {avg}")
+
+    return correlation, score_file, avg
 
 
 @hydra.main(config_path="conf", config_name="eval_blaser", version_base="1.1")
-def main(config: DictConfig) -> tp.Tuple[tp.Optional[float], Path]:
+def main(config: DictConfig) -> tp.Tuple[tp.Optional[float], Path, float]:
     typed_config = core_utils.promote_config(config, BlaserEvalPipelineConfig)
     launcher = hydra.utils.instantiate(config.launcher)
     return asyncio.run(eval_blaser(launcher, typed_config))

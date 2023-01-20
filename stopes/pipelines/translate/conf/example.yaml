@@ -1,0 +1,20 @@
+defaults:
+  - launcher: local
+
+max_size_per_shard: "60K"
+
+generation:
+  model: ???
+  spm: ???
+  output_dir: ???
+  preserve_filenames: true
+  file_list:
+    - [ "/data/monolingual.arb_Arab.txt", "arb_Arab", "arb_Latn"]
+    - [ "/data/monolingual.arb_Arab.txt", "arb_Arab", "ary_Arab"]
+    - [ "/data/monolingual.arb_Arab.txt", "arb_Arab", "ajp_Arab"]
+    - [ "/data/monolingual.arb_Arab.txt", "arb_Arab", "apc_Arab"]
+    - [ "/data/monolingual.ajp_Arab.txt", "ajp_Arab", "arb_Arab"]
+    - [ "/data/monolingual.ajp_Arab.txt", "ajp_Arab", "arb_Latn"]
+    - [ "/data/monolingual.ajp_Arab.txt", "ajp_Arab", "ary_Arab"]
+    - [ "/data/monolingual.ajp_Arab.txt", "ajp_Arab", "apc_Arab"]
+  # format is [path, src_lang, tgt_lang]

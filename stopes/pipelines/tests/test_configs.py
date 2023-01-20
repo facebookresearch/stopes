@@ -130,6 +130,13 @@ def test_configs(tmp_path):
     )
     validate_prepare_data_configs(STOPES / "pipelines" / "prepare_data" / "conf")
 
+    from stopes.pipelines.translate.translation_pipeline import TranslationConfig
+
+    validate_conf(
+        STOPES / "pipelines" / "translate" / "conf" / "example.yaml",
+        TranslationConfig,
+    )
+
     instantiate_conf(
         CONF / "train_spm" / "standard_conf.yaml",
         f"train_spm.output_dir={tmp_path}",
