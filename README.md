@@ -67,7 +67,7 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
 - `monolingual` to preprocess and clean single language data
 - `bitext` to run the "global mining" pipeline and extract aligned sentences
   from two monolingual datasets. (inspired by
-  [CCMatric](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
+  [CCMatrix](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
 - `distilation` to run our sequence-level knowledge distillation pipeline which trains a small student model from a pre-trained large teacher model (approach based on https://arxiv.org/abs/1606.07947)
 4. `eval` provides a set of evaluation tools, including ALTI+ and BLASER for text-free speech translation evaluation.
 5. `demo` contains applications of stopes, including a quickstart demo that you can run at home of mining as well as a example usage of ALTI+ for toxicity and hallucination analysis.
