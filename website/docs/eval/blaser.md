@@ -2,7 +2,7 @@
 
 BLASER leverages a multilingual multimodal encoder to directly encode the speech segments for source input, translation output and reference into a shared embedding space and computes a score of the translation quality that can be used as a proxy to human evaluation.
 
-In this folder you can find tools to use BLASER to score speech translation and to train the BLASER supervised model.
+In this folder you can find tools to use BLASER to score speech translation and to train the BLASER supervised model. You can also download a [pre-trained model](http://dl.fbaipublicfiles.com/blaser/blaser.tar.gz).
 
 BLASER relies on [SpeechLASER embeddings](https://github.com/facebookresearch/fairseq/blob/ust/examples/speech_matrix/speech_laser_encoders.md), follow the instructions there to download the embeddings and embed your speech segments.
 
@@ -27,6 +27,10 @@ pip install -e '.[blaser]'
 Blaser requires embedded speech segments to compute the evaluation metric. A good way to get these embeddings is to use [SpeechLASER embeddings](https://github.com/facebookresearch/fairseq/blob/ust/examples/speech_matrix/speech_laser_encoders.md).
 
 We provide a pipeline that will compute the embeddings and feed them to the blaser model for you.
+
+** Model **
+
+You can download the model from [here](https://dl.fbaipublicfiles.com/blaser/blaser.tar.gz).
 
 ** Requirements **
 
@@ -55,6 +59,8 @@ Rows in each manifest TSV files should align (line 1 of the src manifest should 
 - `audio_path` can be either:
   - a filename in `root_dir` for a .npy/.wav/.flac/.ogg file
   - a filename of stored ZIP file, in `root_dir`, with slicing info: "[zip_path]:[offset]:[length]" to find the bytes in the uncompressed zip archive containing that particular file
+
+Check out the `demo/iwslt_blaser_eval/mk_manifest.py` script to see how to generate such a manifest file.
 
 You can then run the pipeline with:
 
