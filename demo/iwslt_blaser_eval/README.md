@@ -53,20 +53,20 @@ python mk_manifest.py manifest -i yourdatadir > yourmanifestpath.tsv
 
 You should also create such manifest for your reference audio files.
 
-## You can now run blaser eval with:
+## Run blaser eval:
 
-A lot of config is preset in `conf/eval_blaser.yaml`, please see the comments in that configuration
+Most of the config is already preset in `conf/eval_blaser.yaml`, please see the comments in that configuration
 file if you need to adjust anything. After that you can run the following command:
 
 ```bash
-DEMO_DIR=<ENTERPATHTOIWSLTBLASEREVALDIRECTORY> python -m stopes.pipelines.eval.eval_blaser --config-dir $DEMO_DIR/conf tgt_manifest=<PATHTOTARGETMANIFEST.tsv> ref_manifest=<PATHTOREFERENCEMANIFEST.tsv>
+DEMO_DIR=<PATH_TO_IWSLT_EVALDIRECTORY> python -m stopes.pipelines.eval.eval_blaser --config-dir $DEMO_DIR/conf tgt_manifest=<PATH_TARGET_MANIFEST.tsv> ref_manifest=<PATH_REFERENCE_MANIFEST.tsv>
 ```
 
 Make sure to replace:
 
-- `ENTERPATHTOIWSLTBLASEREVALDIRECTORY` to the directory where you've run prepare.sh and downloaded everything
-- `PATHTOTARGETMANIFEST.tsv` to the manifest you've generated for the translation files
-- `PATHTOREFERENCEMANIFEST.tsv` to the manifest you've generated for the reference translations
+- `PATH_TO_IWSLT_EVALDIRECTORY` to the directory where you've run prepare.sh and downloaded everything
+- `PATH_TARGET_MANIFEST.tsv` to the manifest you've generated for the translation files
+- `PATH_REFERENCE_MANIFEST.tsv` to the manifest you've generated for the reference translations
 
 
 ## Citation
