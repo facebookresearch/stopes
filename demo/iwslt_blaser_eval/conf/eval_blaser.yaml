@@ -5,7 +5,7 @@ defaults:
 # specify (on the cli) where you want the output eval data to go
 # by default it goes in your running directory, created for each run
 output_dir: .
-# specify (on the cli) where is your blaser demo directory 
+# specify (on the cli) where is your blaser demo directory
 # (this is where prepare.sh will have downloaded everything)
 demo_dir: ???
 

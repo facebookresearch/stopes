@@ -5,14 +5,14 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import multiprocessing
-import wave
 import contextlib
-import func_argparse
 import math
-
+import multiprocessing
 import typing as tp
+import wave
 from pathlib import Path
+
+import func_argparse
 
 
 def audio_len(file: Path) -> tp.Tuple[Path, int]:

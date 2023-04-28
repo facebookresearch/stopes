@@ -18,7 +18,7 @@ python -m pip install --upgrade pip
 # install fairseq
 pip install fairseq==0.12.1
 
-# install stopes+blaser 
+# install stopes+blaser
 pip install 'stopes[blaser]'
 ```
 
