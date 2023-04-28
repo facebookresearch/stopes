@@ -1,0 +1,64 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+# specify (on the cli) where you want the output eval data to go
+# by default it goes in your running directory, created for each run
+output_dir: .
+# specify (on the cli) where is your blaser demo directory
+# (this is where prepare.sh will have downloaded everything)
+demo_dir: ???
+
+# You need to specify these files, they are the manifest files listing the audio paths
+# see the README on how to generate these from your directories.
+tgt_manifest: ???
+ref_manifest: ???
+
+# adjust this to you setup
+use_gpu: true
+batch_size: 16
+
+# this will be created by the prepare.sh script
+src_manifest: ${demo_dir}/data/en/source.tsv
+
+# base directory for the LASER encoders, see prepare.sh to download this
+checkpoint_dir: ${demo_dir}/encoders/
+
+# where to find the blaser model, see prepare.sh to download this
+blaser_model:
+  config_file: ${demo_dir}/blaser_model/model.config
+  model_checkpoint: ${demo_dir}/blaser_model/model.pt
+
+
+# for this IWSLT we will to EN to CMN evaluation (source is en, tgt and reference are Mandarin)
+src_lang: en
+tgt_lang: cmn
+# by default tgt and ref are the same lang
+ref_lang: ${tgt_lang}
+
+
+max_tokens: 2_560_000
+
+# mapping from lang code to encoder checkpoint
+checkpoints:
+  en: english.pt
+  cmn: mandarin.pt
+
+launcher:
+  # `local` means that you will run all the steps sequentially on
+  # your local computer. You can also use `slurm` if you have a slurm cluster
+  # setup, in which case paralell jobs will be submitted when possible.
+  cluster: local
+  # we don't need to set this if we aren't using slurm
+  partition: null
+  # To improve resilience and make iteration faster, stopes caches the results of
+  # each steps of the pipeline. Set a fixed directory here if you want to
+  # leverage caching. Careful, if you change the manifests without changing the
+  # filename, you'll have to remove the cache.
+  cache:
+    caching_dir: /tmp/blaser_eval
+
+# this is so hydra creates an output dir for every run
+hydra:
+  job:
+    chdir: True
