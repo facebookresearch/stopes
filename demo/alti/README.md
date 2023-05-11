@@ -86,4 +86,21 @@ In fact, `tgt_toks` are `pred_toks` shifted by one position.
 
 
 # Reproducing the hallucination detection experiments
-TBD
+The folder `detecting_hallucinations` contains the code for reproducing the experiments on hallucination detection
+from the paper [Detecting and Mitigating Hallucinations in Machine Translation: Model Internal Workings Alone Do Well, Sentence Similarity Even Better](https://arxiv.org/abs/2212.08597).
+
+The detailed instructions for reproduction are in that folder.
+
+To refer to these results, please cite:
+
+
+```bibtex
+@article{dale2022detecting,
+    title={Detecting and Mitigating Hallucinations in Machine Translation: Model Internal Workings Alone Do Well, Sentence Similarity Even Better},
+    author={Dale, David and Voita, Elena and Barrault, Lo{\"\i}c and Costa-juss{\`a}, Marta R},
+    journal={arXiv preprint arXiv:2212.08597},
+    url={https://arxiv.org/abs/2212.08597},
+    year={2022}
+}
+```
+
