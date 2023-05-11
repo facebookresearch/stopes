@@ -58,6 +58,7 @@ def test_all_files_have_a_copyright_header(autofix: bool = False):
             ".txt",
             ".toml",
             ".ipynb",
+            ".csv",
         ):
             continue
         if file.name in (
