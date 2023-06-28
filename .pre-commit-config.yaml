@@ -1,25 +1,30 @@
 default_language_version:
-    python: python3
+  python: python3
 
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
-    -   id: trailing-whitespace
-    -   id: check-ast
-    -   id: check-merge-conflict
-    -   id: check-added-large-files
-        args: ['--maxkb=2000']
-    -   id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-ast
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=2000"]
+      - id: end-of-file-fixer
 
--   repo:  https://github.com/psf/black
+  - repo: https://github.com/psf/black
     rev: 22.3.0
     hooks:
-    - id: black
-      language_version: python3.8
+      - id: black
+        language_version: python3.8
 
--   repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
     hooks:
-    -   id: isort
+      - id: isort
         exclude: README.md
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v2.7.1
+    hooks:
+      - id: prettier
