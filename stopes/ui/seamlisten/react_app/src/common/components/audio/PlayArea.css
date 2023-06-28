@@ -1,0 +1,23 @@
+// Copyright (c) Meta Platforms, Inc. and affiliates
+// All rights reserved.
+//
+// This source code is licensed under the license found in the
+// LICENSE file in the root directory of this source tree.
+
+.Button {
+  background-color: rgba(123, 38, 193, 0);
+  color: black;
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+
+.Button:hover {
+  background-color: #7a26c1;
+  color: white;
+}
+
+.ButtonEncapsulation {
+  width: 100%;
+  height: 100%;
+}
