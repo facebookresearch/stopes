@@ -62,5 +62,8 @@ module.exports = {
         unnamedComponents: 'arrow-function',
       },
     ],
+    "parserOptions": {
+      "requireConfigFile": false
+    }
   },
 };

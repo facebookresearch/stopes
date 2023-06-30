@@ -3,14 +3,14 @@ import puppeteer from "puppeteer"
 
 jest.setTimeout(40000); 
 
-describe('Homepage', () => {
+describe('/stopes', () => {
   let browser;
   let page;
 
   beforeAll(async () => {
     browser = await puppeteer.launch();
     page = await browser.newPage();
-    await page.goto('https://facebookresearch.github.io/stopes/'); // Replace with the URL of your application
+    await page.goto('https://facebookresearch.github.io/stopes/'); 
   });
 
   afterAll(async () => {

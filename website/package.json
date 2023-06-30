@@ -16,8 +16,7 @@
     "lint": "eslint --cache \"**/*.js\" && stylelint \"**/*.css\"",
     "format": "prettier --config .prettierrc --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "format:diff": "prettier --config .prettierrc --list-different \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
-    "test": "react-scripts test --testPathIgnorePatterns=.*e2e.test.js",
-    "test:e2e": "react-scripts test --testPathPattern=.*e2e.test.js$"
+    "test": "react-scripts test --testPathPattern=.*e2e.test.js$"
   },
   "dependencies": {
     "@docusaurus/core": "^2.2.0",
