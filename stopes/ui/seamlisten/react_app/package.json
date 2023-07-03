@@ -13,6 +13,7 @@
     "@types/react-dom": "^18.0.9",
     "bootstrap": "^5.2.2",
     "crypto-hash": "^2.0.1",
+    "puppeteer": "^18.1.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.5.0",
     "react-dom": "^18.2.0",
@@ -32,7 +33,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --testPathPattern=.*e2e.test.js$",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
