@@ -121,14 +121,14 @@ function useFileNavigate() {
 }
 
 const Files = (): JSX.Element => {
-  const [displayHelper, setDisplayHelper] = useState(false);
+  const [displayHelper, setDisplayHelper] = useState(false); 
   const navigate = useFileNavigate();
   let { filename, pageNumber, numberLines, files, audioBlob, error } =
     useLoaderData() as LoaderReturn;
   const [newFilename, setNewFilename] = useState(
     filename || config.default_path
   );
-
+  
   // if we have a location, we are in a transition between two urls
   const navigation = useNavigation();
   const locationParams = parseLocation(navigation.location);
@@ -168,6 +168,17 @@ const Files = (): JSX.Element => {
     [setFilename]
   );
 
+  // Add new function to handle paste events
+  const fileInputHandlePaste = useCallback(
+    (evt) => {
+      const pastedData = evt.clipboardData.getData('text');
+      setNewFilename(pastedData);
+      navigate(pastedData, pageNumber, numberLines);
+    },
+    [navigate, pageNumber, numberLines]
+  );
+
+  
   return (
     <div style={{ marginTop: "10px" }}>
       <Form as={BRow}>
@@ -183,6 +194,7 @@ const Files = (): JSX.Element => {
                 onChange={setFilenameEventHandler}
                 value={newFilename}
                 onKeyDown={fileInputHandleChange}
+                onPaste={fileInputHandlePaste}
                 size="sm"
               />
               <Form.Text className="text-muted" />
