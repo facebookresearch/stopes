@@ -136,3 +136,6 @@ demo/*.gz
 demo/models/
 demo/mining/*.gz
 demo/mining/models/
+
+# Testing configs
+testing
