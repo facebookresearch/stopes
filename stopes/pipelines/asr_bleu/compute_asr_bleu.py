@@ -18,8 +18,9 @@ class AsrBleu:
     def __init__(self, config: AsrBleuConfig):
         self.config = config
 
-    def run(self):
-        print(OmegaConf.to_yaml(self.config))
+    async def run(self):
+        print(os.listdir(self.config.corpora.audio_dirpath))
+        print(self.config.corpora.reference_path)
         #TODO: migrate run_asr_bleu to here, update code to be asynchronous
 
 def merge_tailo_init_final(text):
@@ -176,7 +177,7 @@ def run_asr_bleu(args):
 @hydra.main(config_path="conf", config_name="asr_bleu")
 def main(config: AsrBleuConfig) -> None:
     pipeline = AsrBleu(config)
-    pipeline.run()
+    asyncio.run(pipeline.run())
 
 if __name__ == "__main__":
     main()
