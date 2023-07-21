@@ -4,7 +4,6 @@ import sacrebleu
 import pandas as pd
 from glob import glob
 from pathlib import Path
-from utils import retrieve_asr_config, ASRGenerator
 from tqdm import tqdm
 from argparse import ArgumentParser
 import asyncio
@@ -12,6 +11,7 @@ import asyncio
 import hydra
 from omegaconf import OmegaConf
 
+from stopes.pipelines.asr_bleu.utils import retrieve_asr_config, ASRGenerator
 from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
 
 class AsrBleu:
