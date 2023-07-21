@@ -17,5 +17,5 @@ field_def: 6 # on what field do we merge; update this to 7 if you have an lm sco
 
 process_locally: false # ignore: if it's faster to read locally, copy all files to tmp_dir first
 resort_files: false # ignore
-glob: '' # ignore
+glob: "" # ignore
 wandb: null # ignore

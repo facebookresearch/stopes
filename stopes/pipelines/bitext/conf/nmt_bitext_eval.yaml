@@ -9,7 +9,6 @@ defaults:
   - eval: generate_multi_bleu_detok
   - _self_
 
-
 src_lang: ???
 tgt_lang: ???
 # this is the bitext being evaluated. It should have 3 columns: (score, src, tgt)

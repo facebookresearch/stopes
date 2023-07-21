@@ -20,7 +20,7 @@ weight_decay: 0.0001
 criterion: label_smoothed_cross_entropy
 label_smoothing: 0.2
 optimizer: adam
-adam_betas: '(0.9, 0.98)'
+adam_betas: "(0.9, 0.98)"
 clip_norm: 0.0
 
 lr_scheduler: inverse_sqrt

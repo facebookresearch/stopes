@@ -2,7 +2,7 @@ language_script_filename: ${mono_pipeline.language_script_filename}
 split_language_equivalences_filename: ${mono_pipeline.split_language_equivalences_filename}
 
 # used for sentence splitting
-split_algo: ${mono_pipeline.split_algo} 
+split_algo: ${mono_pipeline.split_algo}
 
 local_tmp_dir: ${local_tmp_dir}
 dist_tmp_dir: ${dist_tmp_dir}
@@ -15,8 +15,8 @@ bitext_processor:
   local_tmp_dir: ${..local_tmp_dir}
   _version: 0.3
 
-outfile_prefix: ''
-outfile_postfix: ''
+outfile_prefix: ""
+outfile_postfix: ""
 output_dir: ???
 
 filter:

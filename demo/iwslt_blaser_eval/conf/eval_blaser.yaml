@@ -29,13 +29,11 @@ blaser_model:
   config_file: ${demo_dir}/blaser_model/model.config
   model_checkpoint: ${demo_dir}/blaser_model/model.pt
 
-
 # for this IWSLT we will to EN to CMN evaluation (source is en, tgt and reference are Mandarin)
 src_lang: en
 tgt_lang: cmn
 # by default tgt and ref are the same lang
 ref_lang: ${tgt_lang}
-
 
 max_tokens: 2_560_000
 

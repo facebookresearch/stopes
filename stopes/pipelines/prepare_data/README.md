@@ -4,19 +4,19 @@ This pipeline takes in the filtered corpora text files (can be compressed), trai
 
 ## Input Config:
 
-* fold: train, train_mining, train_mmt_bt, train_smt_bt, valid, test are possible options
-* lang_dir: language direction
+- fold: train, train_mining, train_mmt_bt, train_smt_bt, valid, test are possible options
+- lang_dir: language direction
 
 corpora: `CorporaConfig`
-    <FOLD>:
-        <LANG_DIR>:
-            <CORPUS_NAME>:
-                src: <SRC_FILE_PATH>
-                tgt: <TGT_FILE_PATH>
-                metadata: <METADATA_FILE_PATH> (optional)
-            ...
-        ...
-    ...
+<FOLD>:
+<LANG_DIR>:
+<CORPUS_NAME>:
+src: <SRC_FILE_PATH>
+tgt: <TGT_FILE_PATH>
+metadata: <METADATA_FILE_PATH> (optional)
+...
+...
+...
 Specify paths to src, tgt, and optionally metadata files per (fold, lang_dir) for each corpus.
 
 preprocessing: `PreprocessingConfig`
@@ -37,17 +37,18 @@ How to launch your jobs? locally or submitit
 ## Run Command:
 
 Please override the default config options as required.
+
 ```
 python stopes/pipelines/prepare_data/prepare_data.py output_dir=<OUTPUT_DIR>
 ```
 
 ## Pipeline Breakdown
 
-* validate: Counts the number of lines for all parallel corpora and makes sure they're the same for src & tgt and stores train line counts statistics.
-* retrieve_data: Concatenates all corpora for each (fold, lang_dir), runs Moses preprocessing over each of them as per preprocessing config and saves them to the `retrieved_data` directory.
-* build_vocab: Samples a corpus as per sampling_config and trains an SPM on the sampled corpus. We need to sample a corpus since training an SPM on all of the corpora is time consuming. This is done jointly for src, tgt directinos by default but can be done separately as well. The trained SPM, the model file and vocab file are saved in the `vocab_bin` directory
-* dedup_sharding: Deduplicates training corpora across eval corpora (valid, test) & optionally across folds as per dedup_config and shards training corpora.
-* binarize: Binarizes all the sharded files (train, eval) using `MultiProcFairSeqBinarizerEncoder` and writes them to the sharded directories in the `data_bin` directory.
+- validate: Counts the number of lines for all parallel corpora and makes sure they're the same for src & tgt and stores train line counts statistics.
+- retrieve_data: Concatenates all corpora for each (fold, lang_dir), runs Moses preprocessing over each of them as per preprocessing config and saves them to the `retrieved_data` directory.
+- build_vocab: Samples a corpus as per sampling_config and trains an SPM on the sampled corpus. We need to sample a corpus since training an SPM on all of the corpora is time consuming. This is done jointly for src, tgt directinos by default but can be done separately as well. The trained SPM, the model file and vocab file are saved in the `vocab_bin` directory
+- dedup_sharding: Deduplicates training corpora across eval corpora (valid, test) & optionally across folds as per dedup_config and shards training corpora.
+- binarize: Binarizes all the sharded files (train, eval) using `MultiProcFairSeqBinarizerEncoder` and writes them to the sharded directories in the `data_bin` directory.
 
 ## Caveat
 

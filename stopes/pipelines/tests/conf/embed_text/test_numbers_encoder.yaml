@@ -20,4 +20,4 @@ config:
   lang: ???
   shards: ???
   lang_shard_name: None
-  launcher: ${launcher} 
+  launcher: ${launcher}

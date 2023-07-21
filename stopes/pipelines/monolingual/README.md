@@ -16,6 +16,7 @@ The core filtering is in `monolingual_line_processor.py` and `utils/text_filter.
 `python monolingual_pipeline.py data_dir=yourdatahere langs='[umb,ssw]'`
 
 should be enough to get it running.
+
 - `data_dir` is where the raw data is, should have subfolders per lang and files named with the pattern corpus_name.lang.xz
 - `langs` an array of langs to process in this run
 
