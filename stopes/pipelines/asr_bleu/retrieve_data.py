@@ -10,11 +10,11 @@ from stopes.pipelines.filtering.dataset import Dataset
 
 @dataclass
 class RetrieveDataJob:
-    audio_path: str
-    reference_path: str
-    audio_format: str
-    reference_format: str
-    reference_tsv_column: str
+    audio_path: str = MISSING
+    reference_path: str = MISSING
+    audio_format: str = MISSING
+    reference_format: str = MISSING
+    reference_tsv_column: tp.Optional[str] = None
 
 @dataclass
 class RetrieveDataConfig:
@@ -117,6 +117,7 @@ async def retrieve_data(
     reference_format: str,
     reference_tsv_column: str,
 ):
+    
     retrieve_data_jobs = [
         RetrieveDataJob(
             audio_path=dataset[0], 
