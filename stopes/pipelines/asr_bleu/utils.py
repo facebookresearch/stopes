@@ -2,10 +2,11 @@ import json
 import re
 import urllib.request
 from pathlib import Path
+# import asyncio
 
 import fairseq
 import torch
-from fairseq.data.data_utils import lengths_to_padding_mask
+# from fairseq.data.data_utils import lengths_to_padding_mask
 from tqdm import tqdm
 
 try:
@@ -28,17 +29,6 @@ class DownloadProgressBar(tqdm):
 
 
 def retrieve_asr_config(lang_key: str, asr_version: str, json_path: str) -> dict:
-    """
-    Retrieve the asr model configs
-
-    Args:
-        lang_key: the lanuage type as the key name
-        json_path: the path of the config json file
-
-    Returns:
-        Dict of all the configs in the json file
-    """
-    
     if len(lang_key) !=3:
         raise ValueError(f"'{lang_key}' lang key for language type must be 3 characters!")
 
@@ -218,92 +208,3 @@ class ASRGenerator(object):
 
         self.sampling_rate = saved_cfg.task.sample_rate
         self.normalize_input = saved_cfg.task.normalize
-
-    @torch.inference_mode()
-    def load_audiofile(self, audio_path: str) -> torch.Tensor:
-        """
-        Load the audio files and apply resampling and normalizaion
-
-        Args:
-            audio_path: the audio file path
-
-        Returns:
-            audio_waveform: the audio waveform as a torch.Tensor object
-        """
-
-        audio_waveform, sampling_rate = torchaudio.load(audio_path)
-        if audio_waveform.dim == 2:
-            audio_waveform = audio_waveform.mean(-1)
-        if self.sampling_rate != sampling_rate:
-            audio_waveform = torchaudio.functional.resample(
-                audio_waveform, sampling_rate, self.sampling_rate
-            )
-        if self.normalize_input:
-            # following fairseq raw audio dataset
-            audio_waveform = torch.nn.functional.layer_norm(
-                audio_waveform, audio_waveform.shape
-            )
-
-        return audio_waveform
-
-    @torch.inference_mode()
-    def compute_emissions(self, audio_input: torch.Tensor) -> torch.Tensor:
-        """
-        Compute the emissions for either fairseq or huggingface asr model
-
-        Args:
-            audio_path: the input audio waveform
-
-        Returns:
-            emissions: the logits of the encoded prediction.
-        """
-
-        if self.use_cuda:
-            audio_input = audio_input.to("cuda")
-        if isinstance(self.model, fairseq.models.wav2vec.wav2vec2_asr.Wav2VecCtc):
-            padding_mask = lengths_to_padding_mask(torch.tensor([audio_input.numel()]))
-            emissions = self.model.w2v_encoder(audio_input, padding_mask)[
-                "encoder_out"
-            ].transpose(0, 1)
-        else:
-            emissions = self.model(audio_input).logits
-
-        return emissions
-
-    def decode_emissions(self, emissions: torch.Tensor) -> str:
-        """
-        Decode the emissions and apply post process functions
-
-        Args:
-            emissions: the input Tensor object
-
-        Returns:
-            hypo: the str as the decoded transcriptions
-        """
-
-        emissions = emissions.cpu()
-        results = self.decoder(emissions)
-
-        # assuming the lexicon-free decoder and working with tokens
-        hypo = self.decoder.idxs_to_tokens(results[0][0].tokens)
-        hypo = self.post_process_fn(hypo)
-
-        return hypo
-
-    def transcribe_audiofile(self, audio_path: str, lower=True) -> str:
-        """
-        Transcribe the audio into string
-
-        Args:
-            audio_path: the input audio waveform
-            lower: the case of the transcriptions with lowercase as the default
-
-        Returns:
-            hypo: the transcription result
-        """
-
-        asr_input = self.load_audiofile(audio_path)
-        emissions = self.compute_emissions(asr_input)
-        hypo = self.decode_emissions(emissions)
-
-        return hypo.strip().lower() if lower else hypo.strip()

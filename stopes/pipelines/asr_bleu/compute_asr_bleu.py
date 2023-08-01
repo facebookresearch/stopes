@@ -1,27 +1,77 @@
+import asyncio
+import logging
 import os
-from typing import Dict, List
-import sacrebleu
+import typing as tp
 import pandas as pd
-from glob import glob
 from pathlib import Path
 from tqdm import tqdm
-from argparse import ArgumentParser
-import asyncio
+from glob import glob
+
+from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
+from stopes.pipelines.asr_bleu.utils import retrieve_asr_config, ASRGenerator
+from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audiofile
+from stopes.pipelines.asr_bleu.retrieve_data import retrieve_data
 
 import hydra
+import sacrebleu
 from omegaconf import OmegaConf
 
-from stopes.pipelines.asr_bleu.utils import retrieve_asr_config, ASRGenerator
-from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
+logger = logging.getLogger("asr_bleu")
 
 class AsrBleu:
     def __init__(self, config: AsrBleuConfig):
         self.config = config
+        self.launcher = hydra.utils.instantiate(self.config.launcher)
 
     async def run(self):
-        print(os.listdir(self.config.corpora.audio_dirpath))
-        print(self.config.corpora.reference_path)
-        #TODO: migrate run_asr_bleu to here, update code to be asynchronous
+        # 1. Retrieve ASR configuration 
+
+        asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="/home/calderj/Documents/Coding/MLH/stopes/stopes/pipelines/asr_bleu/conf/asr_models/asr_model_cfgs.json")
+        asr_model = ASRGenerator(asr_config)
+
+        # 2. Compose evaluation data.
+
+        #UNCOMMENT TO TEST (currently non functional) retrieve_data MODULE
+        #eval_manifest = await retrieve_data(
+        #    [(self.config.corpora.audio_dirpath, self.config.corpora.reference_path)], 
+        #    self.launcher,
+        #    self.config.corpora.audio_format,
+        #    self.config.corpora.reference_format,
+        #    self.config.corpora.reference_tsv_column
+        #)
+
+        eval_manifest = compose_eval_data(
+            self.config.corpora.audio_dirpath,
+            self.config.corpora.audio_format,
+            self.config.corpora.reference_path,
+            self.config.corpora.reference_format,
+            self.config.corpora.reference_tsv_column
+        )
+
+        # 3. Transcribe audio predictions and compute BLEU score.
+        prediction_transcripts = []
+        for _, eval_pair in tqdm(
+            eval_manifest.iterrows(),
+            desc="Transcribing predictions",
+            total=len(eval_manifest),
+        ):
+            transcription = await transcribe_audiofile(asr_model, eval_pair.prediction)
+            prediction_transcripts.append(transcription.lower())
+
+        if self.config.corpora.lang == "hok":
+            prediction_transcripts = [
+                merge_tailo_init_final(text) for text in prediction_transcripts
+            ]
+
+        references = eval_manifest["reference"].tolist()
+        bleu_score = sacrebleu.corpus_bleu(prediction_transcripts, [references])
+
+        print(bleu_score)
+
+        
+        return prediction_transcripts, bleu_score   
+
+ 
 
 def merge_tailo_init_final(text):
     """
@@ -107,72 +157,26 @@ def compose_eval_data(
 ):
     """
     Speech matrix decoding pipeline produces audio with the following mask "N_pred.wav" where N is the order of the corresponding input sample
+    Returns:
+    pandas.DataFrame: the evaluation dataframe with columns `prediction` and `reference`
     """
-
+    audio_list = extract_audio_for_eval(audio_dirpath, audio_format)
     reference_sentences = extract_text_for_eval(
         references_filepath, reference_format, reference_tsv_column
     )
-    predicted_audio_fp_list = extract_audio_for_eval(audio_dirpath, audio_format)
-    assert len(predicted_audio_fp_list) == len(reference_sentences)
 
-    audio_text_pairs = [
-        (audio, reference)
-        for audio, reference in zip(predicted_audio_fp_list, reference_sentences)
-    ]
-
-    tsv_manifest = pd.DataFrame(audio_text_pairs, columns=["prediction", "reference"])
+    eval_df = pd.DataFrame(
+        {
+            "prediction": audio_list,
+            "reference": reference_sentences,
+        }
+    )
 
     if save_manifest_filepath is not None:
-        tsv_manifest.to_csv(save_manifest_filepath, sep="\t", quoting=3)
-
-    return tsv_manifest
-
-
-def load_eval_data_from_tsv(eval_data_filepath: str):
-    """
-    We may load the result of `compose_eval_data` directly if needed
-    """
-    eval_df = pd.from_csv(eval_data_filepath, sep="\t")
+        eval_df.to_csv(save_manifest_filepath, index=False)
 
     return eval_df
 
-
-def run_asr_bleu(args):
-
-    asr_config = retrieve_asr_config(
-        args.lang, args.asr_version, json_path="./asr_model_cfgs.json"
-    )
-    asr_model = ASRGenerator(asr_config)
-
-    eval_manifest = compose_eval_data(
-        audio_dirpath=args.audio_dirpath,
-        audio_format=args.audio_format,
-        references_filepath=args.reference_path,
-        reference_format=args.reference_format,
-        reference_tsv_column=args.reference_tsv_column,
-        save_manifest_filepath=None,
-    )
-
-    prediction_transcripts = []
-    for _, eval_pair in tqdm(
-        eval_manifest.iterrows(),
-        desc="Transcribing predictions",
-        total=len(eval_manifest),
-    ):
-        transcription = asr_model.transcribe_audiofile(eval_pair.prediction)
-        prediction_transcripts.append(transcription.lower())
-
-    if args.lang == "hok":
-        prediction_transcripts = [
-            merge_tailo_init_final(text) for text in prediction_transcripts
-        ]
-
-    references = eval_manifest["reference"].tolist()
-    bleu_score = sacrebleu.corpus_bleu(prediction_transcripts, [references])
-
-    print(bleu_score)
-
-    return prediction_transcripts, bleu_score
 
 @hydra.main(config_path="conf", config_name="asr_bleu")
 def main(config: AsrBleuConfig) -> None:
@@ -180,11 +184,4 @@ def main(config: AsrBleuConfig) -> None:
     asyncio.run(pipeline.run())
 
 if __name__ == "__main__":
-    main()
-
-
-"""
-Example to load Sl audio and references, compute BLEU:
-
-export lang=fi; split=vp && python compute_asr_bleu.py --lang $lang --audio_dirpath /checkpoint/hygong/S2S/speech_matrix_release_ckpts/generated_waveform_release/en-$lang/test_$split/checkpoint.pt --audio_format n_pred.wav --reference_path /large_experiments/ust/hygong/S2S/SpeechEncoder/manifests/vp-vp/en-$lang/test_$split.$lang --reference_format txt --results_dirpath ./
-"""
+    main()        
