@@ -1,7 +1,10 @@
+import os
+import logging
 import typing as tp
 import pandas as pd
 from dataclasses import dataclass
 from pathlib import Path
+from glob import glob
 from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
@@ -39,7 +42,7 @@ class RetrieveData(StopesModule):
             timeout_min=24 * 60,
         )
     
-    def _extract_audio_for_eval(audio_dirpath: str, audio_format: str):
+    def _extract_audio_for_eval(self, audio_dirpath: str, audio_format: str):
         if audio_format == "n_pred.wav":
             """
             The assumption here is that 0_pred.wav corresponds to the reference at line position 0 from the reference manifest
@@ -70,9 +73,7 @@ class RetrieveData(StopesModule):
 
         return audio_list
     
-    def _extract_text_for_eval(
-        references_filepath: str, reference_format: str, reference_tsv_column: str = None
-    ):
+    def _extract_text_for_eval(self, references_filepath: str, reference_format: str, reference_tsv_column: str = None):
         if reference_format == "txt":
             reference_sentences = open(references_filepath, "r").readlines()
             reference_sentences = [l.strip() for l in reference_sentences]

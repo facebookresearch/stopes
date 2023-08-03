@@ -27,28 +27,30 @@ class AsrBleu:
         # 1. Retrieve ASR configuration 
 
         asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="/home/calderj/Documents/Coding/MLH/stopes/stopes/pipelines/asr_bleu/conf/asr_models/asr_model_cfgs.json")
-        asr_model = ASRGenerator(asr_config)
 
         # 2. Compose evaluation data.
 
-        #UNCOMMENT TO TEST (currently non functional) retrieve_data MODULE
-        #eval_manifest = await retrieve_data(
-        #    [(self.config.corpora.audio_dirpath, self.config.corpora.reference_path)], 
-        #    self.launcher,
+        eval_manifest = await retrieve_data(
+            [(self.config.corpora.audio_dirpath, self.config.corpora.reference_path)], 
+            self.launcher,
+            self.config.corpora.audio_format,
+            self.config.corpora.reference_format,
+            self.config.corpora.reference_tsv_column
+        )
+        print(eval_manifest)
+
+        return
+
+        #eval_manifest = compose_eval_data(
+        #    self.config.corpora.audio_dirpath,
         #    self.config.corpora.audio_format,
+        #    self.config.corpora.reference_path,
         #    self.config.corpora.reference_format,
         #    self.config.corpora.reference_tsv_column
         #)
 
-        eval_manifest = compose_eval_data(
-            self.config.corpora.audio_dirpath,
-            self.config.corpora.audio_format,
-            self.config.corpora.reference_path,
-            self.config.corpora.reference_format,
-            self.config.corpora.reference_tsv_column
-        )
-
         # 3. Transcribe audio predictions and compute BLEU score.
+        asr_model = ASRGenerator(asr_config)
         prediction_transcripts = []
         for _, eval_pair in tqdm(
             eval_manifest.iterrows(),
