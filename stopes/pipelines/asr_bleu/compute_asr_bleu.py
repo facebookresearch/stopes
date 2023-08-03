@@ -1,34 +1,28 @@
 import asyncio
 import logging
-import os
-import typing as tp
-import pandas as pd
-from pathlib import Path
-from tqdm import tqdm
-from glob import glob
 
 from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
-from stopes.pipelines.asr_bleu.utils import retrieve_asr_config, ASRGenerator
-from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audiofile
+from stopes.pipelines.asr_bleu.utils import retrieve_asr_config
+from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audio
 from stopes.pipelines.asr_bleu.retrieve_data import retrieve_data
 
 import hydra
 import sacrebleu
-from omegaconf import OmegaConf
-
-logger = logging.getLogger("asr_bleu")
 
 class AsrBleu:
     def __init__(self, config: AsrBleuConfig):
         self.config = config
         self.launcher = hydra.utils.instantiate(self.config.launcher)
+        self.logger = logging.getLogger("asr_bleu")
 
     async def run(self):
         # 1. Retrieve ASR configuration 
+        logging.info("Setting up ASR model...")
         asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="/home/calderj/Documents/Coding/MLH/stopes/stopes/pipelines/asr_bleu/conf/asr_model/asr_model_cfgs.json")
 
         # 2. Compose evaluation data.
-        eval_manifest = await retrieve_data([
+        logging.info("Composing evaluation data...")
+        eval_manifests = await retrieve_data([
                 (self.config.corpora.audio_dirpath, 
                  self.config.corpora.reference_path,
                  self.config.corpora.audio_format,
@@ -38,34 +32,25 @@ class AsrBleu:
             self.launcher,
         )
 
-        #as we're testing with only one data set, grabbing only the first index
-        eval_manifest = eval_manifest[0]
-
         # 3. Transcribe audio predictions and compute BLEU score.
-        asr_model = ASRGenerator(asr_config)
-        prediction_transcripts = []
-        for _, eval_pair in tqdm(
-            eval_manifest.iterrows(),
-            desc="Transcribing predictions",
-            total=len(eval_manifest),
-        ):
-            transcription = await transcribe_audiofile(asr_model, eval_pair.prediction)
-            prediction_transcripts.append(transcription.lower())
+        logging.info("Transcribing audio predictions...")
+        transcribed_audio = await transcribe_audio(
+            eval_manifests,
+            self.launcher,
+            asr_config,
+        )
+        print(transcribed_audio)
 
-        if self.config.corpora.lang == "hok":
-            prediction_transcripts = [
-                merge_tailo_init_final(text) for text in prediction_transcripts
-            ]
+        # 4. Compute BLEU score
+        logging.info("Computing BLEU scores...")
+        bleu_scores = []
+        for i, prediction_transcripts in enumerate(transcribed_audio):
+            references = eval_manifests[i]["reference"]
+            bleu_score = sacrebleu.corpus_bleu(prediction_transcripts, [references])
+            bleu_scores.append(bleu_score)
+            print(bleu_score)
 
-        references = eval_manifest["reference"].tolist()
-        bleu_score = sacrebleu.corpus_bleu(prediction_transcripts, [references])
-
-        print(bleu_score)
-
-        
-        return prediction_transcripts, bleu_score   
-
- 
+        return transcribed_audio, bleu_scores
 
 def merge_tailo_init_final(text):
     """

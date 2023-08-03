@@ -90,7 +90,7 @@ class RetrieveData(StopesModule):
     def run(self,
             iteration_value: tp.Optional[tp.Any] = None,
             iteration_index: int = 0,
-    ) -> pd.DataFrame:
+    ) -> tp.Dict[str, tp.List]:
         """Retrieves data for each RetrieveDataJob"""
         assert iteration_value is not None, "iteration value is null"
         self.logger = logging.getLogger("stopes.asr_bleu.prepare_data")
@@ -103,14 +103,12 @@ class RetrieveData(StopesModule):
             iteration_value.reference_path, iteration_value.reference_format, iteration_value.reference_tsv_column
         )
 
-        eval_df = pd.DataFrame(
-            {
-                "prediction": audio_list,
-                "reference": reference_sentences,
-            }
-        )
+        eval_manifest = {
+            "prediction": audio_list,
+            "reference": reference_sentences,
+        }
 
-        return eval_df
+        return eval_manifest
 
 
 async def retrieve_data(
@@ -119,10 +117,9 @@ async def retrieve_data(
 ):
     """
     Retrieve data for transcription
-    Returns a list of type pd.DataFrame
+    Returns a list of type dict[str, list]
     Datasets are a 5 tuple: (audio_path, reference_path, audio_format, reference_format, reference_tsv_column)
     """
-    
     retrieve_data_jobs = [
         RetrieveDataJob(
             audio_path=dataset[0], 
