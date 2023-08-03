@@ -28,12 +28,14 @@ class AsrBleu:
         asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="/home/calderj/Documents/Coding/MLH/stopes/stopes/pipelines/asr_bleu/conf/asr_model/asr_model_cfgs.json")
 
         # 2. Compose evaluation data.
-        eval_manifest = await retrieve_data(
-            [(self.config.corpora.audio_dirpath, self.config.corpora.reference_path)], 
+        eval_manifest = await retrieve_data([
+                (self.config.corpora.audio_dirpath, 
+                 self.config.corpora.reference_path,
+                 self.config.corpora.audio_format,
+                 self.config.corpora.reference_format,
+                 self.config.corpora.reference_tsv_column,)
+            ], 
             self.launcher,
-            self.config.corpora.audio_format,
-            self.config.corpora.reference_format,
-            self.config.corpora.reference_tsv_column
         )
         print(eval_manifest)
         return

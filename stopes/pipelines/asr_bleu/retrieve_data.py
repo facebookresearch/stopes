@@ -112,20 +112,17 @@ class RetrieveData(StopesModule):
 
 
 async def retrieve_data(
-    datasets: tp.List[tp.Tuple[str, str]],
+    datasets: tp.List[tp.Tuple[str, str, str, str, str]],
     launcher: Launcher,
-    audio_format: str,
-    reference_format: str,
-    reference_tsv_column: str,
 ):
     
     retrieve_data_jobs = [
         RetrieveDataJob(
             audio_path=dataset[0], 
             reference_path=dataset[1], 
-            audio_format=audio_format, 
-            reference_format=reference_format, 
-            reference_tsv_column=reference_tsv_column,
+            audio_format=dataset[2], 
+            reference_format=dataset[3], 
+            reference_tsv_column=dataset[4],
         ) for dataset in datasets
     ]
     retrieve_data_module = RetrieveData(
