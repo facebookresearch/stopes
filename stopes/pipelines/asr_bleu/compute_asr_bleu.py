@@ -39,7 +39,6 @@ class AsrBleu:
             self.launcher,
             asr_config,
         )
-        print(transcribed_audio)
 
         # 4. Compute BLEU score
         logging.info("Computing BLEU scores...")
