@@ -1,8 +1,0 @@
-eng:
-  oct22":
-    desc: "Wav2Vec 2.0 Large (LV-60) + Self Training from https://github.com/facebookresearch/fairseq/tree/main/examples/wav2vec#pre-trained-models"
-    ckpt_path": "https://dl.fbaipublicfiles.com/fairseq/wav2vec/wav2vec_vox_960h_pl.pt"
-    dict_path": "https://dl.fbaipublicfiles.com/fairseq/wav2vec/dict.ltr.txt"
-    model_type": "fairseq"
-    lang": "eng"
-    post_process": "collapse"
