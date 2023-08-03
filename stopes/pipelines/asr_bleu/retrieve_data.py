@@ -9,7 +9,6 @@ from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.pipelines.filtering.dataset import Dataset
 
 @dataclass
 class RetrieveDataJob:
