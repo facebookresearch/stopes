@@ -37,19 +37,12 @@ class AsrBleu:
             ], 
             self.launcher,
         )
-        print(eval_manifest)
-        return
 
-        #eval_manifest = compose_eval_data(
-        #    self.config.corpora.audio_dirpath,
-        #    self.config.corpora.audio_format,
-        #    self.config.corpora.reference_path,
-        #    self.config.corpora.reference_format,
-        #    self.config.corpora.reference_tsv_column
-        #)
+        #as we're testing with only one data set, grabbing only the first index
+        eval_manifest = eval_manifest[0]
 
         # 3. Transcribe audio predictions and compute BLEU score.
-        asr_model = ASRGenerator(asr_config)
+        asr_model = ASRGenerator(asr_config) #CODE BREAKS ON THIS LINE DUE TO INCOMPATIBLE OVERRIDES WHEN CONFIGURING THE MODEL
         prediction_transcripts = []
         for _, eval_pair in tqdm(
             eval_manifest.iterrows(),
