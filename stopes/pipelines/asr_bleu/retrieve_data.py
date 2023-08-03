@@ -42,6 +42,7 @@ class RetrieveData(StopesModule):
         )
     
     def _extract_audio_for_eval(self, audio_dirpath: str, audio_format: str):
+        """Extract audio file paths for subsequent transcription"""
         if audio_format == "n_pred.wav":
             """
             The assumption here is that 0_pred.wav corresponds to the reference at line position 0 from the reference manifest
@@ -73,6 +74,7 @@ class RetrieveData(StopesModule):
         return audio_list
     
     def _extract_text_for_eval(self, references_filepath: str, reference_format: str, reference_tsv_column: str = None):
+        """Extract sentences for reference"""
         if reference_format == "txt":
             reference_sentences = open(references_filepath, "r").readlines()
             reference_sentences = [l.strip() for l in reference_sentences]
@@ -89,6 +91,7 @@ class RetrieveData(StopesModule):
             iteration_value: tp.Optional[tp.Any] = None,
             iteration_index: int = 0,
     ) -> pd.DataFrame:
+        """Retrieves data for each RetrieveDataJob"""
         assert iteration_value is not None, "iteration value is null"
         self.logger = logging.getLogger("stopes.asr_bleu.prepare_data")
 
@@ -114,6 +117,11 @@ async def retrieve_data(
     datasets: tp.List[tp.Tuple[str, str, str, str, str]],
     launcher: Launcher,
 ):
+    """
+    Retrieve data for transcription
+    Returns a list of type pd.DataFrame
+    Datasets are a 5 tuple: (audio_path, reference_path, audio_format, reference_format, reference_tsv_column)
+    """
     
     retrieve_data_jobs = [
         RetrieveDataJob(

@@ -42,7 +42,7 @@ class AsrBleu:
         eval_manifest = eval_manifest[0]
 
         # 3. Transcribe audio predictions and compute BLEU score.
-        asr_model = ASRGenerator(asr_config) #CODE BREAKS ON THIS LINE DUE TO INCOMPATIBLE OVERRIDES WHEN CONFIGURING THE MODEL
+        asr_model = ASRGenerator(asr_config)
         prediction_transcripts = []
         for _, eval_pair in tqdm(
             eval_manifest.iterrows(),
