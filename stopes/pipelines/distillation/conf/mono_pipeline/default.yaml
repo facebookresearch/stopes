@@ -1,7 +1,7 @@
 launcher: ${launcher}
 dedup: ${dedup}
 langs: ${src_langs}
-corpus_filter: ""
+corpus_filter: ''
 data_dir: ${mono_data_dir}
 output_dir: .
 language_script_filename: language_scripts_200.tsv

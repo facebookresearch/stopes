@@ -45,7 +45,6 @@ You will need to pass three sets of speech segments to get a blaser score:
 - the reference audio (`ref`)
 
 The set of speech segments have to be organised in a tsv manifest pointing to the audio files. The format for each input audio data tsv file is:
-
 ```
 <root_dir>
 <audio_path>\t<num_frames>
@@ -71,8 +70,8 @@ python -m stopes.pipelines.eval.eval_blaser output_dir=YOUROUTPUTDIRECTORY src_m
 
 where `src_lang` is the language of your source audio and tgt_lang is the target language. This is used to lookup the correct encoder model as specified by `stopes/pipelines/eval/conf/eval_blaser.yaml`. You can download pre-trained encoders from the [SpeechMatrix project](https://github.com/facebookresearch/fairseq/blob/ust/examples/speech_matrix/speech_laser_encoders.md). By default, the encoder used for the reference is the same as the target one, you can override this with `ref_lang=..` in the command arguments.
 
-## Citation
 
+## Citation
 If you use `blaser` in your work or any of its models, please cite:
 
 ```bibtex
@@ -87,5 +86,4 @@ If you use `blaser` in your work or any of its models, please cite:
 ```
 
 ## License
-
 `blaser` is MIT licensed, as found in the LICENSE file in the root directory.

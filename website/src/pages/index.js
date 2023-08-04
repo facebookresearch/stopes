@@ -17,7 +17,7 @@ import React from 'react';
 import styles from './styles.module.css';
 
 function Stopes() {
-  return <span className={clsx('stopes')}>stopes</span>;
+  return <span className={clsx('stopes')}>stopes</span>
 }
 
 const features = [
@@ -25,14 +25,13 @@ const features = [
     title: 'Easy to Use',
     description: (
       <>
-        <Stopes /> was designed to provide a modular API to build and reproduce
-        pipelines core to large translation work. In particular data mining and
-        evaluation. Where you run your pipeline and how you scale it is
-        independent of its core logic. Everything is config-driven so you can
-        easily reproduce and track results.
+        <Stopes /> was designed to provide a modular API to build and reproduce pipelines core to large translation work.
+        In particular data mining and evaluation.
+        Where you run your pipeline and how you scale it is independent of its core logic.
+        Everything is config-driven so you can easily reproduce and track results.
       </>
     ),
-    buttonTxt: 'Quickstart',
+    buttonTxt: "Quickstart",
     buttonUrl: 'docs/quickstart',
     imageUrl: 'img/shovel.svg',
   },
@@ -40,13 +39,12 @@ const features = [
     title: 'Batteries Included',
     description: (
       <>
-        <Stopes /> lets you focus on your core data and evaluation needs by
-        providing common modules used for this task and letting you write your
-        pipelines with idiomatic python. Common optimizations have also been
-        built-in to help you scale your work.
+        <Stopes /> lets you focus on your core data and evaluation needs by providing common modules
+        used for this task and letting you write your pipelines with idiomatic python.
+        Common optimizations have also been built-in to help you scale your work.
       </>
     ),
-    buttonTxt: 'Learn More',
+    buttonTxt: "Learn More",
     buttonUrl: 'docs/stopes',
     imageUrl: 'img/modules.svg',
   },
@@ -54,21 +52,21 @@ const features = [
     title: 'State-of-the-art Pipelines',
     description: (
       <>
-        <Stopes /> was developed as part of the Meta AI No Language Left Behind
-        research project. It comes with state-of-the-art pipelines out of the
-        box. You can run our global mining and distillation pipelines and
-        reproduce our research with just a few command lines.
+        <Stopes /> was developed as part of the Meta AI No Language Left Behind research project.
+        It comes with state-of-the-art pipelines out of the box. You can run our global mining and distillation
+        pipelines and reproduce our research with just a few command lines.
       </>
     ),
-    buttonTxt: 'E.g. Start Data Mining',
+    buttonTxt: "E.g. Start Data Mining",
     buttonUrl: 'docs/pipelines/global_mining',
     imageUrl: 'img/pipelines.svg',
   },
 ];
 
+
 const sections = [
   {
-    title: 'No-coding Mining',
+    title: "No-coding Mining",
     language: 'bash',
     code: `python -m stopes.pipelines.bitext.global_mining_pipeline \\
    src_lang=fuv \\
@@ -78,15 +76,12 @@ const sections = [
    output_dir=. \\
    embed_text=laser3`,
     content: (
-      <p>
-        <Stopes /> comes with the Global Mining Pipeline that was used by the
-        NLLB team. You can use it out of the box without extra coding. You will
-        need to setup an environment and create a config file to point to your
-        data, but you can start mining (locally or on a slurm cluster) without
-        any coding. Check out the{' '}
-        <Link to="docs/quickstart">Quickstart guide</Link>.
-      </p>
-    ),
+      <p><Stopes />  comes with the Global Mining Pipeline that was used by the NLLB team.
+        You can use it out of the box without extra coding. You will need to setup an
+        environment and create a config file to point to your data,
+        but you can start mining (locally or on a slurm cluster) without any coding.
+        Check out the <Link to="docs/quickstart">Quickstart guide</Link>.</p>
+    )
   },
   {
     title: 'Reproducible research',
@@ -102,11 +97,10 @@ config:
   num_threads : 4`,
     content: (
       <p>
-        <Stopes /> is based on <Link to="http://hydra.cc/">Hydra</Link>, giving
-        you full control over the behavior of your pipeline. Experiments are
-        easily reproducible along with your results.
-      </p>
-    ),
+        <Stopes /> is based on <Link to="http://hydra.cc/">Hydra</Link>,
+        giving you full control over the behavior of your pipeline.
+        Experiments are easily reproducible along with your results.</p>
+    )
   },
   {
     title: 'Modular pipeline definition',
@@ -147,69 +141,72 @@ config:
     content: (
       <>
         <p>
-          <Stopes /> pipelines are composed of modules. No more duplicated,
-          out-of sync code: your most common preprocessing steps can be shared
+          <Stopes /> pipelines are composed of modules.
+          No more duplicated, out-of sync code: your most common preprocessing steps can be shared
           among all your pipelines.
         </p>
         <p>
           You will find in this repository some implementations of a number of
-          modules that are useful for translation data mining and evaluation,
-          Neural Machine Translation data pre-processing and model training. For
-          example, we provide modules to build{' '}
-          <Link to="https://faiss.ai/">faiss</Link> indexes, encode text with{' '}
-          <Link to="https://github.com/facebookresearch/LASER">LASER</Link> and{' '}
-          <Link to="https://huggingface.co/sentence-transformers">
-            HuggingFace Transformers
-          </Link>
-          , mine bitext or train and evaluate{' '}
-          <Link to="https://github.com/facebookresearch/fairseq">FAIRSEQ</Link>{' '}
-          models.
-        </p>
-      </>
-    ),
+          modules that are useful for translation data mining and evaluation, Neural Machine Translation data pre-processing
+          and model training. For example, we provide modules to build <Link to="https://faiss.ai/">faiss</Link> indexes, encode
+          text with <Link to="https://github.com/facebookresearch/LASER">LASER</Link> and <Link to="https://huggingface.co/sentence-transformers">HuggingFace Transformers</Link>,
+          mine bitext or train and evaluate <Link to="https://github.com/facebookresearch/fairseq">FAIRSEQ</Link> models.
+        </p></>
+    )
   },
-];
+]
 
-function Card({title, description, buttonTxt, buttonUrl, imageUrl}) {
+function Card({ title, description, buttonTxt, buttonUrl, imageUrl }) {
   const imgUrl = useBaseUrl(imageUrl);
   const burl = useBaseUrl(buttonUrl);
 
   return (
     <div className={clsx('col sfeatures')}>
-      <div className={clsx('card card--full-height')}>
+      <div className={clsx("card card--full-height")}>
         {imgUrl && (
-          <div className={clsx('card__image')}>
-            <img src={imgUrl} alt={title} title={title} />
-          </div>
-        )}
-        <div className={clsx('card__body')}>
+          <div className={clsx("card__image")}>
+            <img
+              src={imgUrl}
+              alt={title}
+              title={title} />
+          </div>)}
+        <div className={clsx("card__body")}>
           <h4>{title}</h4>
-          <p>{description}</p>
+          <p>
+            {description}
+          </p>
         </div>
         {buttonTxt && buttonUrl && (
-          <div className={clsx('card__footer')}>
+          <div className={clsx("card__footer")}>
             <Link
-              className={clsx('button button--primary button--block')}
-              to={burl}>
+              className={clsx("button button--primary button--block")}
+              to={burl}
+            >
               {buttonTxt}
             </Link>
           </div>
         )}
       </div>
-    </div>
-  );
+    </div>)
 }
 
-function ContentWithCode({title, children, flip, language}) {
+function ContentWithCode({ title, children, flip, language }) {
+
   const [content, code] = React.Children.toArray(children);
 
-  const textBlock = <div class="col col--4 scontent">{content}</div>;
+  const textBlock = (
+    <div class="col col--4 scontent">
+      {content}
+    </div>
+  )
 
   const codeBlock = (
     <div class="col">
-      <CodeBlock language={language}>{code}</CodeBlock>
+      <CodeBlock language={language}>
+        {code}
+      </CodeBlock>
     </div>
-  );
+  )
 
   let left = textBlock;
   let right = codeBlock;
@@ -227,12 +224,12 @@ function ContentWithCode({title, children, flip, language}) {
       <div className="row">
         {left}
         {right}
-      </div>
-    </div>
-  );
+      </div></div>)
 }
 
 function Banner() {
+
+
   const nllb = useBaseUrl('img/banner_bits/nllb.png');
   const driving = useBaseUrl('img/banner_bits/driving.png');
   const stopes = useBaseUrl('img/banner_bits/stopes.png');
@@ -253,41 +250,36 @@ function Banner() {
       </div>
       <div className="container">
         <div className="sblue banner1">
-          <img alt="NO LANGUAGES LEFT BEHIND" src={nllb} />
-        </div>
-        <div className="sblue banner2">
-          <img
-            alt="Driving inclusion through machine translation"
-            src={driving}
-          />
-        </div>
-        <h1>
-          <img alt="logo" src={logo} className="logo" />
-          <img alt="stopes" src={stopes} />
-        </h1>
-        <div className="banner3">
+          <img alt="NO LANGUAGES LEFT BEHIND" src={nllb} /></div>
+        <div className="sblue banner2" >
+          <img alt="Driving inclusion through machine translation" src={driving} /></div>
+        <h1><img alt="logo" src={logo} className="logo" /><img alt="stopes" src={stopes} /></h1>
+        <div className="banner3" >
           <h2>Large-Scale Translation Tooling</h2>
         </div>
       </div>
       <div className="bottom">
         <div className="button-container">
           <Link
-            className={clsx('button button--secondary button--lg')}
+            className={clsx(
+              'button button--secondary button--lg',
+            )}
             to={useBaseUrl('docs/quickstart')}>
             Mining Quickstart
           </Link>
         </div>
-        <div className="banner-meta">
+        <div className="banner-meta" >
           <img alt="meta" src={meta} />
         </div>
       </div>
     </header>
-  );
+  )
 }
+
 
 export default function Home() {
   const context = useDocusaurusContext();
-  const {siteConfig = {}} = context;
+  const { siteConfig = {} } = context;
   return (
     <Layout
       title={`${siteConfig.title}`}
@@ -298,24 +290,22 @@ export default function Home() {
           <section className={styles.features}>
             <div>
               <div className="row">
-                {features.map(
-                  ({title, imageUrl, description, buttonTxt, buttonUrl}) => (
-                    <Card
-                      key={title}
-                      title={title}
-                      imageUrl={imageUrl}
-                      description={description}
-                      buttonTxt={buttonTxt}
-                      buttonUrl={buttonUrl}
-                    />
-                  ),
-                )}
+                {features.map(({ title, imageUrl, description, buttonTxt, buttonUrl }) => (
+                  <Card
+                    key={title}
+                    title={title}
+                    imageUrl={imageUrl}
+                    description={description}
+                    buttonTxt={buttonTxt}
+                    buttonUrl={buttonUrl}
+                  />
+                ))}
               </div>
             </div>
           </section>
         )}
         <section>
-          {sections.map(({title, language, code, content}, index) => (
+          {sections.map(({ title, language, code, content }, index) => (
             <ContentWithCode
               key={title}
               flip={index % 2}

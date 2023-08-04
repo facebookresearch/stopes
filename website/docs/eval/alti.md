@@ -1,19 +1,24 @@
 # ALTI+
 
-ALTI+ is a tool for inspecting token contributions in a transformer encoder-decoder model. It might be useful for detecting hallucinated translations or undertranslations.
+ALTI+ is a tool for inspecting token contributions in a transformer encoder-decoder model.
+It might be useful for detecting hallucinated translations or undertranslations.
 
-This repository is based on the code from the paper [Ferrando et al., 2022](https://arxiv.org/abs/2205.11631). The original code is located at https://github.com/mt-upc/transformer-contributions-nmt. It is licensed under the Apache 2.0 license included in the current directory.
+This repository is based on the code from the paper [Ferrando et al., 2022](https://arxiv.org/abs/2205.11631).
+The original code is located at https://github.com/mt-upc/transformer-contributions-nmt.
+It is licensed under the Apache 2.0 license included in the current directory.
 
-We have made a few adaptation to the code so that it can run with the dense NLLB-200 models. The code in this directory is licensed both under the Apache 2.0 license of the original code (in the current directory), and under the MIT license of the whole project (in the parent directory).
+We have made a few adaptation to the code so that it can run with the dense NLLB-200 models.
+The code in this directory is licensed both under the Apache 2.0 license of the original code (in the current directory),
+and under the MIT license of the whole project (in the parent directory).
 
 # Usage
+An instruction for setting up the environment and computing ALTI+ token contributions from an NLLB model
+with a command line interface is present in the folder `demo/alti`.
 
-An instruction for setting up the environment and computing ALTI+ token contributions from an NLLB model with a command line interface is present in the folder `demo/alti`.
-
-Below is another example, that uses a bilingual model and the Python interface. Here is how you can run it:
+Below is another example, that uses a bilingual model and the Python interface.
+Here is how you can run it:
 
 1. Prepare the environment by installing Fairseq and Stopes:
-
 ```
 pip install fairseq==0.12.1
 git clone https://github.com/facebookresearch/stopes.git
@@ -22,17 +27,17 @@ pip install -e '.[alti]'
 ```
 
 2. Download the model and dictionary from https://github.com/deep-spin/hallucinations-in-nmt:
-   - model: https://www.mediafire.com/file/mp5oim9hqgcy8fb/checkpoint_best.tar.xz/file
-   - data: https://www.mediafire.com/file/jfl7y6yu7jqwwhv/wmt18_de-en.tar.xz/file
-3. Run the following commands to unpack the data: `tar -xvf checkpoint_best.tar.xz && tar -xvf wmt18_de-en.tar.xz`
+    - model: https://www.mediafire.com/file/mp5oim9hqgcy8fb/checkpoint_best.tar.xz/file
+    - data: https://www.mediafire.com/file/jfl7y6yu7jqwwhv/wmt18_de-en.tar.xz/file
+3. Run the following commands to unpack the data:
+```tar -xvf checkpoint_best.tar.xz && tar -xvf wmt18_de-en.tar.xz```
 4. Run the following command to download the tokenizers:
-
 ```
 wget https://github.com/deep-spin/hallucinations-in-nmt/raw/main/sentencepiece_models/sentencepiece.joint.bpe.model
 wget https://github.com/deep-spin/hallucinations-in-nmt/raw/main/sentencepiece_models/sentencepiece.joint.bpe.vocab
 ```
-
 Now you can run the following Python code to look at the ALTI analysis:
+
 
 ```Python
 from stopes.eval.alti.wrappers.transformer_wrapper import FairseqTransformerHub
@@ -72,9 +77,7 @@ print(compute_alti_metrics(*compute_alti_nllb(hub, src, tgt2))['avg_sc'])  # 0.4
 ```
 
 # Citation
-
 If you use ALTI+ in your work, please consider citing:
-
 ```bibtex
 @inproceedings{alti_plus,
     title = {Towards Opening the Black Box of Neural Machine Translation: Source and Target Interpretations of the Transformer},

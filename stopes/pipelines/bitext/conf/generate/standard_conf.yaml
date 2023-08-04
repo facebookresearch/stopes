@@ -10,3 +10,4 @@ config:
   beam_search:
     beam: 5
   file_list: []
+

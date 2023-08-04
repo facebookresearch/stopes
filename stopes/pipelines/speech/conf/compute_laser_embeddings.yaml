@@ -5,4 +5,4 @@ defaults:
 launcher:
   partition: ??? # set as null if running locallyc
   cache:
-    caching_dir: ${out_dir}/cache # Cache won't be re-used if you change the out_dir.
+    caching_dir: ${out_dir}/cache  # Cache won't be re-used if you change the out_dir.

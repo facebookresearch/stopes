@@ -1,5 +1,6 @@
 ![stopes](/website/static/img/banner.png?raw=true "stopes by NLLB.")
 
+
 # `stopes`: A library for preparing data for machine translation research
 
 As part of the FAIR No Language Left Behind (NLLB) ([Paper](https://research.facebook.com/publications/no-language-left-behind/), [Website](https://ai.facebook.com/research/no-language-left-behind/), [Blog](https://ai.facebook.com/blog/nllb-200-high-quality-machine-translation/))
@@ -17,14 +18,12 @@ checkout the `demo` directory for an example usage with the [WMT22 Shared Task: 
 Languages](https://statmt.org/wmt22/large-scale-multilingual-translation-task.html) data.
 
 ## Requirements
-
 `stopes` relies on:
-
-- submitit to schedule jobs when ran on clusters
-- hydra-core version >= 1.2.0 for configuration
-- fairseq to use LASER encoders
-- PyTorch version >= 1.5.0
-- Python version >= 3.8
+* submitit to schedule jobs when ran on clusters
+* hydra-core version >= 1.2.0 for configuration
+* fairseq to use LASER encoders
+* PyTorch version >= 1.5.0
+* Python version >= 3.8
 
 ## Installing stopes
 
@@ -33,13 +32,11 @@ pip for the install to work. We recommend that you first upgrade pip:
 `python -m pip install --upgrade pip`
 
 The mining pipeline relies on fairseq to run LASER encoders, because of competing dependency version, you'll have to first install fairseq with pip separately:
-
 ```
 pip install fairseq==0.12.1
 ```
 
 You can then install stopes with pip:
-
 ```
 git clone https://github.com/facebookresearch/stopes.git
 cd stopes
@@ -51,7 +48,6 @@ You can choose what to install. If you are only interested in `mining`, you do n
 Currently `fairseq` and `stopes` require different version of hydra, so `pip` might output some warnings, do not worry about them, we want hydra>=1.1.
 
 If you plan to train a lot of NMT model you will also want to setup apex to get a faster training.
-
 ```
 git clone https://github.com/NVIDIA/apex
 cd apex
@@ -63,19 +59,16 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
 ## How `stopes` works
 
 `stopes` is made of a few different parts:
-
 1. `core` provides a library to write readable piplines
 2. `modules` provides a set of modules using the core library and implementing
    common steps in our mining and evaluation pipelines
 3. `pipelines` provides pipeline implementation for the data pipelines we use in
    NLLB:
-
 - `monolingual` to preprocess and clean single language data
 - `bitext` to run the "global mining" pipeline and extract aligned sentences
   from two monolingual datasets. (inspired by
   [CCMatrix](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
 - `distilation` to run our sequence-level knowledge distillation pipeline which trains a small student model from a pre-trained large teacher model (approach based on https://arxiv.org/abs/1606.07947)
-
 4. `eval` provides a set of evaluation tools, including ALTI+ and BLASER for text-free speech translation evaluation.
 5. `demo` contains applications of stopes, including a quickstart demo that you can run at home of mining as well as a example usage of ALTI+ for toxicity and hallucination analysis.
 
@@ -106,7 +99,6 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
 (in alphabetical order)
 
 ## Citation
-
 If you use `stopes` in your work, please cite:
 
 ```bibtex
@@ -133,5 +125,4 @@ Some of the tools in stopes, like BLASER and ALTI have their own publications, p
 ```
 
 ## License
-
 `stopes` is MIT licensed, as found in the LICENSE file.

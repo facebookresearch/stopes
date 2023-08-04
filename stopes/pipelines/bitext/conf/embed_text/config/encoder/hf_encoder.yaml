@@ -7,5 +7,5 @@ fp16: False
 
 # these are not used, but required as the laser3 uses it. but sentence transformer doesn't need them
 # we just set it to nothing
-spm_model: ""
-spm_vocab: ""
+spm_model: ''
+spm_vocab: ''

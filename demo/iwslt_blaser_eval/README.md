@@ -1,3 +1,4 @@
+
 # Getting started with mining
 
 Welcome to `stopes`, this is a quickstart guide to discover how to run automated pipelines with `stopes`. In this example we describe how to use BLASER to evaluate speech translation as described in the https://iwslt.org/2023/s2s task.
@@ -67,8 +68,8 @@ Make sure to replace:
 - `PATH_TARGET_MANIFEST.tsv` to the manifest you've generated for the translation files
 - `PATH_REFERENCE_MANIFEST.tsv` to the manifest you've generated for the reference translations
 
-## Citation
 
+## Citation
 If you use `blaser` in your work or any of its models, please cite:
 
 ```bibtex
@@ -83,5 +84,4 @@ If you use `blaser` in your work or any of its models, please cite:
 ```
 
 ## License
-
 The `blaser` code is MIT licensed, as found in the LICENSE file in the root directory.

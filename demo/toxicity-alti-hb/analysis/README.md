@@ -1,12 +1,10 @@
 # Analysis code
 
 Contains scripts for calculating/plotting toxicity results, given precomputed toxicities and ALTI+ scores. Prerequisites:
-
 - Install the HolisticBias module ([setup instructions](https://github.com/facebookresearch/ResponsibleNLP/tree/main/holistic_bias))
 - Define paths for loading in pre-existing files of source/target sentences, toxicity results, ALTI+ source contribution scores, etc. in `util.py` (see `'TODO'`s)
 
 Scripts:
-
 - `00_compile_toxicity_stats.py`: compute the course-grained analysis of toxicity as a function of language, axis, noun, template, etc.
 - `00c_plot_toxicity_per_lang.py`: plot the breakdown of toxicity across HolisticBias axes as a function of language
 - `01_sample_high_risk_translations.py`: sample translations likely to be toxic despite not being labeled as toxic, for the false negative analysis

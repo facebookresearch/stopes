@@ -24,6 +24,7 @@
   --ifm-color-primary-lightest: #2b6cf8;
 }
 
+
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
   --ifm-color-primary: #4d82ff;
@@ -101,7 +102,7 @@
 }
 
 .sbanner .bottom .button-container {
-  margin-left: 255px;
+  margin-left: 255px
 }
 
 .sbanner .bottom .button-container .button {
@@ -146,7 +147,9 @@
   color: #ce6849;
 }
 
+
 @media only screen and (max-width: 700px) {
+
   .sbanner .container {
     margin-left: 5px;
   }
