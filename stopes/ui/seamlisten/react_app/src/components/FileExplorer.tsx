@@ -4,15 +4,12 @@
 // This source code is licensed under the license found in the
 // LICENSE file in the root directory of this source tree.
 
-
 import { useCallback, useEffect, useState } from "react";
-
 
 import Button from "react-bootstrap/Button";
 import { default as BCol } from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import { default as BRow } from "react-bootstrap/Row";
-
 
 import {
   Location,
@@ -28,14 +25,11 @@ import { LineResult } from "../common/types/api";
 import Help from "./fileviewer/FileExplorerHelp";
 import Table from "./fileviewer/Table";
 
-
 import { text_to_audio } from "../common/components/audio/audioquery_constructor";
-
 
 const FILENAME_PARAM = "file";
 const PAGENUMBER_PARAM = "page";
 const NUMBERLINES_PARAM = "lines";
-
 
 type LoaderReturn = {
   filename: string;
@@ -45,7 +39,6 @@ type LoaderReturn = {
   audioBlob: Blob;
   error: any;
 };
-
 
 function parseParams(searchParams) {
   return {
@@ -57,7 +50,6 @@ function parseParams(searchParams) {
   };
 }
 
-
 function parseLocation(location: Location) {
   if (!location) {
     return null;
@@ -65,10 +57,8 @@ function parseLocation(location: Location) {
   return parseParams(new URLSearchParams(location.search));
 }
 
-
 export async function loader({ request }): Promise<LoaderReturn> {
   const url = new URL(request.url);
-
 
   const { filename, numberLines, pageNumber } = parseParams(url.searchParams);
   const toRet = {
@@ -79,7 +69,6 @@ export async function loader({ request }): Promise<LoaderReturn> {
     audioBlob: undefined,
     error: null,
   };
-
 
   try {
     if (
@@ -96,7 +85,6 @@ export async function loader({ request }): Promise<LoaderReturn> {
       return toRet;
     }
 
-
     const audioResult = await text_to_audio(filename, 1);
     if (audioResult) {
       toRet.audioBlob = audioResult;
@@ -110,7 +98,6 @@ export async function loader({ request }): Promise<LoaderReturn> {
   return toRet;
 }
 
-
 function Error({ error }) {
   const msg = error.data
     ? error.data.detail
@@ -123,7 +110,6 @@ function Error({ error }) {
   );
 }
 
-
 function useFileNavigate() {
   const navigate = useNavigate();
   return (file: string, page: number, numberLines: number) =>
@@ -134,7 +120,6 @@ function useFileNavigate() {
     );
 }
 
-
 const Files = (): JSX.Element => {
   const [displayHelper, setDisplayHelper] = useState(false);
   const navigate = useFileNavigate();
@@ -143,7 +128,6 @@ const Files = (): JSX.Element => {
   const [newFilename, setNewFilename] = useState(
     filename || config.default_path
   );
-
 
   // if we have a location, we are in a transition between two urls
   const navigation = useNavigation();
@@ -155,11 +139,9 @@ const Files = (): JSX.Element => {
   }
   const loading = !!navigation.location;
 
-
   // in some navigation events (like back/forward navigation, the component is not remounted)
   // so we need to reset the "default" for the filename form.
   useEffect(() => setNewFilename(filename), [filename]);
-
 
   const setFilenameEventHandler = useCallback(
     (evt) => setNewFilename(evt.target.value),
@@ -186,7 +168,6 @@ const Files = (): JSX.Element => {
     [setFilename]
   );
 
-
   // Add new function to handle paste events
   const fileInputHandlePaste = useCallback(
     (evt) => {
@@ -196,7 +177,6 @@ const Files = (): JSX.Element => {
     },
     [navigate, pageNumber, numberLines]
   );
-
 
   return (
     <div style={{ marginTop: "10px" }}>
@@ -281,6 +261,5 @@ const Files = (): JSX.Element => {
     </div>
   );
 };
-
 
 export default Files;
