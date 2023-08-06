@@ -51,30 +51,6 @@ class AsrBleu:
 
         return transcribed_audio, bleu_scores
 
-def merge_tailo_init_final(text):
-    """
-    Hokkien ASR hypothesis post-processing.
-    """
-    sps = text.strip().split()
-    results = []
-    last_syllable = ""
-    for sp in sps:
-        if sp == "NULLINIT" or sp == "nullinit":
-            continue
-        last_syllable += sp
-        if sp[-1].isnumeric():
-            results.append(last_syllable)
-            last_syllable = ""
-    if last_syllable != "":
-        results.append(last_syllable)
-    return " ".join(results)
-
-def remove_tone(text):
-    """
-    Used for tone-less evaluation of Hokkien
-    """
-    return " ".join([t[:-1] for t in text.split()])
-
 @hydra.main(config_path="conf", config_name="asr_bleu")
 def main(config: AsrBleuConfig) -> None:
     pipeline = AsrBleu(config)
