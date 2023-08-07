@@ -10,6 +10,8 @@ import typing as tp
 import zipfile
 from pathlib import Path
 
+# needed to import OS to expand the path
+import os
 import torchaudio
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
@@ -104,14 +106,22 @@ def open_zip_file(file: str, start_idx: int, end_idx: int) -> tp.List[LineResult
     return audio_samples
 
 
+# this is a helper function to expand the path
+def get_absolute_path(path: str) -> str:
+    return os.path.expanduser(path)
+
+
 @router.post("/annotations/")
 def get_annotations(
     query: AnnotationQuery,
 ) -> tp.List[LineResult]:
-    path = query.gz_path.strip()
+    # path = query.gz_path.strip()
+    path = get_absolute_path(query.gz_path.strip())
     print(path, query.start_idx, query.end_idx)
     if path.endswith(".tsv.gz") or path.endswith(".tsv"):
         try:
+            print(path)
+            print("opening file")
             return open_segment_tsv(path, query.start_idx, query.end_idx)
         except FileNotFoundError:
             raise HTTPException(

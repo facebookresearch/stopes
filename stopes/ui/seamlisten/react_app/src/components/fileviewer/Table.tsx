@@ -12,6 +12,7 @@ import "../../common/components/table/table.css";
 import LineSelector from "./table/LinesSelector";
 import Pagination from "./table/Pagination";
 import { Row } from "./table/Row";
+import DownloadButton from "../DownloadButton";
 
 type TableProps = {
   items: LineResult[];
@@ -77,7 +78,9 @@ function Table({
     }
   }
 
+  // this method results in a unique key for each row
   function extractKeyFromItem(item: LineResult): string {
+    console.log(item);
     return hashString(
       item.columns
         .map((item_cell) => extractInfoFromObject(item_cell))
@@ -101,12 +104,14 @@ function Table({
                   Column {cell_item_index + 1}
                 </th>
               ))}
+              <th>Action</th>
             </tr>
           </thead>
           <tbody ref={tbodyRef}>
-            {items.map((row_item) => (
+            {items.map((row_item,index) => (
               <Row
-                key={extractKeyFromItem(row_item)}
+                // this key in some cases is not unique
+                key={index}
                 rowKey={extractKeyFromItem(row_item)}
                 item={row_item}
                 waveformKeyEvent={waveformKeyEvent}
@@ -115,8 +120,9 @@ function Table({
                 focusedRowID={focusedRowID}
                 currentPlayingID={currentPlayingID}
                 currentPlayingIDHandler={setCurrentPlayingID}
-              />
+             />
             ))}
+
           </tbody>
         </table>
         <Pagination page={page} setPage={setPageNumber} />
