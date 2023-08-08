@@ -1,0 +1,67 @@
+/* Notebook container */
+.notebook-container {
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  
+  /* Folder navigation panel */
+  .folder-navigation {
+    flex: 1;
+    padding: 10px;
+    background-color: #f5f5f5;
+  }
+  
+  /* Folder item */
+  .folder-item {
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-bottom: 5px;
+    transition: background-color 0.2s;
+  }
+  
+  .folder-item:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .selected {
+    background-color: #2196f3;
+    color: white;
+    font-weight: bold;
+  }
+  
+  /* Notebook content panel */
+  .notebook-content {
+    flex: 3;
+    padding: 10px;
+    border-left: 1px solid #ccc;
+  }
+  
+  /* File viewer */
+  .file-viewer {
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    min-height: 200px;
+    overflow: auto;
+  }
+  
+  /* File content */
+  pre {
+    white-space: pre-wrap;
+    font-family: monospace;
+  }
+  
+  /* Default text style */
+  div {
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Centered text */
+  .text-center {
+    text-align: center;
+  }
+  
