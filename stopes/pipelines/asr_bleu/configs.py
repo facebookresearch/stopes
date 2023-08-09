@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class CorporaConfig:
     lang: str
@@ -10,6 +11,7 @@ class CorporaConfig:
     audio_format: str = "n_pred.wav"
     results_dirpath: str = None
     transcripts_path: str = None
+
 
 @dataclass 
 class AsrBleuConfig:
