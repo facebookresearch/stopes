@@ -18,9 +18,11 @@ class RetrieveDataJob:
     reference_format: str = MISSING
     reference_tsv_column: tp.Optional[str] = None
 
+
 @dataclass
 class RetrieveDataConfig:
     retrieve_data_jobs: tp.List[RetrieveDataJob] = MISSING
+
 
 class RetrieveData(StopesModule):
     def __init__(self, 
@@ -117,7 +119,6 @@ async def retrieve_data(
     """
     Retrieve data for transcription
     Returns a list of type dict[str, list]
-    Datasets are a 5 tuple: (audio_path, reference_path, audio_format, reference_format, reference_tsv_column)
     """
     retrieve_data_jobs = [
         RetrieveDataJob(

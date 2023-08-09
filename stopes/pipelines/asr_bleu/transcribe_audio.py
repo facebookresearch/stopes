@@ -19,9 +19,11 @@ class TranscribeAudioJob:
     eval_manifest: tp.Dict[str, tp.List] = MISSING
     asr_config: tp.Dict = MISSING
 
+
 @dataclass
 class TranscribeAudioConfig:
     transcribe_audio_jobs: tp.List[TranscribeAudioJob] = MISSING
+
 
 class TranscribeAudio(StopesModule):
     def __init__(self, config: TranscribeAudioConfig):
@@ -167,15 +169,12 @@ class TranscribeAudio(StopesModule):
         asr_model = ASRGenerator(iteration_value.asr_config)
 
         prediction_transcripts = []
-    
-        #TODO: reimplement tqdm progress bar with the dictionary instead of the dataframe
-        #for _,  eval_pair in tqdm(
-        #    iteration_value.eval_manifest.iterrows(),
-        #    desc="Transcribing predictions",
-        #    total=len(iteration_value.eval_manifest["prediction"]),
-        #):
 
-        for prediction in iteration_value.eval_manifest["prediction"]:
+        for prediction in tqdm(
+            iterable=iteration_value.eval_manifest["prediction"],
+            desc="Transcribing predictions",
+            total=len(iteration_value.eval_manifest["prediction"]),
+        ):
             self.logger.info(f"Transcribing {prediction}")
             transcription = self._transcribe_audiofile(asr_model, prediction)
             prediction_transcripts.append(transcription.lower())
@@ -186,6 +185,7 @@ class TranscribeAudio(StopesModule):
             ]
         
         return prediction_transcripts
+
 
 async def transcribe_audio(   
     eval_manifests: tp.List[tp.Dict[str, tp.List]],

@@ -54,10 +54,12 @@ class AsrBleu:
 
         return transcribed_audio, bleu_scores
 
+
 @hydra.main(config_path="conf", config_name="asr_bleu")
 def main(config: AsrBleuConfig) -> None:
     pipeline = AsrBleu(config)
     asyncio.run(pipeline.run())
+
 
 if __name__ == "__main__":
     main()        
