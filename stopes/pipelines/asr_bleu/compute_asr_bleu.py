@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from stopes.core import utils
 from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
 from stopes.pipelines.asr_bleu.utils import retrieve_asr_config
 from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audio
@@ -15,6 +16,7 @@ class AsrBleu:
     def __init__(self, config: AsrBleuConfig):
         self.config = config
         self.launcher = hydra.utils.instantiate(self.config.launcher)
+        utils.ensure_dir(self.config.output_dir)
 
     async def run(self):
         # 1. Retrieve ASR configuration 
