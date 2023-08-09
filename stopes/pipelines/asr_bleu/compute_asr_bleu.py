@@ -19,7 +19,7 @@ class AsrBleu:
     async def run(self):
         # 1. Retrieve ASR configuration 
         logger.info("Setting up ASR model...")
-        asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="/home/calderj/Documents/Coding/MLH/stopes/stopes/pipelines/asr_bleu/conf/asr_model/asr_model_cfgs.json")
+        asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="../../../conf/asr_model/asr_model_cfgs.json")
 
         # 2. Compose evaluation data.
         logger.info("Composing evaluation data...")
