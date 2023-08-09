@@ -9,19 +9,20 @@ from stopes.pipelines.asr_bleu.retrieve_data import retrieve_data
 import hydra
 import sacrebleu
 
+logger = logging.getLogger("stopes.asr_bleu")
+
 class AsrBleu:
     def __init__(self, config: AsrBleuConfig):
         self.config = config
         self.launcher = hydra.utils.instantiate(self.config.launcher)
-        self.logger = logging.getLogger("asr_bleu")
 
     async def run(self):
         # 1. Retrieve ASR configuration 
-        logging.info("Setting up ASR model...")
+        logger.info("Setting up ASR model...")
         asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.asr_version, json_path="/home/calderj/Documents/Coding/MLH/stopes/stopes/pipelines/asr_bleu/conf/asr_model/asr_model_cfgs.json")
 
         # 2. Compose evaluation data.
-        logging.info("Composing evaluation data...")
+        logger.info("Composing evaluation data...")
         eval_manifests = await retrieve_data([
                 (self.config.corpora.audio_dirpath, 
                  self.config.corpora.reference_path,
@@ -33,7 +34,7 @@ class AsrBleu:
         )
 
         # 3. Transcribe audio predictions and compute BLEU score.
-        logging.info("Transcribing audio predictions...")
+        logger.info("Transcribing audio predictions...")
         transcribed_audio = await transcribe_audio(
             eval_manifests,
             self.launcher,
@@ -41,13 +42,13 @@ class AsrBleu:
         )
 
         # 4. Compute BLEU score
-        logging.info("Computing BLEU scores...")
+        logger.info("Computing BLEU scores...")
         bleu_scores = []
         for i, prediction_transcripts in enumerate(transcribed_audio):
             references = eval_manifests[i]["reference"]
             bleu_score = sacrebleu.corpus_bleu(prediction_transcripts, [references])
             bleu_scores.append(bleu_score)
-            print(bleu_score)
+            logger.info(bleu_score)
 
         return transcribed_audio, bleu_scores
 

@@ -26,7 +26,6 @@ class RetrieveData(StopesModule):
     def __init__(self, 
                  config: RetrieveDataConfig
     ):
-        print(config)
         super().__init__(config=config, config_class=RetrieveDataConfig)
 
     def array(self):

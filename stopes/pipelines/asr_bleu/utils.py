@@ -1,5 +1,6 @@
 import json
 import re
+import logging
 import urllib.request
 from pathlib import Path
 # import asyncio
@@ -14,6 +15,8 @@ try:
     from torchaudio.models.decoder import ctc_decoder
 except ImportError:
     raise ImportError("Upgrade torchaudio to 0.12 to enable CTC decoding")
+
+logger = logging.getLogger("stopes.asr_bleu.utils")
 
 
 class DownloadProgressBar(tqdm):
@@ -164,7 +167,7 @@ class ASRGenerator(object):
                         url, filename=download_path.as_posix(), reporthook=t.update_to
                     )
             else:
-                print(f"'{url}' exists in {cache_dir}")
+                logger.info(f"'{url}' exists in {cache_dir}")
 
             return download_path.as_posix()
 
@@ -203,7 +206,7 @@ class ASRGenerator(object):
             self.sil_token = tokens[
                 2
             ]  # use eos as silence token if | not presented e.g., Hok ASR model
-        print(f"Inferring silence token from the dict: {self.sil_token}")
+        logger.info(f"Inferring silence token from the dict: {self.sil_token}")
         self.blank_token = self.tokens[0]
 
         self.sampling_rate = saved_cfg.task.sample_rate
