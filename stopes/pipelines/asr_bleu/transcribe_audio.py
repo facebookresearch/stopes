@@ -12,7 +12,7 @@ from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.pipelines.asr_bleu.utils import ASRGenerator
+from stopes.pipelines.asr_bleu.utils import ASRContainer
 
 @dataclass
 class TranscribeAudioJob:
@@ -160,7 +160,7 @@ class TranscribeAudio(StopesModule):
         
         assert iteration_value is not None, "Iteration value is null"
         self.logger = logging.getLogger("stopes.asr_bleu.transcribe_audio")
-        asr_model = ASRGenerator(iteration_value.asr_config)
+        asr_model = ASRContainer(iteration_value.asr_config)
 
         prediction_transcripts = []
 

@@ -40,7 +40,7 @@ def retrieve_asr_config(lang_key: str, asr_version: str, json_path: str) -> dict
     return asr_model_cfgs[lang_key][asr_version]
 
 
-class ASRGenerator(object):
+class ASRContainer(object):
     """A class to represent a ASR generator"""
 
     def __init__(
