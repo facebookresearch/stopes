@@ -11,13 +11,14 @@ from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.pipelines.asr_bleu.utils import ASRContainer
+from stopes.pipelines.asr_bleu.utils import ASRContainer, retrieve_asr_config
 
 
 @dataclass
 class TranscribeAudioJob:
     eval_manifest: tp.Dict[str, tp.List] = MISSING
-    asr_config: tp.Dict = MISSING
+    lang: str = MISSING
+    asr_version: str = MISSING
 
 
 @dataclass
@@ -201,7 +202,12 @@ class TranscribeAudio(StopesModule):
 
         assert iteration_value is not None, "Iteration value is null"
         self.logger = logging.getLogger("stopes.asr_bleu.transcribe_audio")
-        asr_model = ASRContainer(iteration_value.asr_config)
+        asr_config = retrieve_asr_config(
+            iteration_value.lang,
+            iteration_value.asr_version,
+            json_path="../../../conf/asr_model/asr_model_cfgs.json"
+        )
+        asr_model = ASRContainer(asr_config)
 
         prediction_transcripts = []
 
@@ -214,7 +220,7 @@ class TranscribeAudio(StopesModule):
             transcription = self._transcribe_audiofile(asr_model, prediction)
             prediction_transcripts.append(transcription.lower())
 
-        if iteration_value.asr_config.lang == "hok":
+        if iteration_value.lang == "hok":
             prediction_transcripts = [
                 self._merge_tailo_init_final(
                     text
@@ -225,9 +231,8 @@ class TranscribeAudio(StopesModule):
 
 
 async def transcribe_audio(
-    eval_manifests: tp.List[tp.Dict[str, tp.List]],
+    retrieved_data: tp.List[tp.Dict[str, tp.List]],
     launcher: Launcher,
-    asr_config,
 ):
     """
     Transcribes audio from a list of audio files
@@ -236,9 +241,10 @@ async def transcribe_audio(
     """
     transcribe_audio_jobs = [
         TranscribeAudioJob(
-            eval_manifest=eval_manifest,
-            asr_config=asr_config,
-        ) for eval_manifest in eval_manifests
+            eval_manifest=retrieved_dataset[0],
+            lang=retrieved_dataset[1],
+            asr_version=retrieved_dataset[2]
+        ) for retrieved_dataset in retrieved_data
     ]
     transcribe_audio_module = TranscribeAudio(
         TranscribeAudioConfig(

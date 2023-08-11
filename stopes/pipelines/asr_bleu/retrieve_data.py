@@ -9,6 +9,7 @@ from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
+from stopes.pipelines.asr_bleu.configs import CorporaConfig
 
 
 @dataclass
@@ -18,6 +19,8 @@ class RetrieveDataJob:
     audio_format: str = MISSING
     reference_format: str = MISSING
     reference_tsv_column: tp.Optional[str] = None
+    lang: str = MISSING
+    asr_version: str = MISSING
 
 
 @dataclass
@@ -136,11 +139,11 @@ class RetrieveData(StopesModule):
             "reference": reference_sentences,
         }
 
-        return eval_manifest
+        return (eval_manifest, iteration_value.lang, iteration_value.asr_version)
 
 
 async def retrieve_data(
-    datasets: tp.List[tp.Tuple[str, str, str, str, str]],
+    corpora_conf: CorporaConfig,
     launcher: Launcher,
 ):
     """
@@ -149,12 +152,14 @@ async def retrieve_data(
     """
     retrieve_data_jobs = [
         RetrieveDataJob(
-            audio_path=dataset[0],
-            reference_path=dataset[1],
-            audio_format=dataset[2],
-            reference_format=dataset[3],
-            reference_tsv_column=dataset[4],
-        ) for dataset in datasets
+            audio_path=corpora_conf[corpus].audio_dirpath,
+            reference_path=corpora_conf[corpus].reference_path,
+            audio_format=corpora_conf[corpus].audio_format,
+            reference_format=corpora_conf[corpus].reference_format,
+            reference_tsv_column=corpora_conf[corpus].reference_tsv_column,
+            lang=corpora_conf[corpus].lang,
+            asr_version=corpora_conf[corpus].asr_version,
+        ) for corpus in corpora_conf
     ]
     retrieve_data_module = RetrieveData(
         RetrieveDataConfig(
