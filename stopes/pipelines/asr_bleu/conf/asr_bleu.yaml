@@ -2,6 +2,5 @@ defaults:
   - launcher: local
   - _self_
 
-asr_version: "oct22"
 output_dir: ???
 corpora: ???

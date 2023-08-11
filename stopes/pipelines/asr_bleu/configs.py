@@ -9,6 +9,7 @@ class CorporaConfig:
     reference_format: str
     reference_tsv_column: str = None
     audio_format: str = "n_pred.wav"
+    asr_version: str = "oct22"
     results_dirpath: str = None
     transcripts_path: str = None
 
@@ -16,4 +17,3 @@ class CorporaConfig:
 @dataclass 
 class AsrBleuConfig:
     corpora: CorporaConfig
-    asr_version: str = "oct22"
