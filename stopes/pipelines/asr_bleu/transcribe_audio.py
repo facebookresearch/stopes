@@ -129,12 +129,6 @@ class TranscribeAudio(StopesModule):
             results.append(last_syllable)
         return " ".join(results)
 
-    def _remove_tone(self, text):
-        """
-        Used for tone-less evaluation of Hokkien
-        """
-        return " ".join([t[:-1] for t in text.split()])
-
     def _transcribe_audiofile(
         self,  
         asr_model,

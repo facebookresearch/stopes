@@ -89,11 +89,11 @@ classifiers=[
     # fairseq is also a dependency, but it must be installed separately
   ]
   asr_bleu = [
-    "pandas==1.4.3",
+    "pandas",
     "sacrebleu==2.2.0"
-    "torch==1.12.1"
-    "torchaudio==0.12.1"
-    "transformers==4.21.1"
+    "torch"
+    "torchaudio"
+    "transformers"
   ]
 
 [tool.black]
