@@ -31,9 +31,15 @@ class DownloadProgressBar(tqdm):
         self.update(b * bsize - self.n)
 
 
-def retrieve_asr_config(lang_key: str, asr_version: str, json_path: str) -> dict:
-    if len(lang_key) !=3:
-        raise ValueError(f"'{lang_key}' lang key for language type must be 3 characters!")
+def retrieve_asr_config(
+    lang_key: str,
+    asr_version: str,
+    json_path: str
+) -> dict:
+    if len(lang_key) != 3:
+        raise ValueError(
+            f"'{lang_key}' lang key for language type must be 3 characters!"
+        )
 
     with open(json_path, "r") as f:
         asr_model_cfgs = json.load(f)
@@ -53,7 +59,8 @@ class ASRContainer(object):
 
         Args:
             model_cfg: the dict of the asr model config
-            cache_dirpath: the default cache path is "Path.home()/.cache/ust_asr"
+            cache_dirpath: the default cache path is
+            "Path.home()/.cache/ust_asr"
         """
 
         self.cache_dirpath = Path(cache_dirpath) / model_cfg["lang"]
@@ -115,14 +122,17 @@ class ASRContainer(object):
             """
             Different HF checkpoints have different notion of silence token
             such as | or " " (space)
-            Important: when adding new HF asr model in, check what silence token it uses
+            Important: when adding new HF asr model in,
+            check what silence token it uses
             """
             if "|" in vocab:
                 return "|"
             elif " " in vocab:
                 return " "
             else:
-                raise RuntimeError("Silence token is not found in the vocabulary")
+                raise RuntimeError(
+                    "Silence token is not found in the vocabulary"
+                )
 
         try:
             from transformers import (AutoFeatureExtractor, AutoTokenizer,
@@ -136,7 +146,8 @@ class ASRContainer(object):
         self.preprocessor = AutoFeatureExtractor.from_pretrained(model_path)
         self.processor = Wav2Vec2Processor.from_pretrained(model_path)
 
-        # extra unk tokens are there to make some models work e.g. Finnish ASR has some vocab issue
+        # extra unk tokens are there to make some models work
+        # e.g. Finnish ASR has some vocab issue
         vocab_list = [
             self.tokenizer.decoder.get(i, f"{self.tokenizer.unk_token}1")
             for i in range(self.tokenizer.vocab_size)
@@ -153,18 +164,24 @@ class ASRContainer(object):
         Prepare the fairseq asr model
 
         Args:
-            model_cfg: the specific model config dict must have: (1) ckpt_path, (2) dict_path
+            model_cfg: the specific model config dict must have:
+            (1) ckpt_path, (2) dict_path
         """
 
         def download_file(url: str, cache_dir: Path):
             download_path = cache_dir / url.split("/")[-1]
             if not (cache_dir / url.split("/")[-1]).exists():
                 with DownloadProgressBar(
-                    unit="B", unit_scale=True, miniters=1, desc=url.split("/")[-1]
+                    unit="B",
+                    unit_scale=True,
+                    miniters=1,
+                    desc=url.split("/")[-1]
                 ) as t:
                     cache_dir.mkdir(parents=True, exist_ok=True)
                     urllib.request.urlretrieve(
-                        url, filename=download_path.as_posix(), reporthook=t.update_to
+                        url,
+                        filename=download_path.as_posix(),
+                        reporthook=t.update_to
                     )
             else:
                 logger.info(f"'{url}' exists in {cache_dir}")
@@ -184,16 +201,17 @@ class ASRContainer(object):
         if re.search("^https", dict_path):
             dict_path = download_file(dict_path, self.cache_dirpath)
 
-        model, saved_cfg, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-            [ckpt_path],
-            arg_overrides={
-                "task": "audio_finetuning",
-                "data": self.cache_dirpath.as_posix(),
-            },  # data must have dict in it
-        )
+        model, saved_cfg, _ = \
+            fairseq.checkpoint_utils.load_model_ensemble_and_task(
+                [ckpt_path],
+                arg_overrides={
+                    "task": "audio_finetuning",
+                    "data": self.cache_dirpath.as_posix(),
+                },  # data must have dict in it
+            )
 
         dict_lines = open(dict_path, "r").readlines()
-        tokens = [l.split()[0] for l in dict_lines]
+        tokens = [line.split()[0] for line in dict_lines]
         # adding default fairseq special tokens
         tokens = ["<s>", "<pad>", "</s>", "<unk>"] + tokens
 
@@ -205,7 +223,7 @@ class ASRContainer(object):
         else:
             self.sil_token = tokens[
                 2
-            ]  # use eos as silence token if | not presented e.g., Hok ASR model
+            ]  # use eos as silence token if | not presented e.g. Hok ASR model
         logger.info(f"Inferring silence token from the dict: {self.sil_token}")
         self.blank_token = self.tokens[0]
 

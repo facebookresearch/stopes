@@ -14,11 +14,13 @@ import sacrebleu
 
 logger = logging.getLogger("asr_bleu")
 
+
 class AsrBleu:
     def __init__(self, config: AsrBleuConfig):
         self.config = config
         self.ensure_all_dirs()
-        self.config.launcher.cache.caching_dir = Path(self.output_dir) / "cache"
+        self.config.launcher.cache.caching_dir = Path(self.output_dir) \
+            / "cache"
         self.launcher = hydra.utils.instantiate(self.config.launcher)
         OmegaConf.save(
             config=config,
@@ -28,20 +30,23 @@ class AsrBleu:
         OmegaConf.set_readonly(self.config, True)
 
     async def run(self):
-        # 1. Retrieve ASR configuration 
+        # 1. Retrieve ASR configuration
         logger.info("Setting up ASR model...")
-        asr_config = retrieve_asr_config(self.config.corpora.lang, self.config.corpora.asr_version, 
-                                         json_path="../../../conf/asr_model/asr_model_cfgs.json")
+        asr_config = retrieve_asr_config(
+            self.config.corpora.lang,
+            self.config.corpora.asr_version,
+            json_path="../../../conf/asr_model/asr_model_cfgs.json"
+        )
 
         # 2. Compose evaluation data.
         logger.info("Composing evaluation data...")
         eval_manifests = await retrieve_data([
-                (self.config.corpora.audio_dirpath, 
+                (self.config.corpora.audio_dirpath,
                  self.config.corpora.reference_path,
                  self.config.corpora.audio_format,
                  self.config.corpora.reference_format,
                  self.config.corpora.reference_tsv_column,)
-            ], 
+            ],
             self.launcher,
         )
 
@@ -58,10 +63,13 @@ class AsrBleu:
         bleu_scores = []
         for i, prediction_transcripts in enumerate(transcribed_audio):
             references = eval_manifests[i]["reference"]
-            bleu_score = sacrebleu.corpus_bleu(prediction_transcripts, [references])
+            bleu_score = sacrebleu.corpus_bleu(
+                prediction_transcripts,
+                [references]
+            )
             bleu_scores.append(bleu_score)
-            print(bleu_score)
-          
+            logger.info(bleu_score)
+
         # 5. Save the BLEU score
         bleu_scores_file = self.output_dir / "bleu_scores"
 
@@ -70,7 +78,7 @@ class AsrBleu:
                 f.write(str(score) + "\n")
 
         return transcribed_audio, bleu_scores
-    
+
     def ensure_all_dirs(self) -> None:
         self.output_dir = Path(self.config.output_dir).resolve()
         utils.ensure_dir(self.output_dir)
@@ -83,4 +91,4 @@ def main(config: AsrBleuConfig) -> None:
 
 
 if __name__ == "__main__":
-    main()        
+    main()
