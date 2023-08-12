@@ -7,6 +7,7 @@ from pathlib import Path
 from glob import glob
 from omegaconf.omegaconf import MISSING
 
+from stopes.core import utils
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.pipelines.asr_bleu.configs import CorporaConfig
@@ -93,9 +94,9 @@ class RetrieveData(StopesModule):
     ) -> tp.List[str]:
         """Extract sentences for reference"""
         if reference_format == "txt":
-            reference_sentences = open(references_filepath, "r").readlines()
+            reference_sentence_file = utils.open(references_filepath, "r")
             reference_sentences = [
-                line.strip() for line in reference_sentences
+                line.strip() for line in reference_sentence_file.readlines()
             ]
         elif reference_format == "tsv":
             tsv_df = pd.read_csv(references_filepath, sep="\t", quoting=3)
@@ -139,7 +140,11 @@ class RetrieveData(StopesModule):
             "reference": reference_sentences,
         }
 
-        return (eval_manifest, iteration_value.lang, iteration_value.asr_version)
+        return (
+            eval_manifest,
+            iteration_value.lang,
+            iteration_value.asr_version
+        )
 
 
 async def retrieve_data(
@@ -148,18 +153,19 @@ async def retrieve_data(
 ):
     """
     Retrieve data for transcription
-    Returns a list of type dict[str, list]
+    Returns a list of 3 tuples: (eval_manifest, lang, asr_version)
     """
+    datasets = corpora_conf.datasets
     retrieve_data_jobs = [
         RetrieveDataJob(
-            audio_path=corpora_conf[corpus].audio_dirpath,
-            reference_path=corpora_conf[corpus].reference_path,
-            audio_format=corpora_conf[corpus].audio_format,
-            reference_format=corpora_conf[corpus].reference_format,
-            reference_tsv_column=corpora_conf[corpus].reference_tsv_column,
-            lang=corpora_conf[corpus].lang,
-            asr_version=corpora_conf[corpus].asr_version,
-        ) for corpus in corpora_conf
+            audio_path=datasets[corpus].audio_dirpath,
+            reference_path=datasets[corpus].reference_path,
+            audio_format=datasets[corpus].audio_format,
+            reference_format=datasets[corpus].reference_format,
+            reference_tsv_column=datasets[corpus].reference_tsv_column,
+            lang=datasets[corpus].lang,
+            asr_version=datasets[corpus].asr_version,
+        ) for corpus in datasets
     ]
     retrieve_data_module = RetrieveData(
         RetrieveDataConfig(

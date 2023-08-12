@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class CorporaConfig:
+class Dataset:
     lang: str
     audio_dirpath: str
     reference_path: str
@@ -13,6 +13,11 @@ class CorporaConfig:
     transcripts_path: str
     audio_format: str = "n_pred.wav"
     asr_version: str = "oct22"
+
+
+@dataclass
+class CorporaConfig:
+    datasets: tp.Dict[str, Dataset]
 
 
 @dataclass

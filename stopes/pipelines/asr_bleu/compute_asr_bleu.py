@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import typing as tp
 
 from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
 from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audio
