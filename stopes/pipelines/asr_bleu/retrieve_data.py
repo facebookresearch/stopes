@@ -113,7 +113,7 @@ class RetrieveData(StopesModule):
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
-    ) -> tp.Dict[str, tp.List]:
+    ) -> tp.Tuple[tp.Dict[str, tp.List], str, str]:
         """Retrieves data for each RetrieveDataJob"""
         assert iteration_value is not None, "iteration value is null"
         self.logger = logging.getLogger("stopes.asr_bleu.prepare_data")
@@ -150,7 +150,7 @@ class RetrieveData(StopesModule):
 async def retrieve_data(
     corpora_conf: CorporaConfig,
     launcher: Launcher,
-):
+) -> tp.List[tp.Tuple[tp.Dict[str, tp.List], str, str]]:
     """
     Retrieve data for transcription
     Returns a list of 3 tuples: (eval_manifest, lang, asr_version)

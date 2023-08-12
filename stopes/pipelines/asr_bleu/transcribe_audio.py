@@ -233,7 +233,7 @@ class TranscribeAudio(StopesModule):
 async def transcribe_audio(
     retrieved_data: tp.List[tp.Dict[str, tp.List]],
     launcher: Launcher,
-):
+) -> tp.List[tp.List[str]]:
     """
     Transcribes audio from a list of audio files
     Returns a list of lists of transcriptions
