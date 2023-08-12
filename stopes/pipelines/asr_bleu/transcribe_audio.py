@@ -39,7 +39,7 @@ class TranscribeAudio(StopesModule):
             tasks_per_node=1,
             gpus_per_node=0,
             cpus_per_task=1,
-            timeout_min=720,
+            timeout_min=24*60,
         )
 
     @torch.inference_mode()
