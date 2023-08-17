@@ -3,4 +3,10 @@ defaults:
   - _self_
 
 output_dir: ???
+
+launcher:
+  partition: ??? # set as null if running locally
+  cache:
+    caching_dir: ${output_dir}/cache
+
 corpora: ???

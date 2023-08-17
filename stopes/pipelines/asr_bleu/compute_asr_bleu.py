@@ -4,12 +4,12 @@ import logging
 from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
 from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audio
 from stopes.pipelines.asr_bleu.retrieve_data import retrieve_data
+from stopes.pipelines.asr_bleu.compute_bleu_scores import compute_bleu_scores
 from stopes.core import utils
 
 from pathlib import Path
 import hydra
 from omegaconf import OmegaConf
-import sacrebleu
 
 logger = logging.getLogger("asr_bleu")
 
@@ -19,6 +19,8 @@ class AsrBleu:
         self.config = config
         self.ensure_all_dirs()
         self.launcher = hydra.utils.instantiate(self.config.launcher)
+        self.config.launcher.cache.caching_dir = Path(self.output_dir) / \
+            "cache"
         OmegaConf.save(
             config=config,
             f=str(self.output_dir / "asr_bleu.yaml"),
@@ -43,15 +45,11 @@ class AsrBleu:
 
         # 3. Compute BLEU score
         logger.info("Computing BLEU scores...")
-        bleu_scores = []
-        for i, prediction_transcripts in enumerate(transcribed_audio):
-            references = retrieved_data[i][0]["reference"]
-            bleu_score = sacrebleu.corpus_bleu(
-                prediction_transcripts,
-                [references]
-            )
-            bleu_scores.append(bleu_score)
-            logger.info(bleu_score)
+        bleu_scores = await compute_bleu_scores(
+            retrieved_data,
+            transcribed_audio,
+            self.launcher,
+        )
 
         # 4. Save the BLEU score
         bleu_scores_file = self.output_dir / "bleu_scores"
