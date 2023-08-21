@@ -20,7 +20,7 @@ import {
 import WaveSurferComponent from "../common/components/audio/WaveSurfer";
 import InnerScale from "../common/components/spinners/spinner";
 import { config } from "../common/constants/config";
-import fetchFiles from "../common/fetchers/mining_result";
+import {fetchFiles , processFolder} from "../common/fetchers/mining_result";
 import { LineResult } from "../common/types/api";
 import Help from "./fileviewer/FileExplorerHelp";
 import Table from "./fileviewer/Table";
@@ -68,6 +68,7 @@ export async function loader({ request }): Promise<LoaderReturn> {
     files: [],
     audioBlob: undefined,
     error: null,
+    folderContents: [], // Add folderContents field
   };
 
   try {
@@ -84,6 +85,12 @@ export async function loader({ request }): Promise<LoaderReturn> {
       toRet.files = files;
       return toRet;
     }
+    else if (isDirectoryPath(filename)){
+      const folderContents = await processFolder(filename);
+      toRet.folderContents = folderContents;
+      console.log("folderContents", folderContents);
+      return toRet;
+    }
 
     const audioResult = await text_to_audio(filename, 1);
     if (audioResult) {
@@ -96,6 +103,13 @@ export async function loader({ request }): Promise<LoaderReturn> {
     toRet.error = err;
   }
   return toRet;
+}
+
+function isDirectoryPath(path) {
+  // Implement a logic to check if the provided path is a directory
+  // You might use regular expressions or other methods to check.
+  // For example, if the path ends with "/", it's likely a directory.
+  return path.endsWith("/");
 }
 
 function Error({ error }) {
