@@ -76,10 +76,10 @@ const sections = [
    output_dir=. \\
    embed_text=laser3`,
     content: (
-      <p><Stopes />  comes with the Global Mining Pipeline that was used by the NLLB team.
+      <p><Stopes />  comes with the Multimodal Mining Pipeline that was used by the NLLB and Seamless Communication teams.
         You can use it out of the box without extra coding. You will need to setup an
         environment and create a config file to point to your data,
-        but you can start mining (locally or on a slurm cluster) without any coding.
+        but you can start mining (locally or on a slurm cluster) speech and text using the  <Link to="https://github.com/facebookresearch/SONAR">SONAR</Link> embedding space.
         Check out the <Link to="docs/quickstart">Quickstart guide</Link>.</p>
     )
   },
