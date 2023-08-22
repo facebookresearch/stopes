@@ -20,6 +20,8 @@ function CellRender({
   if (typeof object === "number") {
     return <span>{object.toString()}</span>;
   }
+  console.log("object kind", object.kind)
+  console.log("object", object)
   switch (object.kind) {
     case "audio":
       return (
@@ -47,6 +49,8 @@ function CellRender({
       );
     case "text":
       return <span>{object.content}</span>;
+    default:
+      return <span>{object}</span>;
   }
 }
 

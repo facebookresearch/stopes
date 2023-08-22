@@ -10,12 +10,10 @@ import typing as tp
 import zipfile
 from pathlib import Path
 import os
-
 import torchaudio
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, Response
-
 import stopes.core.utils as stutils
 import stopes.modules.speech.utils as stopes_speech
 from stopes.modules.speech.utils import LineResult, auto_parse_line
@@ -134,10 +132,10 @@ def get_annotations(
 async def general_query(query: DefaultQuery) -> Response:
     query_path = query.gz_path.strip()
     # Convert the path to an absolute path
-    query_path = str(Path(os.path.expanduser(query_path)).resolve())
+    query_path = Path(os.path.expanduser(query_path)).resolve()
     # Check if the path is a directory
     print(query_path)
-    if os.path.isdir(query_path):
+    if query_path.is_dir():
         result_data = gather_folder_contents(query_path)
         return result_data
 
@@ -171,22 +169,27 @@ async def general_query(query: DefaultQuery) -> Response:
         )
 
 
-import os
+def gather_folder_contents(folder_path, max_depth=5):
+    def gather_contents_recursive(folder_path, current_depth):
+        if current_depth > max_depth:
+            return {"folder": folder_path, "subfolders": [], "audio_files": []}
 
+        subfolders = []
+        audio_files = []
 
-def gather_folder_contents(folder_path, max_depth=3):
-    folder_contents = []
-    for root, dirs, files in os.walk(folder_path, topdown=True):
-        depth = root[len(folder_path) + len(os.path.sep) :].count(os.path.sep)
-        if depth <= max_depth:
-            folder_data = {
-                "folder": root,
-                "subfolders": dirs,
-                "audio_files": [
-                    file for file in files if file.endswith((".wav", ".ms"))
-                ],
-            }
-            folder_contents.append(folder_data)
-            if depth == max_depth:
-                del dirs[:]  # Stop os.walk from going deeper
-    return folder_contents
+        for entry in os.listdir(folder_path):
+            entry_path = os.path.join(folder_path, entry)
+            if os.path.isdir(entry_path):
+                subfolders.append(
+                    gather_contents_recursive(entry_path, current_depth + 1)
+                )
+            elif entry.endswith((".wav", ".ms")):
+                audio_files.append(entry)
+
+        return {
+            "folder": folder_path,
+            "subfolders": subfolders,
+            "audio_files": audio_files,
+        }
+
+    return gather_contents_recursive(folder_path, 1)
