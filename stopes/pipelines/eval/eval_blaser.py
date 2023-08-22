@@ -17,7 +17,7 @@ from stopes.core import utils as core_utils
 from stopes.core.launcher import Launcher
 from stopes.eval.blaser.score import BlaserEvalConfig, PytorchModelConfig
 from stopes.modules.evaluation.blaser_module import BlaserEvalModule
-from stopes.pipelines.speech.compute_laser_embeddings import (
+from stopes.pipelines.speech_laser_embeddings.speech_laser_embeddings import (
     ComputeEmbedding,
     ComputeEmbeddingConfig,
 )

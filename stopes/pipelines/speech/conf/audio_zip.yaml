@@ -1,0 +1,20 @@
+# A pipeline that runs an AudioZip module followed by PostAudioZip module for a given TSV file
+# Note that this hydra config file is different than the config in stopes/pipelines/bitext/conf/audio_zio/base.yaml
+# which is the base config of the AudioZip module only (no PostAudioZip)
+defaults:
+  - launcher: submitit
+  - _self_
+
+# Input/output
+tsv_file: ???
+output_dir: ???
+output_prefix: ""
+sample_rate: 16000
+audio_format: ogg
+# column should be index of the tsv file 0 or 2... or multiple indices at once separated by comma '0,6'
+column: ???
+nshards: 1
+
+# Whether to add duplicate segments to the zip file. Default true but this can be turned off
+# for debugging purpose
+no_duplicate: true

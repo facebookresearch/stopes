@@ -92,7 +92,11 @@ async def binarize(
     # Copy train metadata to binarized subfolder.
     for dataset in sharded_train_datasets:
         if dataset.metadata:
-            shard_str = re.search(r"shard\d{3}", dataset.metadata).group()
+            shard_match = re.search(r"shard\d{3}", dataset.metadata)
+            assert (
+                shard_match is not None
+            ), f"Shard not found in {dataset.metadata}. Expected format .shard000."
+            shard_str = shard_match.group()
             outfile_name = Path(dataset.metadata).name.replace(f".{shard_str}", "")
             target_path = output_dir / shard_str / outfile_name
             shutil.copy(dataset.metadata, target_path)

@@ -10,15 +10,12 @@ import lzma
 import math
 import random
 import shutil
-import subprocess
 import typing as tp
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import hydra
 import numpy as np
-from fairseq.file_chunker_utils import Chunker
-from more_itertools import iterate
 from omegaconf import MISSING, DictConfig, OmegaConf
 
 from stopes.core import stopes_module, utils
@@ -28,6 +25,7 @@ from stopes.modules.preprocess.multiproc_line_processor import (
     MultiprocLineProcessorConfig,
     MultiprocLineProcessorModule,
 )
+from stopes.utils.file_chunker_utils import Chunker
 
 logger = logging.getLogger("shard_and_shuffle")
 

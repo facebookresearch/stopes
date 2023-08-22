@@ -1,0 +1,11 @@
+_target_: stopes.modules.preprocess.sonar_sentence_encoder.SonarTextEncoder
+
+# SONAR name of the model, e.g. "text_sonar_basic_encoder"
+_name: ???
+normalize: False
+fp16: False
+
+# these are not used, but required as the laser3 uses it. but sentence transformer doesn't need them
+# we just set it to nothing
+spm_model: ""
+spm_vocab: ""

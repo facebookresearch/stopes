@@ -4,17 +4,17 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import logging
 import os
 import typing as tp
-from importlib.machinery import SourceFileLoader
+from pathlib import Path
 
-# TODO: This code depends on fairseq branch `xlsr_laser_m2c2`
-# at commit c4310cc97150d8255226e600d5fe0c57ece1e345
-import fairseq
-import numpy as np
-import torchaudio
+import torch
 
+from stopes.core import utils as core_utils
 from stopes.modules.preprocess.encode_to_npy import EncodeToNPY
+from stopes.modules.speech.speech_units import parallel_audio_read
+from stopes.utils.embedding_utils import NpMatrix
 from stopes.utils.mining_utils import extract_shard_id
 
 
@@ -23,21 +23,21 @@ class MiningSpeechEncoder(EncodeToNPY):
         self,
         _name: str,
         encoder_model: str,
-        # TODO: refactor speech vs text encoders, spm_model is unused here
+        # Keeping for operability speech vs text encoders
         spm_model: str,
         outfile_prefix: str,
         input_file: str,
-        input_file_idx: int,
-        output_dir: str,
+        output_dir: Path,
+        input_file_idx: int = 0,
         outfile_postfix: str = "",
-        spm_vocab: str = None,
-        max_sentences: tp.Optional[int] = None,
-        max_tokens: int = 12_000,
-        stable_sort: bool = False,
+        spm_vocab: tp.Optional[str] = None,
+        max_tokens: int = 1_280_000,
         normalize: bool = False,
         fp16: bool = False,
-        cpu: bool = False,
-        fp16_model: bool = False,
+        gpu: bool = False,
+        num_processes: int = 1,
+        input_column_offset: int = 1,
+        **kwargs,
     ) -> None:
         super().__init__(
             outfile_prefix=outfile_prefix,
@@ -48,33 +48,48 @@ class MiningSpeechEncoder(EncodeToNPY):
             normalize=normalize,
             fp16=fp16,
         )
-        self.fp16_model = fp16_model
-        examples = SourceFileLoader(
-            "examples",
-            fairseq.__path__[0] + "/../examples/__init__.py",
-        ).load_module()
+        self.logger = logging.getLogger("stopes.MiningSpeechEncoder")
+        self.encoder_model = encoder_model
+        self.max_tokens = max_tokens
 
-        from examples.laser.laser_src.laser_speech import (
-            LaserSpeechEncoder as FairseqLaserEncoder,
-        )
+        # Lazily construct the encoder so the lib fairseq / fairseq2
+        # is only loaded right at the beginning of the inference
+        self._encoder = None
+        self.input_column_offset = input_column_offset
+        self.gpu = gpu
+        self.num_processes = num_processes
+        self.kwargs = kwargs
 
-        self.encoder = FairseqLaserEncoder(encoder_model)
-        if self.fp16_model:
-            self.encoder.encoder.half()
+    @property
+    def encoder(self):
+        if self._encoder is None:
+            from stopes.modules.preprocess.wav2vec_laser_speech_encoder import (
+                LaserSpeechEncoder,
+            )
+
+            checkpoint = Path(self.encoder_model)
+            self.checkpoint = checkpoint
+            self._encoder = LaserSpeechEncoder(
+                checkpoint.parent, checkpoint.name, self.logger
+            )  # type: ignore[assignment]
+        assert (
+            self._encoder is not None
+        ), f"Cannot load LaserSpeechEncoder from {self.encoder_model}"
+        return self._encoder
 
     def name_output_file(self) -> str:
         shard_idx = extract_shard_id(self.input_file, default=self.input_file_idx)
 
-        return os.path.abspath(
-            os.path.join(
-                self.output_dir,
-                f"{self.outfile_prefix}.{shard_idx:05d}.{self.outfile_postfix}",
-            )
-        )
+        # Avoid file name such as "XYZ."
+        filename = f"{self.outfile_prefix}.{shard_idx:05d}"
+        if self.outfile_postfix and len(self.outfile_postfix) > 0:
+            filename = f"{filename}.{self.outfile_postfix}"
+
+        return os.path.abspath(os.path.join(self.output_dir, filename))
 
     def encode_to_np(
         self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]
-    ) -> np.ndarray:
+    ) -> NpMatrix:
         """
         Reads a file where each line is a text containing information on
         the audio file and segment timestamps, and returns an embedding
@@ -94,58 +109,100 @@ class MiningSpeechEncoder(EncodeToNPY):
         ...
 
         <batch_no> is an extra information that is already provided by the code
-        that computes the segments (VAD class).
+        that computes the segments (VAD class). Here, we ignore this information
+        since we compute the batches.
+
+        We also allow the input file to be a tsv, usually the output of the lid
+        module.
+
+        score <tab> a.mp3 40594 58382 0 <tab> eng
+        score <tab> a.mp3 89430 95000 1 <tab> eng
+        ...
+
+        In this case, we read the second column to fetch the audio signal
+        information.
         """
-        last_audio_file = None
-        last_batch_no = None
-        wav_audio_samples = None
-        batch_timestamps = []
-        results = []
+        from stopes.modules.preprocess.wav2vec_laser_speech_encoder import AudioDataset
 
-        examples = SourceFileLoader(
-            "examples",
-            fairseq.__path__[0] + "/../examples/__init__.py",
-        ).load_module()
-        from examples.laser.laser_src import vad
+        audio_signals = []
+        with core_utils.measure("parallel_audio_read", self.logger):
+            for line, audio in parallel_audio_read(
+                (a[1] for a in lines_with_number),
+                column_offset=self.input_column_offset,
+                gpu=self.gpu,
+                fp16=self.fp16,
+                num_process=self.num_processes,
+            ):
+                audio_signals.append(audio)
 
-        def handle_batch_buffer():
-            nonlocal batch_timestamps, results
+        assert len(audio_signals) > 0, "Empty audio input"
 
-            if len(batch_timestamps):
-                wav_list = [
-                    wav_audio_samples[start:end] for start, end in batch_timestamps
-                ]
-                sizes = [end - start for start, end in batch_timestamps]
-                minidataset = vad.FromWavAudioDataset(
-                    wav_list, "_dummy", batch_timestamps, sizes
-                )
-                batch = minidataset.get_batch([i for i in range(len(wav_list))])
-                if self.fp16_model:
-                    for k in batch.keys():
-                        batch[k] = batch[k].half()
-                embeddings = self.encoder.encode_batch(**batch)
-                embeddings = embeddings.detach().cpu().numpy()
-                results.append(embeddings)
-                batch_timestamps = []
+        """Given a list of audios, compute their matrix of embeddings."""
+        sizes = [signal.size for signal in audio_signals]
+        dataset = AudioDataset(
+            audio_signals, sizes, fbank_features=self.encoder.fbank_features
+        )
+        batch_sampler = dataset.batch_by_size(
+            dataset.ordered_indices(),
+            max_tokens=self.max_tokens,
+            max_sentences=None,
+            required_batch_size_multiple=1,
+        )
+        return self.encoder.encode_dataset(batch_sampler, dataset)
 
-        torchaudio.set_audio_backend("sox_io")
 
-        for _, line in lines_with_number:
-            cur_input_file, ts_start, ts_end, cur_batch_no = line.split(" ")
-            ts_start = int(ts_start)
-            ts_end = int(ts_end)
-            cur_batch_no = int(cur_batch_no)
-            if cur_input_file != last_audio_file or last_batch_no != cur_batch_no:
-                handle_batch_buffer()
-            if cur_input_file != last_audio_file:
-                wav_audio_samples = vad.read_audio(cur_input_file)
-            batch_timestamps.append((ts_start, ts_end))
-            last_audio_file = cur_input_file
-            last_batch_no = cur_batch_no
+class Sonar2MiningSpeechEncoder(MiningSpeechEncoder):
+    """
+    The speech mining encoder that uses the Sonar speech encoder model.
+    Both `fairseq2` and `sonar` are required.
+    """
 
-        handle_batch_buffer()
+    SONAR_PAD_TOKEN = 2
+    SAMPLING_RATE = 16000
 
-        results = np.vstack(results)
+    @MiningSpeechEncoder.encoder.getter  # type: ignore[attr-defined]
+    def encoder(self):
+        if self._encoder is None:
+            from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 
-        assert results.shape[0] == len(lines_with_number)
-        return results
+            device = torch.device(
+                "cuda" if self.gpu and torch.cuda.is_available() else "cpu"
+            )
+            fbank_dtype = torch.float16 if self.fp16 else torch.float32
+
+            self._encoder = SpeechToEmbeddingModelPipeline(
+                encoder=self.encoder_model,
+                device=device,
+                fbank_dtype=fbank_dtype,
+            )  # type: ignore[assignment]
+        return self._encoder
+
+    def encode_to_np(
+        self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]
+    ) -> NpMatrix:
+        audio_signals = []
+        with core_utils.measure("parallel_audio_read", self.logger):
+            for _, audio in parallel_audio_read(
+                (a[1] for a in lines_with_number),
+                column_offset=self.input_column_offset,
+                gpu=self.gpu,
+                fp16=self.fp16,
+                num_process=self.num_processes,
+            ):
+                audio_tensor = torch.from_numpy(audio)
+                if audio_tensor.ndim == 1:
+                    audio_tensor = audio_tensor.unsqueeze(0)
+                audio_signals.append(audio_tensor)
+
+        mini_batch_size = self.kwargs.get("mini_batch_size", len(audio_signals))
+
+        return (
+            self.encoder.predict(
+                audio_signals,
+                batch_size=mini_batch_size,
+                n_parallel=self.num_processes,
+                pad_idx=self.SONAR_PAD_TOKEN,
+            )
+            .cpu()
+            .numpy()
+        )  # type: ignore

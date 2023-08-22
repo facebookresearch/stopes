@@ -1,0 +1,4 @@
+_target_: stopes.modules.preprocess.uromanize_cli_module.UromanPreprocessModule
+lang: xxx
+input_file: ???
+output_dir: ???

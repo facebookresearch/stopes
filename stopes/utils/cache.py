@@ -9,6 +9,7 @@ import typing as tp
 
 K = tp.TypeVar("K")
 V = tp.TypeVar("V")
+BatchFn = tp.Callable[[tp.Sequence[K]], tp.Sequence[V]]
 
 log = logging.getLogger("generational_cache")
 
@@ -46,7 +47,7 @@ class GenerationalCache(tp.Generic[K, V]):
                 return val
         return None
 
-    def __setitem__(self, key, val) -> None:
+    def __setitem__(self, key: K, val: V) -> None:
         if self.n > self.max_entry:
             self.purge()
         self.n += 1
@@ -76,64 +77,60 @@ class GenerationalCache(tp.Generic[K, V]):
             g.clear()
 
     def map_batches(
-        self,
-        fn: tp.Callable[[tp.List[K]], tp.List[V]],
-        it: tp.Iterable[K],
-        batch_size: int,
-        fn_dict: dict = None,
-    ):
-
-        return map_batches(fn, it, batch_size, cache=self, fn_dict=fn_dict)
+        self, fn: BatchFn[K, V], it: tp.Iterable[K], batch_size: int
+    ) -> tp.Iterator[V]:
+        return map_batches(fn, it, batch_size, cache=self)
 
 
 def map_batches(
-    fn: tp.Callable[[tp.List[K]], tp.List[V]],
+    fn: BatchFn[K, V],
     it: tp.Iterable[K],
     batch_size: int,
-    cache: GenerationalCache[K, V] = None,
-    fn_dict: dict = None,
-):
+    cache: tp.Optional[GenerationalCache[K, V]] = None,
+) -> tp.Iterator[V]:
     # When translating a website we will see some sentences a lot of times,
     # typically header/footer/menus. So we use a generational cache.
-    cache = cache or GenerationalCache([10, 1])
-    batch = []
-    batch_with_results = []
+    if cache is None:
+        cache = GenerationalCache([10, 1])
+    _cache = cache
+    batch: tp.List[K] = []
+    batch_with_results: tp.List[tp.Tuple[K, tp.Optional[V]]] = []
 
-    def handle_batch(batch, batch_with_results) -> tp.Iterator[V]:
+    def handle_batch(cache: GenerationalCache[K, V]) -> tp.Iterator[V]:
         if batch:
-            new_results = fn(batch, fn_dict) if fn_dict is not None else fn(batch)
+            new_results = fn(batch)
         else:
             new_results = []
         assert len(batch) == len(new_results)
         for x, res in zip(batch, new_results):
             cache[x] = res
         j = 0
-        for (x, res) in batch_with_results:
-            if res is None:
-                res = new_results[j]
+        for (x, maybe_res) in batch_with_results:
+            if maybe_res is None:
+                maybe_res = new_results[j]
                 j += 1
-            yield res
+            yield maybe_res
 
         assert j == len(new_results)
         batch_with_results.clear()
         batch.clear()
 
     for x in it:
-        res = cache.get(x)
-        batch_with_results.append((x, res))
-        if res is None:
+        maybe_res = cache.get(x)
+        batch_with_results.append((x, maybe_res))
+        if maybe_res is None:
             batch.append(x)
 
         if len(batch) >= batch_size:
-            yield from handle_batch(batch, batch_with_results)
+            yield from handle_batch(cache)
 
     if batch_with_results:
-        yield from handle_batch(batch, batch_with_results)
+        yield from handle_batch(cache)
     log.warning(f"Cache {cache}")
 
 
-def test_map_batches():
-    def fn(xs):
+def test_map_batches() -> None:
+    def fn(xs: tp.Iterable[int]) -> tp.List[int]:
         return [x + 1 for x in xs]
 
     assert list(map_batches(fn, range(10), 3)) == list(range(1, 11))

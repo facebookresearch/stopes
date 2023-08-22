@@ -26,7 +26,7 @@ class FairSeqBinarizerEncoder(LineProcessorCallback):
         outfile_prefix: str,
         input_file: str,
         input_file_idx: int,
-        output_dir: str,
+        output_dir: Path,
         vocab_file_path: str,
         outfile_postfix: str = "",
         spm_model_path: tp.Optional[str] = None,

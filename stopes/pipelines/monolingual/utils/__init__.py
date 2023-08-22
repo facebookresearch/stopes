@@ -9,7 +9,7 @@ import typing as tp
 from pathlib import Path
 
 
-def split_list(list: tp.List[Path], chunk_size: int) -> tp.Iterator[Path]:
+def split_list(list: tp.List[Path], chunk_size: int) -> tp.Iterator[tp.List[Path]]:
     for i in range(0, len(list), chunk_size):
         yield list[i : i + chunk_size]
 

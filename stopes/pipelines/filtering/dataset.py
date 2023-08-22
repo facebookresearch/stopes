@@ -38,8 +38,8 @@ class Dataset:
         - fold (str): Type of dataset, eg: train, train_mining, valid, test
     """
 
-    src: Optional[str] = None
-    tgt: Optional[str] = None
+    src: str
+    tgt: str
     tsv: Optional[str] = None
     metadata: Optional[str] = None
     lang_dir: Optional[str] = None

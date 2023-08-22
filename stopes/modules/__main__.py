@@ -15,7 +15,11 @@ import omegaconf
 from stopes.core.stopes_module import StopesModule
 
 
-@hydra.main(config_path="../pipelines/bitext/conf", config_name="launch_conf")
+@hydra.main(
+    config_path="../pipelines/bitext/conf",
+    config_name="launch_conf",
+    version_base="1.1",
+)
 def main(config: omegaconf.DictConfig) -> None:
     """
     Launches a module from CLI.
@@ -36,7 +40,6 @@ def main(config: omegaconf.DictConfig) -> None:
         sys.exit(1)
 
     config_keys = [k for k in config.keys() if k not in launch_keys]
-    assert len(config_keys) == 1, "should only specify one module config"
     launcher = hydra.utils.instantiate(config.launcher)
     module_conf = config[config_keys[0]]
     module = StopesModule.build(module_conf)
@@ -48,6 +51,7 @@ def main(config: omegaconf.DictConfig) -> None:
         )
         return
 
+    print(f"Will run {module.name()} with conf:\n{module.config}")
     loop = asyncio.get_event_loop()
     if config.launcher.cluster == "debug":
         loop.set_debug(True)

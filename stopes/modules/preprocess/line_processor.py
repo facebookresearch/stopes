@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
 import logging
 import typing as tp
 from abc import abstractmethod
@@ -15,8 +16,7 @@ import hydra
 from omegaconf import MISSING
 
 import stopes.core
-from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.core.utils import ensure_dir
+from stopes.core import Requirements, StopesModule, utils
 
 logger = logging.getLogger("text_encoder")
 
@@ -32,14 +32,15 @@ class LineProcessorCallback(AbstractContextManager):
         outfile_prefix: str,
         input_file: str,
         input_file_idx: int,
-        output_dir: str,
+        output_dir: Path,
         outfile_postfix: str = "",
     ) -> None:
         self.outfile_prefix = outfile_prefix
         self.outfile_postfix = outfile_postfix
         self.input_file = input_file
         self.input_file_idx = input_file_idx
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
         super().__init__()
 
     @abstractmethod
@@ -58,27 +59,15 @@ class LineProcessorCallback(AbstractContextManager):
         pass
 
 
-def buffered_read(
-    fp: tp.TextIO, buffer_size: int
-) -> tp.Generator[tp.List[tp.Tuple[int, str]], None, None]:
-    buffer = []
-    for line_num, src_str in enumerate(fp):
-        buffer.append((line_num, src_str.strip()))
-        if len(buffer) >= buffer_size:
-            yield buffer
-            buffer = []
-
-    if len(buffer) > 0:
-        yield buffer
-
-
 @dataclass
 class LineProcessorConfig:
     line_processor: tp.Any = MISSING
     output_dir: str = MISSING
     outfile_prefix: str = "embed"
     outfile_postfix: str = ""
-    shards: tp.List[str] = MISSING
+    # shards is either a list of files or a glob string
+    # if only hydra allowed, the right type would be tp.Union[str, tp.List[str]]
+    shards: tp.Any = MISSING
     buffer_size: int = 10_000
     requirements: Requirements = Requirements(
         nodes=1,
@@ -94,7 +83,7 @@ class LineProcessorModule(StopesModule):
     def __init__(
         self,
         config: LineProcessorConfig = LineProcessorConfig(),
-        processed_lines=0,
+        processed_lines: int = 0,
         validate_config: bool = False,
     ):
         super().__init__(
@@ -107,12 +96,14 @@ class LineProcessorModule(StopesModule):
         # we do basic checkpointing with submitit Checkpointable which will store the state of this
         # callable. The basic idea here is to remember the last line processed
         self.processed_lines = processed_lines
-        ensure_dir(self.config.output_dir)
+        Path(config.output_dir).mkdir(exist_ok=True)
 
-    def array(self):
-        return self.config.shards
+    def array(self) -> tp.List[str]:
+        if isinstance(self.config.shards, str):
+            return list(glob.glob(self.config.shards))
+        return self.config.shards  # type: ignore[no-any-return]
 
-    def requirements(self):
+    def requirements(self) -> Requirements:
         reqs = self.config.requirements
         if not isinstance(reqs, Requirements):
             # Performe conversion if needed
@@ -123,7 +114,7 @@ class LineProcessorModule(StopesModule):
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
-    ):
+    ) -> tp.Any:
         input_file: str = iteration_value  # type: ignore
         assert Path(input_file).exists(), f"input_file: {input_file} doesn't exist"
 
@@ -136,21 +127,23 @@ class LineProcessorModule(StopesModule):
         if hasattr(self.config, "outfile_postfix"):
             kwargs["outfile_postfix"] = self.config.outfile_postfix
 
+        # TODO: use StopesModule.build here to flatten the config
         processor: LineProcessorCallback = hydra.utils.instantiate(
             self.config.line_processor,
             **kwargs,
         )
-        with stopes.core.utils.open(input_file) as filep:
-            with processor as enc:
-                for lines_with_numbers in buffered_read(filep, self.config.buffer_size):
-                    enc.process_lines(lines_with_numbers)
-                    # TODO For checkpointing, keep track of processed lines + slice initial buffer read
+        with stopes.core.utils.open(input_file) as f, processor as proc:
+            for lines_with_numbers in utils.batch(
+                enumerate(f), self.config.buffer_size
+            ):
+                proc.process_lines(lines_with_numbers)
+                # TODO For checkpointing, keep track of processed lines + slice initial buffer read
         # TODO: this may not point to an existing file, making cache validation
         # impossible. However, the cache validate function can be adjusted accordingly
         return processor.final_result()
 
-    @classmethod
-    def version(cls):
+    @staticmethod
+    def version() -> str:
         return "0.2"
 
     def name(self) -> str:

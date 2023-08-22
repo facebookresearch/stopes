@@ -1,10 +1,13 @@
 defaults:
   - launcher: submitit
+  # TODO this is just for testing
+  - blaser_model: fb_fair
   - _self_
 
 output_dir: ???
 use_gpu: true
 batch_size: 16
+
 
 src_manifest: ???
 tgt_manifest: ???
@@ -16,11 +19,6 @@ tgt_lang: ???
 ref_lang: ${tgt_lang}
 
 checkpoint_dir: ???
-
-# where to find the blaser model, you can find it at http://dl.fbaipublicfiles.com/blaser/blaser.tar.gz
-blaser_model:
-  config_file: ???
-  model_checkpoint: ???
 
 max_tokens: 2_560_000
 
@@ -38,4 +36,3 @@ checkpoints:
   pt: romance.pt
   ro: romance.pt
   de: germanic.pt
-  cmn: mandarin.pt

@@ -9,9 +9,9 @@
 This toolkit contains code for several key parts of the stopes multilingual data mining project.
 
 * core: tools to schedule and organize the jobs running the pre-processing and mining.
-* mining: tools to find sentence translations inside a web scale corpus of text.
+* mining: tools to find sentence translations inside a web scale corpus of text and speech.
 * monolingual: tools to pre-process data before mining as per the NLLB translation project.
 
 """
 
-__version__ = "1.1.0"
+__version__ = "2.0.0"

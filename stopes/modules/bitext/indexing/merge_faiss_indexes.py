@@ -37,6 +37,7 @@ class MergeFAISSIndexesModule(StopesModule):
         checkpoint_file_idx: tp.Optional[int] = None,
     ):
         super().__init__(config)
+        assert "IVF" in self.config.index_type, "we can only merge IVF FAISS indexes."
         self.final_merged_index = (
             Path(self.config.output_dir)
             / f"{self.config.data.bname}.{self.config.index_type}.merged.{self.config.lang}.data.idx"

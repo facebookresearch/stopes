@@ -5,9 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import asyncio
 import contextlib
+import datetime
 import math
+import time
 import typing as tp
+import uuid
 from pathlib import Path
 from unittest import mock
 
@@ -17,7 +21,7 @@ from omegaconf import OmegaConf
 from submitit import AutoExecutor
 
 from stopes.core.cache import Cache, FileCache
-from stopes.core.launcher import Launcher
+from stopes.core.launcher import Launcher, ThrottleConfig
 from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.tests.hello_world import (
     HelloWorldArrayConfig,
@@ -47,7 +51,7 @@ def launcher(tmp_path: Path, cache: Cache):
 @pytest.mark.parametrize("use_mem", [True, False])
 async def test_supports_mem(tmp_path: Path, use_mem: bool):
     mod = HelloWorldModule(HelloWorldConfig(duration=None))
-    launcher = Launcher(
+    launcher1 = Launcher(
         config_dump_dir=tmp_path / "conf",
         log_folder=tmp_path / "logs",
         cluster="local",
@@ -55,7 +59,7 @@ async def test_supports_mem(tmp_path: Path, use_mem: bool):
     )
 
     with mock.patch("submitit.auto.auto.AutoExecutor.update_parameters") as mock_update:
-        await launcher.schedule(mod)
+        await launcher1.schedule(mod)
         assert (mock.call(mem_gb=10) in mock_update.call_args_list) == use_mem
 
 
@@ -116,9 +120,9 @@ async def test_single_cache(tmp_path: Path, launcher: Launcher, cache: Cache):
         assert mock_submit.call_count == 1
 
         # uncached module
-        mod2 = HelloWorldModule(
-            HelloWorldConfig(greet="Hello", person="Bar", duration=None)
-        )
+        mod2_config = HelloWorldConfig(greet="Hello", person="Bar", duration=None)
+        mod2 = HelloWorldModule(mod2_config)
+
         result3 = await launcher.schedule(mod2)
         assert result3 == "Hello Bar !"
         # different config, so we should submit again
@@ -129,6 +133,20 @@ async def test_single_cache(tmp_path: Path, launcher: Launcher, cache: Cache):
         assert result4 == "Hello Foo !"
         # cached, so no more call
         assert mock_submit.call_count == 2
+
+        # another module instance with the same config except `timeout_min`,
+        # should use cache
+        mod2_config.requirements.timeout_min += 10
+        result5 = await launcher.schedule(HelloWorldModule(mod2_config))
+        assert result5 == "Hello Bar !"
+        assert mock_submit.call_count == 2
+
+        # another module instance with the same config except `gpus_per_node`,
+        # should submit again
+        mod2_config.requirements.gpus_per_node += 1
+        result6 = await launcher.schedule(HelloWorldModule(mod2_config))
+        assert result6 == "Hello Bar !"
+        assert mock_submit.call_count == 3
 
 
 async def test_array_cache(tmp_path: Path, launcher: Launcher, cache: Cache):
@@ -315,3 +333,105 @@ async def test_retry_array(launcher):
     )
     val = await launcher.schedule(success)
     assert val == ["a" * i for i in range(1, 4)]
+
+
+############
+# throttling
+############
+
+
+class ThrottleModuleTest(StopesModule):
+    def __init__(self, wait_time, idx=0):
+        super().__init__(OmegaConf.create({"wait_time": wait_time, "idx": idx}))
+
+    def requirements(self) -> Requirements:
+        return Requirements(cpus_per_task=1)
+
+    def run(
+        self,
+        iteration_value: tp.Optional[tp.Any] = None,
+        iteration_index: int = 0,
+    ) -> tp.Any:
+        time.sleep(self.config.wait_time)
+        return datetime.datetime.now()
+
+    def name(self):
+        return f"throttle-{self.config.idx}"
+
+
+async def test_throttling(tmp_path):
+    wait_time = 1.5
+    shared_name = f"/test_throttling{uuid.uuid4()}"
+
+    launcher1 = Launcher(
+        cache=None,
+        config_dump_dir=tmp_path / "conf",
+        log_folder=tmp_path / "logs",
+        cluster="local",
+        max_jobarray_jobs=30,
+        throttle=ThrottleConfig(limit=1, shared_name=shared_name, timeout=30),
+    )
+    launcher2 = Launcher(
+        cache=None,
+        config_dump_dir=tmp_path / "conf",
+        log_folder=tmp_path / "logs",
+        cluster="local",
+        max_jobarray_jobs=30,
+        throttle=ThrottleConfig(limit=1, shared_name=shared_name, timeout=30),
+    )
+
+    mod1 = ThrottleModuleTest(wait_time)
+    mod2 = ThrottleModuleTest(wait_time)
+    mod3 = ThrottleModuleTest(wait_time)
+
+    ends = []
+    for coro in asyncio.as_completed(
+        [launcher1.schedule(mod1), launcher2.schedule(mod2), launcher1.schedule(mod3)]
+    ):
+        res = await coro
+        ends.append(res)
+
+    ends.sort()
+    for (end1, end2) in zip(ends, ends[1:]):
+        t_diff = end2 - end1
+        assert (
+            t_diff.total_seconds() >= wait_time
+        ), f"{t_diff} is too short, should have waited {wait_time} at least in the semaphore."
+
+
+async def test_throttling_timeout(tmp_path):
+
+    launcher1 = Launcher(
+        cache=None,
+        config_dump_dir=tmp_path / "conf",
+        log_folder=tmp_path / "logs",
+        cluster="local",
+        max_jobarray_jobs=30,
+        throttle=ThrottleConfig(limit=2, timeout=1),
+    )
+    mod_slow = ThrottleModuleTest(1.5)
+    # no time for the three to run under 1s
+    with pytest.raises(RuntimeError):
+        a = asyncio.create_task(launcher1.schedule(mod_slow))
+        b = asyncio.create_task(launcher1.schedule(mod_slow))
+        c = asyncio.create_task(launcher1.schedule(mod_slow))
+        await a
+        await b
+        await c
+
+    launcher2 = Launcher(
+        cache=None,
+        config_dump_dir=tmp_path / "conf",
+        log_folder=tmp_path / "logs",
+        cluster="local",
+        max_jobarray_jobs=30,
+        throttle=ThrottleConfig(limit=10, timeout=2),
+    )
+    # the three should run concurrently thus finish in the 2s
+    mod_slow = ThrottleModuleTest(1)
+    a = asyncio.create_task(launcher2.schedule(mod_slow))
+    b = asyncio.create_task(launcher2.schedule(mod_slow))
+    c = asyncio.create_task(launcher2.schedule(mod_slow))
+    await a
+    await b
+    await c

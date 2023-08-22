@@ -18,12 +18,14 @@ checkout the `demo` directory for an example usage with the [WMT22 Shared Task: 
 Languages](https://statmt.org/wmt22/large-scale-multilingual-translation-task.html) data.
 
 ## Requirements
+
 `stopes` relies on:
-* submitit to schedule jobs when ran on clusters
-* hydra-core version >= 1.2.0 for configuration
-* fairseq to use LASER encoders
-* PyTorch version >= 1.5.0
-* Python version >= 3.8
+
+- submitit to schedule jobs when ran on clusters
+- hydra-core version >= 1.2.0 for configuration
+- fairseq to use LASER encoders
+- PyTorch version >= 1.5.0
+- Python version >= 3.8
 
 ## Installing stopes
 
@@ -32,11 +34,13 @@ pip for the install to work. We recommend that you first upgrade pip:
 `python -m pip install --upgrade pip`
 
 The mining pipeline relies on fairseq to run LASER encoders, because of competing dependency version, you'll have to first install fairseq with pip separately:
+
 ```
-pip install fairseq==0.12.1
+pip install fairseq==0.12.2
 ```
 
 You can then install stopes with pip:
+
 ```
 git clone https://github.com/facebookresearch/stopes.git
 cd stopes
@@ -48,6 +52,7 @@ You can choose what to install. If you are only interested in `mining`, you do n
 Currently `fairseq` and `stopes` require different version of hydra, so `pip` might output some warnings, do not worry about them, we want hydra>=1.1.
 
 If you plan to train a lot of NMT model you will also want to setup apex to get a faster training.
+
 ```
 git clone https://github.com/NVIDIA/apex
 cd apex
@@ -56,19 +61,26 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
   --global-option="--fast_multihead_attn" ./
 ```
 
+### Speech package installing
+
+Some speech packages like the MMS Text-to-Speech(TTS) require additional library installation, see [here](stopes/speech/README.md) for more details.
+
 ## How `stopes` works
 
 `stopes` is made of a few different parts:
+
 1. `core` provides a library to write readable piplines
 2. `modules` provides a set of modules using the core library and implementing
    common steps in our mining and evaluation pipelines
 3. `pipelines` provides pipeline implementation for the data pipelines we use in
    NLLB:
+
 - `monolingual` to preprocess and clean single language data
 - `bitext` to run the "global mining" pipeline and extract aligned sentences
   from two monolingual datasets. (inspired by
   [CCMatrix](https://ai.facebook.com/blog/ccmatrix-a-billion-scale-bitext-data-set-for-training-translation-models/))
 - `distilation` to run our sequence-level knowledge distillation pipeline which trains a small student model from a pre-trained large teacher model (approach based on https://arxiv.org/abs/1606.07947)
+
 4. `eval` provides a set of evaluation tools, including ALTI+ and BLASER for text-free speech translation evaluation.
 5. `demo` contains applications of stopes, including a quickstart demo that you can run at home of mining as well as a example usage of ALTI+ for toxicity and hallucination analysis.
 
@@ -81,24 +93,12 @@ See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
 
 ## Contributors
 
-- [Pierre Andrews](https://github.com/Mortimerp9)
-- [Onur Çelebi](https://github.com/Celebio)
-- [David Dale](https://github.com/avidale)
-- [Paul Deveau](https://github.com/DeveauP)
-- [Angela Fan](https://github.com/huihuifan)
-- [Vedanuj Goswami](https://github.com/vedanuj)
-- [Alex Guo](https://github.com/aguo71)
-- [Kevin Heffernan](https://github.com/heffernankevin)
-- [Ammar Kamran](https://github.com/AmmarKamran)
-- [Jean Maillard](https://github.com/jeanm)
-- [Alexandre Mourachko](https://github.com/alexmourachko)
-- [Kaushik Ram Sadagopan](https://github.com/kauterry)
-- [Holger Schwenk](https://github.com/hoschwenk)
-- [Guillaume Wenzek](https://github.com/gwenzek)
+You can find the list of the main contributors in the [NLLB](https://github.com/facebookresearch/fairseq/tree/nllb) and [Seamless Communication](https://github.com/facebookresearch/seamless_communication) papers.
 
 (in alphabetical order)
 
 ## Citation
+
 If you use `stopes` in your work, please cite:
 
 ```bibtex
@@ -124,5 +124,17 @@ Some of the tools in stopes, like BLASER and ALTI have their own publications, p
 }
 ```
 
+If you use SeamlessM4T in your work or any models/datasets/artifacts published in SeamlessM4T, please cite :
+
+@article{seamlessm4t2023,
+  title={SeamlessM4T—Massively Multilingual \& Multimodal Machine Translation},
+  author={{Seamless Communication}, Lo\"{i}c Barrault, Yu-An Chung, Mariano Cora Meglioli, David Dale, Ning Dong, Paul-Ambroise Duquenne, Hady Elsahar, Hongyu Gong, Kevin Heffernan, John Hoffman, Christopher Klaiber, Pengwei Li, Daniel Licht, Jean Maillard, Alice Rakotoarison, Kaushik Ram Sadagopan, Guillaume Wenzek, Ethan Ye,  Bapi Akula, Peng-Jen Chen, Naji El Hachem, Brian Ellis, Gabriel Mejia Gonzalez, Justin Haaheim, Prangthip Hansanti, Russ Howes, Bernie Huang, Min-Jae Hwang, Hirofumi Inaguma, Somya Jain, Elahe Kalbassi, Amanda Kallet, Ilia Kulikov, Janice Lam, Daniel Li, Xutai Ma, Ruslan Mavlyutov, Benjamin Peloquin, Mohamed Ramadan, Abinesh Ramakrishnan, Anna Sun, Kevin Tran, Tuan Tran, Igor Tufanov, Vish Vogeti, Carleigh Wood, Yilin Yang, Bokai Yu, Pierre Andrews, Can Balioglu, Marta R. Costa-juss\`{a} \footnotemark[3], Onur \,{C}elebi,Maha Elbayad,Cynthia Gao, Francisco Guzm\'an, Justine Kao, Ann Lee, Alexandre Mourachko, Juan Pino, Sravya Popuri, Christophe Ropers, Safiyyah Saleem, Holger Schwenk, Paden Tomasello, Changhan Wang, Jeff Wang, Skyler Wang},
+  journal={ArXiv},
+  year={2023}
+}
+
 ## License
+
 `stopes` is MIT licensed, as found in the LICENSE file.
+
+When using speech mining with the [SONAR](https://github.com/facebookresearch/SONAR) models, beware that this code and models are released under [CC-BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).

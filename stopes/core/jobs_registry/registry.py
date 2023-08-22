@@ -59,7 +59,7 @@ class JobsRegistry:
         """
         job_id = stopes_job.job_id
         if job_id in self.registry:
-            logger.warning(
+            logger.debug(
                 f"Tried to add job with id: {job_id} into registry, but it already exists previously"
             )
         else:
@@ -171,7 +171,7 @@ class JobsRegistry:
         for job in self.registry.values():
             progress[job.get_status()] += 1
         progress["Total"] = len(self.registry)
-        logger.info(f"Jobs progress: {dict.__repr__(progress)}")
+        logger.debug(f"Jobs progress: {dict.__repr__(progress)}")
 
     ###########################################################
     # Methods used for logging registry in different formats

@@ -105,6 +105,7 @@ class RetrieveData(StopesModule):
         retrieve_data_job: RetrieveDataJob = iteration_value
         datasets = retrieve_data_job.datasets
         lang_dir, fold = datasets[0].lang_dir, datasets[0].fold
+        assert lang_dir is not None, f"Invalid RetrieveDataJob {retrieve_data_job}"
         src, tgt = lang_dir.split("-")
         self.logger.info(f"Retrieving data for {fold}: {lang_dir}")
 

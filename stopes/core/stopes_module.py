@@ -43,7 +43,7 @@ class StopesModule(ABC):
     retry_counts: tp.List[int]
 
     @staticmethod
-    def build(config: tp.Any, **kwargs):
+    def build(config: tp.Any, **kwargs) -> "StopesModule":
         """Builds the correct module given a loaded config with a _target_ entry."""
         assert hasattr(
             config, "_target_"
@@ -64,9 +64,11 @@ class StopesModule(ABC):
         # Hydra will detach `config` from its parent in `instantiate`.
         # We need to resolve before that.
         OmegaConf.resolve(config)
-        return hydra.utils.instantiate({"_target_": target}, config, _recursive_=False)
+        return hydra.utils.instantiate({"_target_": target}, config, _recursive_=False)  # type: ignore[no-any-return]
 
-    def __init__(self, config: tp.Any, config_class: tp.Type = None):
+    def __init__(
+        self, config: tp.Any, config_class: tp.Optional[tp.Type[tp.Any]] = None
+    ):
         if dataclasses.is_dataclass(config):
             config = OmegaConf.structured(config)
         if config_class is not None:
@@ -140,8 +142,30 @@ class StopesModule(ABC):
             self.__class__.__module__,
             self.__class__.__qualname__,
             self.version(),
-            self.config,
+            self.get_config_for_cache(),
         )
+
+    def get_config_for_cache(self):
+        """
+        We want the cache to be agnostic to the timeout. Here we are returning
+        a python dictionary corresponding to the config, except the value for
+        the key `timeout_min`.
+        """
+        config_for_cache = OmegaConf.to_container(self.config, resolve=False)
+        assert isinstance(
+            config_for_cache, dict
+        ), "StopesModule.config need to be a dict config."
+        OVERWRITE_VALUE_FOR_CACHE = -1
+
+        def deep_overwrite(dct: dict):
+            for k, v in dct.items():
+                if isinstance(v, dict):
+                    deep_overwrite(v)
+                elif k == "timeout_min":
+                    dct[k] = OVERWRITE_VALUE_FOR_CACHE
+
+        deep_overwrite(config_for_cache)
+        return config_for_cache
 
     # TODO: @functools.cached_property()
     # This is only safe if cache_key is not allowed to change, in particular if config is frozen.

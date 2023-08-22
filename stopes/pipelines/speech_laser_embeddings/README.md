@@ -1,6 +1,6 @@
 # Speech Pipelines
 
-## compute_laser_embeddings
+## speech_laser_embeddings
 
 This pipeline takes in audio data tsv files for multiple language directions and computes LASER embeddings for each language direction using the SpeechLASER model used for mining SpeechMatrix data. For each language direction, the pipeline first splits the audio data tsv file into chunks and computes the laser embeddings for each chunk separately on a node with 1 GPU asynchronously and saves a `.embeddings` file for each chunk.
 
@@ -15,7 +15,7 @@ The format for each input audio data tsv file is:
 
 We run the pipeline using the command:
 ```
-python stopes/pipelines/speech/compute_laser_embeddings.py
+python stopes/pipelines/speech_laser_embeddings/speech_laser_embeddings.py
 ```
 
 The input config:

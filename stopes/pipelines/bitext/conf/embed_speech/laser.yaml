@@ -1,0 +1,5 @@
+defaults:
+  - /embed_text/preproc_and_encode@_here_
+  - encoder: mining_speech_encoder
+
+preprocess: null

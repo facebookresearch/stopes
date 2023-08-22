@@ -24,7 +24,7 @@ from stopes.pipelines.filtering.configs import (
     register_configs,
 )
 from stopes.pipelines.filtering.dataset import Dataset, DatasetLine, DatasetReader
-from stopes.pipelines.filtering.filters import FilteringCounts
+from stopes.pipelines.filtering.filters.base import FilteringCounts
 from stopes.pipelines.filtering.utils import cache_step_sync, normalize_unicode
 from stopes.pipelines.monolingual.utils.text_normalizer import replace_unicode_punct
 

@@ -95,7 +95,10 @@ class LengthFilter(Filter):
             if self.min_src_unique_ratio is not None:
                 # the order is six for English, appropriately scaled for other langs
                 order = min(1, 6 * self.src_factor)
-                ngrms = ngrams(line.src, order=order)
+                assert order == int(
+                    order
+                ), f"Length factor is {self.src_factor}, but this code only works with int. Help fix me"
+                ngrms = ngrams(line.src, order=int(order))
                 if len(set(ngrms)) / len(ngrms) < self.min_src_unique_ratio:
                     counts.min_src_unique_ratio += 1
                     return None

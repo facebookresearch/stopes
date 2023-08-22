@@ -17,7 +17,7 @@ def chunk_files_exist(tsv_file: Path, num_chunks: int) -> bool:
     return True
 
 
-def split_tsv_files(data_dir: str, lang_dirs: str, num_chunks=16) -> None:
+def split_tsv_files(data_dir: Path, lang_dirs: str, num_chunks: int = 16) -> None:
     """
     Splits tsv files into chunks where each tsv file is of the format:
     <root_dir>

@@ -56,25 +56,19 @@ class SampleEmbeddingModule(StopesModule):
         self, config: SampleEmbeddingModuleConfig = SampleEmbeddingModuleConfig()
     ):
         super().__init__(config, SampleEmbeddingModuleConfig)
-        self.num_workers = max(
+        self.num_workers = min(
             int(self.config.max_num_workers),
             len(self.config.embedded_files),
         )
 
-    def requirements(self):
-        return Requirements(
-            nodes=1,
-            tasks_per_node=1,
-            gpus_per_node=0,
-            cpus_per_task=self.num_workers,
-            timeout_min=24 * 60,
-        )
+    def requirements(self) -> Requirements:
+        return Requirements(cpus_per_task=self.num_workers, timeout_min=24 * 60)
 
     def run(
         self,
         iteration_value: tp.Optional[tp.Any] = None,
         iteration_index: int = 0,
-    ):
+    ) -> Path:
         slurm_env = os.environ.get("SLURM_JOB_ID", None)
         tmp_dir = Path(self.config.tmp_dir)
         if slurm_env:
@@ -111,8 +105,9 @@ class SampleEmbeddingModule(StopesModule):
             combined_fp.append_files(sample_shards)
         return out_file.resolve()
 
-    def name(self):
+    def name(self) -> str:
         return f"sample_emb.{self.config.lang}-{len(self.config.embedded_files)}"
 
-    def version(self):
+    @staticmethod
+    def version() -> str:
         "0.2"

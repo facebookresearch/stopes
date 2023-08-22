@@ -5,26 +5,26 @@
 # LICENSE file in the root directory of this source tree.
 
 import csv
-import typing as tp
 from pathlib import Path
+from typing import Any, Dict, Iterable, List
+
+DictRow = Dict[str, Any]
 
 
-def read_tsv(filename: Path, named_columns: bool = True) -> tp.List[tp.Dict]:
+def read_tsv(filename: Path, named_columns: bool = True) -> List[DictRow]:
     """Read a named or unnamed tsv file and return a list of row dicts"""
     result = []
     with open(filename, "r", encoding="utf-8") as csvfile:
         if named_columns:
-            reader = csv.DictReader(csvfile, delimiter="\t")
-            for row in reader:
-                result.append(row)
+            for dict_row in csv.DictReader(csvfile, delimiter="\t"):
+                result.append(dict_row)
         else:
-            reader = csv.reader(csvfile, delimiter="\t")
-            for row in reader:
+            for row in csv.reader(csvfile, delimiter="\t"):
                 result.append(dict(enumerate(row)))
     return result
 
 
-def write_tsv(filename: Path, data: tp.List[tp.Dict]) -> None:
+def write_tsv(filename: Path, data: List[DictRow]) -> None:
     """Write a named tsv file"""
     with open(filename, "w", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(
@@ -35,17 +35,19 @@ def write_tsv(filename: Path, data: tp.List[tp.Dict]) -> None:
             writer.writerow(row)
 
 
-def select_columns(data: tp.List[tp.Dict], column_ids: tp.List) -> tp.List[tp.List]:
+def select_columns(
+    data: Iterable[DictRow], column_ids: List[str]
+) -> List[List[DictRow]]:
     """Select list of "columns" from a list of dicts"""
-    columns = [[] for _ in column_ids]
+    columns: List[List[DictRow]] = [[] for _ in column_ids]
     for item in data:
         for column, column_id in zip(columns, column_ids):
             column.append(item[column_id])
     return columns
 
 
-def join_lists_of_dicts(*inputs: tp.List[tp.List[tp.Dict]]) -> tp.List[tp.Dict]:
-    """Loop through several lists of dicts and join the corresponding ellements"""
+def join_lists_of_dicts(*inputs: Iterable[DictRow]) -> List[DictRow]:
+    """Loop through several lists of dicts and join the corresponding elements"""
     results = []
     for items in zip(*inputs):
         results.append({k: v for item in items for k, v in item.items()})

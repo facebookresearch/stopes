@@ -67,14 +67,16 @@ class SampleCorpus(StopesModule):
         }
         logger.info(f"samples count per lang: {lang_counts_sampled_map}")
 
-        output_lang_counts = defaultdict(int)
+        lang_counts: tp.Dict[str, int] = defaultdict(int)
         np.random.seed(0)
         with utils.open(self.config.corpus_file, "wb") as f_out:
             for lang, corpora in self.config.lang_files.items():
                 total_count = lang_counts_map[lang]
                 sample_count = lang_counts_sampled_map[lang]
                 indices = set(
-                    np.random.choice(total_count, sample_count, replace=False)
+                    np.random.choice(
+                        total_count, sample_count, replace=(sample_count > total_count)
+                    )
                 )
                 num_processed_lines = 0
                 for corpus in corpora:
@@ -85,9 +87,9 @@ class SampleCorpus(StopesModule):
                                 or num_processed_lines in indices
                             ):
                                 f_out.write(line)
-                                output_lang_counts[lang] += 1
+                                lang_counts[lang] += 1
                             num_processed_lines += 1
-        logger.info(f"sampled corpus with counts per lang: {output_lang_counts}")
+        logger.info(f"sampled corpus with counts per lang: {lang_counts}")
         return self.config.corpus_file
 
     def validate(

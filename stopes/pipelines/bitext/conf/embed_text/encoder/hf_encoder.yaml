@@ -1,7 +1,7 @@
 _target_: stopes.modules.preprocess.hf_sentence_encoder.HFTextEncoder
 
-_name: ${.encoder_model} # Model Hub specification
-encoder_model: ???
+# HuggingFace name of the model
+_name: ???
 normalize: False
 fp16: False
 

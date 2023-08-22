@@ -10,6 +10,11 @@ import typing as tp
 from collections import Counter, defaultdict
 from pathlib import Path
 
+# Based on:
+# https://www.internalfb.com/intern/anp/view/?id=1215095&checkpoint_id=1023178205186735
+# https://docs.google.com/spreadsheets/d/1hpIFwUb0fNFAlS6aOTClexFxLrmlq305A8zZlaxz52c/edit#gid=0
+
+
 adlm_ranges = [(0x1E900, 0x1E95F)]
 arab_ranges = [(0x0600, 0x06FF), (0x0750, 0x077F), (0x0870, 0x089F), (0x08A0, 0x08FF)]
 armn_ranges = [(0x0530, 0x058F)]
@@ -90,7 +95,7 @@ SCRIPT_RANGES = {
     "Grek": grek_ranges,
     "Gujr": gujr_ranges,
     "Guru": guru_ranges,
-    "Han": han_ranges,
+    "Hans": han_ranges,
     "Hang": hang_ranges,
     "Hebr": hebr_ranges,
     "Java": java_ranges,

@@ -1,0 +1,13 @@
+_target_: stopes.modules.preprocess.laser_sentence_encoder.LaserSentenceEncoder
+
+# Careful laser2 requires you to set "+embed_text.vocab_dir=..." and "+embed_text.model_dir=..."
+_name: laser2_encoder
+encoder_model: ${model_dir}/laser2.pt
+spm_model: ${model_dir}/laser2.spm
+spm_vocab: ${vocab_dir}/laser2.cvocab
+max_sentences:
+max_tokens: 12_000
+stable_sort: False
+normalize: False
+fp16: False
+cpu: False

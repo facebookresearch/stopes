@@ -9,6 +9,14 @@ import typing as tp
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
+
+if tp.TYPE_CHECKING:
+    NpVector = np.ndarray[tp.Literal[1], np.dtype[np.float32]]
+    NpMatrix = np.ndarray[tp.Literal[2], np.dtype[np.float32]]
+else:
+    NpVector = np.ndarray
+    NpMatrix = np.ndarray
 
 
 class MissingHeaderError(Exception):
@@ -52,16 +60,16 @@ class Embedding:
                     your file to integrate header
                     """
                 )
-        self.length = shape[0]
-        self.embedding_dimensions = shape[1]
+        self.length = int(shape[0])
+        self.embedding_dimensions = int(shape[1])
         self.dtype = dtype
 
     def __len__(self) -> int:
         return self.length
 
     @contextlib.contextmanager
-    def open_for_read(self, mode="mmap") -> tp.Iterator[np.ndarray]:
-        emb = None
+    def open_for_read(self, mode: str = "mmap") -> tp.Iterator[NpMatrix]:
+        emb: NpMatrix = None  # type: ignore
         IMPLEMENTATION_ERROR_TEXT = (
             "open_for_read was called with not"
             + f" implemented option: {mode}. "
@@ -83,12 +91,11 @@ class Embedding:
                     raise NotImplementedError(IMPLEMENTATION_ERROR_TEXT)
             else:
                 if mode == "memory":
-                    mmap = None
+                    emb = np.load(self.file_path, mmap_mode=None)
                 elif mode == "mmap":
-                    mmap = "r"
+                    emb = np.load(self.file_path, mmap_mode="r")
                 else:
                     raise NotImplementedError(IMPLEMENTATION_ERROR_TEXT)
-                emb = np.load(self.file_path, mmap_mode=mmap)
             yield emb
         finally:
             # looks like there is no clean way to close an mmap in numpy
@@ -100,7 +107,7 @@ class Embedding:
     def save(
         self,
         output_file: tp.Union[str, Path],
-        sample: tp.Union[tp.List[int], np.ndarray] = None,
+        sample: tp.Union[tp.Sequence[int], npt.NDArray[np.int_], None],
         fp16: bool = False,
         mode: str = "mmap",
     ) -> None:
@@ -152,7 +159,7 @@ class EmbeddingConcatenator:
             "shape": self.shape,
         }
 
-    def __enter__(self):
+    def __enter__(self) -> "EmbeddingConcatenator":
         self.output_file_pointer = open(self.output_file, "wb")
         # add temporary header at the beginning of the file
         # the header will be replaced with correct info when exiting,
@@ -162,7 +169,7 @@ class EmbeddingConcatenator:
         )
         return self
 
-    def __exit__(self, *_exc):
+    def __exit__(self, *_exc: tp.Any) -> None:
         self.output_file_pointer.seek(0)
         # rewrite header with correct shape
         header = self.header
@@ -173,7 +180,8 @@ class EmbeddingConcatenator:
         )
         self.output_file_pointer.close()
 
-    def _update_shape(self, shape: tp.Tuple[int, int]) -> None:
+    def _update_shape(self, shape: tp.Tuple[int, ...]) -> None:
+        assert len(shape) == 2, f"Can only append 2D array to {self.output_file}"
         if self.shape[1] != 0:
             # check that all embeddings have the same dimension
             assert (
@@ -181,7 +189,7 @@ class EmbeddingConcatenator:
             ), f"Embeddings do not have the same dimension: found {self.shape[1]} and {shape[1]}"
         self.shape = (self.shape[0] + shape[0], shape[1])
 
-    def append_embedding_from_array(self, embedding: np.ndarray) -> None:
+    def append_embedding_from_array(self, embedding: NpMatrix) -> None:
         self._update_shape(embedding.shape)
         np.ascontiguousarray(embedding, dtype=self.dtype).tofile(
             self.output_file_pointer
@@ -201,10 +209,10 @@ def _hdr_filepath(fp: Path) -> Path:
 
 def create_header(
     fp: tp.Union[str, Path],
-    shape: tp.Tuple,
+    shape: tp.Tuple[int, ...],
     dtype: type = np.float32,
     fortran_order: bool = False,
-    inplace=False,
+    inplace: bool = False,
 ) -> tp.Union[str, Path]:
     """Create a companion header file that can be used to load embeddings
     created with the previous versions of stopes.
@@ -223,7 +231,7 @@ def create_header(
         N.B.: Currently supposes the file can be loaded in memory
     """
     if inplace:
-        data = np.fromfile(fp, dtype=dtype, count=-1)
+        data: NpMatrix = np.fromfile(fp, dtype=dtype, count=-1)
         data.resize(shape)
         np.save(fp, data)
         return fp

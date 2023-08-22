@@ -108,10 +108,7 @@ def test_save_embeddings(
 @pytest.mark.parametrize("fp16", [True, False])
 def test_embed_concat(tmp_path: Path, fp16: bool):
     concat_path = tmp_path / "concat_path.npy"
-    if fp16:
-        dtype = np.float16
-    else:
-        dtype = np.float32
+    dtype = np.float16 if fp16 else np.float32
     array, paths = generate_n_saved_embeddings(
         tmp_path, dim=3, split_length=5, dtype=dtype
     )

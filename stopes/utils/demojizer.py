@@ -5,7 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Any, Dict
+
 import emoji
+
+SEARCH_TREE = Dict[str, Dict[str, Any]]
 
 
 class Demojizer:
@@ -17,10 +21,10 @@ class Demojizer:
     All rights reserved.
     """
 
-    def _get_search_tree(self):
-        _SEARCH_TREE = {}
+    def _get_search_tree(self) -> SEARCH_TREE:
+        tree: SEARCH_TREE = {}
         for emj in emoji.unicode_codes.EMOJI_DATA:
-            sub_tree = _SEARCH_TREE
+            sub_tree = tree
             lastidx = len(emj) - 1
             for i, char in enumerate(emj):
                 if char not in sub_tree:
@@ -28,12 +32,12 @@ class Demojizer:
                 sub_tree = sub_tree[char]
                 if i == lastidx:
                     sub_tree["data"] = emoji.unicode_codes.EMOJI_DATA[emj]
-        return _SEARCH_TREE
+        return tree
 
     def __init__(self) -> None:
         self.search_tree = self._get_search_tree()
 
-    def __call__(self, string: str, replace_str: str):
+    def __call__(self, string: str, replace_str: str) -> str:
         result = []
         i = 0
         length = len(string)
@@ -67,7 +71,7 @@ class Demojizer:
         return "".join(result)
 
 
-def test_demojizer():
+def test_demojizer() -> None:
     dem = Demojizer()
 
     assert dem("😺😸😹😻😼cats😽🙀😿😾", "") == "cats"

@@ -334,6 +334,7 @@ class LaserSentenceEncoder(EncodeToNPY):
         normalize: bool = False,
         fp16: bool = False,
         cpu: bool = False,
+        fp16_model: bool = False,
     ) -> None:
         super().__init__(
             outfile_prefix=outfile_prefix,

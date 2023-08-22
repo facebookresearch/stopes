@@ -1,0 +1,19 @@
+_target_: stopes.modules.speech.audio_zip.AudioZipModule
+tsv_file: ???
+output_dir: ???
+output_prefix: ""
+sample_rate: 16000
+audio_format: ogg
+# output the number of frames for each audio in manifest
+store_num_frames: false
+# output the entire input line in manifest (helpful for debugging)
+store_input_line: false
+# persist a file "/path/to/manifest.tsv.validated-ok" if successfull validation (helpful for debugging)
+output_validation_token: false
+# column should be index of the tsv file 0 or 2... or multiple indices at once separated by comma '0,6'
+column: ???
+nshards: ???
+
+# Whether to add duplicate segments to the zip file. Default true but this can be turned off
+# for debugging purpose
+no_duplicate: true

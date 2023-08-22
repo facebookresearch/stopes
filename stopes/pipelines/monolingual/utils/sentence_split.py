@@ -86,6 +86,7 @@ LANGS_MOSES = {
     "tur": "tr",
 }
 
+LANGS_THAINLP = {"tha": "tha"}
 LANGS_LAONLP = {"lao": "lao"}
 LANGS_KHMER = {"khm": "khm"}
 LANGS_BODNLP = {
@@ -160,6 +161,20 @@ def split_burmese(line: str) -> tp.Iterable[str]:
         yield sent.replace("APOS။", "။”")
 
 
+# ----------------------------------------------
+LANGS_CHINESE = {"zho": "zho", "zho_Hans": "zho_Hans"}
+
+
+def split_chinese(line: str) -> tp.Iterable[str]:
+    """
+    Split Chinese text into sentences.
+    From https://stackoverflow.com/questions/27441191/splitting-chinese-document-into-sentences
+    Special question/exclamation marks were added upon inspection of our raw data
+    """
+    for sent in re.findall(r"[^!?。\.\!\?\！\？\．]+[!?。\.\!\?\！\？\．]?", line, flags=re.U):
+        yield sent
+
+
 # ----------------------------------
 
 
@@ -177,6 +192,10 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
             split_algo = "khmer"
         elif lang in LANGS_BURMESE:
             split_algo = "burmese"
+        elif lang in LANGS_CHINESE:
+            split_algo = "chinese"
+        elif lang in LANGS_THAINLP:
+            split_algo = "thai"
         else:
             # use Moses by default (which likely will fall-back to English)
             split_algo = "moses"
@@ -257,7 +276,14 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
         logger.info(f" - Burmese rule-based sentence splitter applied to '{lang}'")
         return split_burmese
 
-    else:
-        logger.error(f"Unknown splitting algorithm {split_algo}")
+    elif split_algo == "chinese":
+        logger.info(f" - Chinese rule-based sentence splitter applied to '{lang}'")
+        return split_chinese
 
-    return None
+    elif split_algo == "thai":
+        logger.info(f" - PyThaiNLP sentence splitter applied to '{lang}'")
+        from pythainlp import sent_tokenize
+
+        return sent_tokenize  # type: ignore[no-any-return]
+
+    raise ValueError(f"Unknown splitting algorithm {split_algo}")

@@ -6,11 +6,14 @@
 
 import asyncio
 import dataclasses
-import hashlib
+import datetime
+import getpass
 import logging
 import typing as tp
+import uuid
 from pathlib import Path
 
+import posix_ipc
 import submitit
 import tqdm
 from omegaconf import OmegaConf
@@ -41,6 +44,8 @@ class Task:
     _result: tp.Any = dataclasses.field(init=False, repr=False)
     # _job keeps the current inflight job, _tries keeps the past tries
     _tries: tp.List[submitit.Job] = dataclasses.field(default_factory=list, init=False)
+    # _must_release is True when _job was launched by acquiring a semaphore
+    _must_release: bool = dataclasses.field(init=False, default=False)
 
     def done_from_cache(
         self,
@@ -54,10 +59,12 @@ class Task:
     def waiting_on_job(
         self,
         job: submitit.Job,
+        must_release: bool,  # this should be true if this job acquired the throttle semaphore and needs to release it when done.
     ) -> "Task":
         self._done = False
         self._job = job
         self._result = None
+        self._must_release = must_release
 
         return self
 
@@ -76,13 +83,17 @@ class Task:
                 # but because they are all identical, just return the first
                 self._result = results[0]
                 self._done = True
+                if self._must_release:
+                    self.launcher.release_throttle()
                 return self
             except Exception as ex:
-                self._handle_exception(ex, attempt)
+                if self._must_release:
+                    self.launcher.release_throttle()
+                await self._handle_exception(ex, attempt)
 
         assert False, f"Too many retries {attempt} and that wasn't handled"
 
-    def _handle_exception(self, ex, attempt):
+    async def _handle_exception(self, ex, attempt):
         """
         deal with retries. If we see an exception while waiting on the result from submitit, then
         something bad has happenened, we need to decide if we retry or not.
@@ -99,11 +110,15 @@ class Task:
 
         assert self._job is not None, "No _job on pending task."
         self._tries.append(self._job)
-        self._job = self.launcher.submit_job(
+        job, must_release = await self.launcher.submit_job(
             self.module,
             iteration_index=self.iteration_index,
             iteration_value=self.iteration_value,
         )
+        logger.info(
+            f"scheduled retry (#{len(self._tries)}) job for {self.module.name()}:{self.iteration_index}, jobid: {job.job_id}"
+        )
+        self.waiting_on_job(job, must_release)
         self.module.retry_counts[self.iteration_index] = len(self._tries) - 1
 
     async def wait_and_validate(self):
@@ -137,7 +152,32 @@ class Task:
         return self._done
 
 
+@dataclasses.dataclass(frozen=True)
+class ThrottleConfig:
+    """
+    config the throttling of job submissions.
+
+    `shared_name`, if set to None, a random name will be used and the throttling will be local to this launcher.
+    If you specify a name, all launchers (on the same host) with the same throttle name will use the same throttle,
+    even if they are running in separate python processes. The name should start with `/` and be a valid path component.
+    The `limit` decides how many single jobs can be submitted in parallel. The first launcher to set-up the throttle with
+    a non-null limit will set the limit for everyone using that name, if the other launchers set a different limit later
+    on, they will be ignored and the initial limit will be used. If the `limit` is <= 0, it is as if we do not have
+    a throttle. `limit` is inclusive, that is, if you set it to 1, you will only have a single job running at a time.
+    With `timeout` set to None (default) the throttle will block indefinitely until a slot is available to submit the
+    next job. You probably want to set the timeout (in seconds) to avoid waiting forever when processes do not release the throttle
+    properly. HOWEVER, you should make sure that this timeout is bigger than the length of your longest job + slurm queue time
+    as otherwise you might end up dying waiting to submit your next job.
+    """
+
+    shared_name: tp.Optional[str] = None
+    limit: int = 0
+    timeout: tp.Optional[float] = None
+
+
 class Launcher:
+    throttle: tp.Optional[utils.AsyncIPCSemaphore] = None
+
     def __init__(
         self,
         cache: tp.Optional[Cache] = None,
@@ -149,9 +189,22 @@ class Launcher:
         disable_tqdm: bool = False,  # if you don't want tqdm progress bars
         max_retries: int = 0,
         max_jobarray_jobs: int = 1000,
+        throttle: tp.Optional[ThrottleConfig] = None,
+        update_parameters: tp.Optional[dict] = None,
     ):
         """
         If this was started by another launcher, it will be passed down, other launcher is None.
+
+         - `cache` is the cache setup used to store pre-computed results from module executions
+         - `config_dump_dir` where to dump the configs of each submitted modules
+         - `log_folder` where to store execution logs for each job (default: `executor_logs`)
+         - `cluster`, a submitit cluster spec. `local` to run locally, `slurm` for slurm
+         - `partition`, the slurm partition to use
+         - `supports_mem_spec`, ignore mem requirements for some cluster
+         - `disable_tqdm`, don't show that fancy progress  bar
+         - `max_retries`, how many retries do we want for each job
+         - `max_jobarray_jobs`, some clusters do not like very big slurm array, this splits large arrays in multiple array-jobs
+         - `throttle`, if not None, throttle single job submissions.
         """
         self.cache = NoCache() if cache is None else cache
         self.config_dump_dir = (
@@ -171,6 +224,17 @@ class Launcher:
         self.cluster = cluster
         self.max_retries = max_retries
         self.max_jobarray_jobs = max_jobarray_jobs
+        self.update_parameters = update_parameters
+
+        if throttle:
+            self.throttle = utils.AsyncIPCSemaphore(
+                name=throttle.shared_name
+                if throttle.shared_name
+                else f"/launcher_{getpass.getuser()}_{uuid.uuid4()}",
+                flags=posix_ipc.O_CREAT,
+                initial_value=throttle.limit,
+                timeout=throttle.timeout,
+            )
 
     def dump_config(self, module: "StopesModule") -> Path:
         config_folder = Path(self.config_dump_dir) / module.name()
@@ -193,6 +257,10 @@ class Launcher:
         if self.disable_tqdm:
             return
         self.progress_bar.update(1)
+
+    def release_throttle(self) -> None:
+        if self.throttle:
+            self.throttle.release()
 
     async def schedule(self, module: "StopesModule"):
         with logging_redirect_tqdm():
@@ -220,6 +288,10 @@ class Launcher:
         module_log_folder = self.log_folder / name
         module_log_folder.mkdir(parents=True, exist_ok=True)
         executor = AutoExecutor(folder=module_log_folder, cluster=self.cluster)
+
+        # update launcher params
+        if self.update_parameters:
+            executor.update_parameters(**self.update_parameters)
 
         # setup parameters
         reqs = module.requirements()
@@ -249,7 +321,7 @@ class Launcher:
             executor.update_parameters(**mapped_reqs)
             if hasattr(reqs, "mem_gb") and self.supports_mem_spec:
                 executor.update_parameters(mem_gb=reqs.mem_gb)
-            if hasattr(reqs, "contraints"):
+            if reqs.constraint:
                 executor.update_parameters(slurm_constraint=reqs.constraint)
 
         return executor
@@ -266,31 +338,52 @@ class Launcher:
         except MissingCache:
             pass
 
-        job = self.submit_job(module)
+        job, must_release = await self.submit_job(module)
         logger.info(f"submitted single job for {module.name()}: {job.job_id}")
+        logger.info(f"Logs at: {job.paths.stderr}")
 
         self._track_job(job, module)
-        task = Task(module, 0, None, launcher=self).waiting_on_job(job)
+        task = Task(module, 0, None, launcher=self).waiting_on_job(job, must_release)
         await task.wait_and_validate()
 
         logger.info(f"{module.name()} done after full execution")
         return task.final_result
 
-    def submit_job(
+    async def submit_job(
         self,
         module: "StopesModule",
         iteration_index: int = 0,
         iteration_value: tp.Any = None,
-    ) -> submitit.Job:
-        executor = self._get_executor(module)
-        job = executor.submit(
-            module,
-            iteration_index=iteration_index,
-            iteration_value=iteration_value,
-            cache=self.cache,
-        ).cancel_at_deletion()
-        self._track_job(job, module)
-        return job
+    ) -> tp.Tuple[submitit.Job, bool]:
+        must_release = False
+        start_wait = datetime.datetime.now()
+        try:
+            if self.throttle:
+                must_release = True
+                await self.throttle.acquire()
+                tdiff = datetime.datetime.now() - start_wait
+                if tdiff.total_seconds() > 1:
+                    # don't log if the wait time is really short (probably just system overhead, not throttling)
+                    logger.info(
+                        f"{module.name()}:{iteration_value} was throttled, waited {datetime.datetime.now()-start_wait}."
+                    )
+            executor = self._get_executor(module)
+            job = executor.submit(
+                module,
+                iteration_index=iteration_index,
+                iteration_value=iteration_value,
+                cache=self.cache,
+            ).cancel_at_deletion()
+            self._track_job(job, module)
+            return job, must_release
+        except posix_ipc.BusyError as exc:
+            raise RuntimeError(
+                f"Waited too long for the throttle to submit the job {datetime.datetime.now() - start_wait}. "
+                "You might need to increase the launcher.throttle.timeout config to be longer than your longest job."
+            ) from exc
+
+        # make mypy happy, we should never fall through here
+        assert False, "unreachable"
 
     ########################################
     # schedule multiple jobs at once
@@ -332,7 +425,7 @@ class Launcher:
                         iteration_value=task.iteration_value,
                         cache=self.cache,
                     ).cancel_at_deletion()
-                    task = task.waiting_on_job(job)
+                    task = task.waiting_on_job(job, False)
 
         not_cached = len(tasks_to_submit)
         already_cached = len(tasks) - not_cached
@@ -346,6 +439,9 @@ class Launcher:
         logger.info(
             f"submitted job array for {module.name()}: {[task._job.job_id for task in tasks if task._job is not None]}"
         )
+        if tasks:
+            first_job = next(task._job for task in tasks if task._job is not None)
+            logger.info(f"Logs at: {first_job.paths.stderr}")
         # keep tasks in the register, I'm not sure why we aren't tracking everything
         for task in tasks:
             if task._job is not None:

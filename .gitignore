@@ -34,7 +34,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -136,3 +135,5 @@ demo/*.gz
 demo/models/
 demo/mining/*.gz
 demo/mining/models/
+.pytest_cache
+.pytest_cache

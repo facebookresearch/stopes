@@ -62,7 +62,8 @@ def run(config: BlaserEvalConfig) -> tp.Tuple[tp.Optional[float], Path]:
         model.load_from_ckpt_file(config.model.model_checkpoint)
     else:
         logger.info("using unsupervised BLASER")
-        model = unsupervised_blaser
+        # unsupervised_blaser has almost the same signature than BLASER
+        model = unsupervised_blaser  # type: ignore
 
     src_batch = batchify(
         load_emb(config.src_emb_files),

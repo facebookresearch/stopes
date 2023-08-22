@@ -21,6 +21,9 @@ output_dir: ???
 embedding_dimensions: 1024
 mine_threshold: 1.04
 local_tmp_dir: /tmp
+index_type: null
+existing_index_path: null
+existing_embedding_glob: null
 
 embedding_sample:
   max_num_workers: 40
@@ -36,11 +39,7 @@ split_in_shards:
   config:
     output_dir: ${output_dir}/split_langs.${data.data_version}
 embed_text:
-  config:
-    model_dir: ${model_dir}
-    vocab_dir: ${vocab_dir}
-    output_dir: ${output_dir}/embed.${data.data_version}
-    embedding_dimensions: ${embedding_dimensions}
+  output_dir: ${output_dir}/embed.${data.data_version}
 train_index:
   config:
     data: ${data}

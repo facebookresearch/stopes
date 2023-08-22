@@ -1,0 +1,10 @@
+_target_: stopes.modules.preprocess.mining_speech_encoder.Sonar2MiningSpeechEncoder
+
+_name: sonar2_speech_encoder
+encoder_model: ???
+spm_model: null
+spm_vocab: null
+mini_batch_size: null
+fp16: true
+gpu: true
+num_processes: 4

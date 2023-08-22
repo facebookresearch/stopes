@@ -11,12 +11,12 @@ from pathlib import Path
 import numpy as np
 
 from stopes.modules.preprocess.line_processor import LineProcessorCallback
-from stopes.utils.embedding_utils import EmbeddingConcatenator
+from stopes.utils.embedding_utils import EmbeddingConcatenator, NpMatrix
 
 
 class EncodeToNPY(LineProcessorCallback):
     """
-    a text encoder is responsible for encoding sentences and writing them to an output file.
+    an encoder is responsible for encoding sentences and writing them to an output file.
     It's used as a context manager so that it can deal with opening/closing the output file resource properly.
     """
 
@@ -25,7 +25,7 @@ class EncodeToNPY(LineProcessorCallback):
         outfile_prefix: str,
         input_file: str,
         input_file_idx: int,
-        output_dir: str,
+        output_dir: Path,
         outfile_postfix: str = "",
         normalize: bool = False,
         fp16: bool = False,
@@ -51,12 +51,12 @@ class EncodeToNPY(LineProcessorCallback):
         """
         pass
 
-    def __enter__(self):
+    def __enter__(self) -> "EncodeToNPY":
         self.concat.__enter__()
         self.output_file_pointer = self.concat.output_file_pointer
         return self
 
-    def __exit__(self, *_exc) -> None:
+    def __exit__(self, *_exc: tp.Any) -> None:
         self.concat.__exit__(*_exc)
 
     def process_lines(self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]) -> None:
@@ -69,13 +69,13 @@ class EncodeToNPY(LineProcessorCallback):
     @abstractmethod
     def encode_to_np(
         self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]
-    ) -> np.ndarray:
+    ) -> NpMatrix:
         """
         encode a batch of sentences and return them as an numpy array
         """
         pass
 
-    def _normalize(self, embeddings: np.ndarray) -> np.ndarray:
+    def _normalize(self, embeddings: NpMatrix) -> NpMatrix:
         if isinstance(embeddings, np.ndarray) and self.normalize:
             assert (
                 embeddings.dtype == np.float32

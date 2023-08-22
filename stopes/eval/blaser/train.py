@@ -141,7 +141,7 @@ def train_iterations(
             opt, 0, 30000 * 100 // batch_size
         )
 
-    best_corr = -1
+    best_corr = -1.0
     best_mlp = model.mlp
     for epoch in range(train_epoch):
         train_batch = shuffle_data(train_dset, batch_size)

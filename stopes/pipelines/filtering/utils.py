@@ -9,7 +9,7 @@ import logging
 import os
 import pickle
 import unicodedata
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def cache_step_sync(default_step: str):
     return decorator
 
 
-def check_cache(step: str, output_dir: str, kwargs: Dict[Any, Any]) -> None:
+def check_cache(step: str, output_dir: str, kwargs: Dict[Any, Any]) -> Optional[Any]:
     output_path = os.path.join(output_dir, "progress", f"{step}.output")
     input_path = os.path.join(output_dir, "progress", f"{step}.input")
     if os.path.exists(output_path) and os.path.exists(input_path):

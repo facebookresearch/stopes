@@ -12,6 +12,14 @@ PY_HEADER = """# Copyright (c) Meta Platforms, Inc. and affiliates
 
 """
 
+DOUBLE_SLASH_COMMENT_HEADER = """// Copyright (c) Meta Platforms, Inc. and affiliates
+// All rights reserved.
+//
+// This source code is licensed under the license found in the
+// LICENSE file in the root directory of this source tree.
+
+"""
+
 
 def check_file(file: Path, autofix: bool = False) -> bool:
     full_text = file.read_text()
@@ -28,6 +36,11 @@ def check_file(file: Path, autofix: bool = False) -> bool:
 
     if file.suffix == ".py":
         file.write_text(PY_HEADER + full_text)
+        return True
+
+    double_slash_comment_header_suffixes = {".ts", ".tsx", ".js", ".jsx", ".css"}
+    if file.suffix in double_slash_comment_header_suffixes:
+        file.write_text(DOUBLE_SLASH_COMMENT_HEADER + full_text)
         return True
 
     return False
@@ -51,6 +64,7 @@ def test_all_files_have_a_copyright_header(autofix: bool = False):
             ".ico",
             ".json",
             ".jsonl",
+            ".yml",
             ".yaml",
             ".md",
             ".tsv",
@@ -58,7 +72,9 @@ def test_all_files_have_a_copyright_header(autofix: bool = False):
             ".txt",
             ".toml",
             ".ipynb",
+            ".html",
             ".csv",
+            ".env",
         ):
             continue
         if file.name in (
@@ -67,9 +83,10 @@ def test_all_files_have_a_copyright_header(autofix: bool = False):
             ".prettierrc",
             ".nojekyll",
             "moses-config.lowercase",
+            "parse_options.sh",
         ):
             continue
-        if file.is_symlink():
+        if file.is_symlink() or not file.exists():
             continue
         try:
             license = check_file(file, autofix=autofix)
@@ -79,7 +96,7 @@ def test_all_files_have_a_copyright_header(autofix: bool = False):
             print(file)
             failed.append(file)
 
-    assert not failed
+    assert not failed, f"{failed} are missing the license header"
 
 
 if __name__ == "__main__":

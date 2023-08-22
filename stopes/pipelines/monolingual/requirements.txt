@@ -2,7 +2,7 @@ indic-nlp-library
 pythainlp
 laonlp
 khmer-nltk
-laonlp
+pythainlp
 python-crfsuite
 fasttext
 sentence_splitter

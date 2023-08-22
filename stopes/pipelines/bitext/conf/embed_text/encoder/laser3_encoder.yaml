@@ -10,3 +10,4 @@ stable_sort: False
 normalize: False
 fp16: False
 cpu: False
+fp16_model: False

@@ -18,9 +18,9 @@ from stopes.modules.preprocess.wav2vec_laser_speech_encoder import (
     LaserEmbeddingConfig,
     LaserFileAudioEncoder,
 )
-from stopes.pipelines.speech.utils import split_tsv_files
+from stopes.pipelines.speech_laser_embeddings.utils import split_tsv_files
 
-logger = logging.getLogger("speech.compute_laser_embeddings")
+logger = logging.getLogger("speech_laser_embeddings.speech_laser_embeddings")
 
 
 @dataclass
@@ -80,7 +80,7 @@ def get_checkpoint_file(lang: str) -> str:
     return checkpoint_file
 
 
-async def compute_laser_embeddings(config: LaserEmbeddingConfig) -> None:
+async def speech_laser_embeddings(config: LaserEmbeddingConfig) -> None:
     logger.info(config)
     split_tsv_files(config.data_dir, config.lang_dirs, config.num_chunks)
     utils.ensure_dir(config.out_dir)
@@ -113,10 +113,10 @@ async def compute_laser_embeddings(config: LaserEmbeddingConfig) -> None:
 
 
 @hydra.main(
-    config_path="conf", config_name="compute_laser_embeddings", version_base="1.1"
+    config_path="conf", config_name="speech_laser_embeddings", version_base="1.1"
 )
 def main(config: LaserEmbeddingConfig) -> None:
-    asyncio.run(compute_laser_embeddings(config))
+    asyncio.run(speech_laser_embeddings(config))
 
 
 if __name__ == "__main__":

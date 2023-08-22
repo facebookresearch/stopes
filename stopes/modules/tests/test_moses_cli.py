@@ -18,7 +18,7 @@ from stopes.pipelines.tests import test_configs
 CLEAN_SENTENCE = "'the quick brown fox jumps over the lazy & dog'"
 
 
-def test_moses_cli_module(tmp_path: Path):
+def test_moses_cli_module(tmp_path: Path) -> None:
 
     input_dir = tmp_path / "data"
     output_dir = tmp_path / "output"
@@ -33,7 +33,7 @@ def test_moses_cli_module(tmp_path: Path):
         print(CLEAN_SENTENCE.replace("&", "&amp;"), file=f)
         print(CLEAN_SENTENCE.upper(), file=f)
 
-    mod: MosesPreprocessModule = test_configs.instantiate_conf(
+    mod: MosesPreprocessModule = test_configs.instantiate_module(  # type: ignore[assignment]
         test_configs.CONF / "moses" / "standard_conf.yaml",
         "moses.lang=en",
         f"moses.shards=[{input_file}]",

@@ -84,7 +84,7 @@ def load_nllb_model(
 def load_bilingual_model(
     checkpoint: Path,
     data_dir: Path,
-    spm: str,
+    spm: Path,
     **kwargs,
 ) -> FairseqTransformerHub:
     """Loading an ALTI hub for a bilingual Fairseq translation model."""
@@ -95,7 +95,7 @@ def load_bilingual_model(
         checkpoint_file=checkpoint_filename,
         data_name_or_path=str(data_dir),
         bpe="sentencepiece",
-        sentencepiece_model=spm,
+        sentencepiece_model=str(spm),
         **kwargs,
     )
     return alti_hub

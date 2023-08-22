@@ -275,6 +275,13 @@ def load_distances_and_compute_average_single_file(
     # Normalization
     # dists = 2.0 - dists may cause OOM error for temp allocations
     # performing in-place operation dists = 2 - dists instead
+
+    # `extracted_dists` contains L2^2 distances, and all vectors are normalized.
+    # Under these assumptions, the correct formula for cosine is
+    # cosine = (2 - L2^2) / 2, however the implementation below is
+    # cosine = 2 - L2^2, (without the divisor). This doesn't affect the ranking
+    # but absolute values don't correspond to cosine similarity, in particular
+    # they are not in the range [0, 1].
     np.negative(extracted_dists, out=extracted_dists)
     np.add(extracted_dists, 2, out=extracted_dists)
     # And the same normalization for avg, as needed for neighbors score formula downstream
@@ -324,13 +331,14 @@ def build_neighbors_single_file(
     sort_neighbors: bool = False,
 ):
     # load indices of k_extract columns
-    tmp = np.load(path_ind1, mmap_mode="r")
+    ind1 = np.load(path_ind1, mmap_mode="r")
 
     # when we request more neighbors than there are entries in the index,
     # FAISS returns -1. This can happen with very low resource languages
     # TODO: trim k directly when this happens
-    ind1 = tmp.copy()
-    ind1[ind1 == INVALID_INDEX_VALUE] = INVALID_INDEX_REPLACEMENT
+    if len(ind1[ind1 == INVALID_INDEX_VALUE]) > 0:
+        ind1 = ind1.copy()
+        ind1[ind1 == INVALID_INDEX_VALUE] = INVALID_INDEX_REPLACEMENT
 
     avg_dist = (
         avg1[pos : pos + len(ind1)].reshape(-1, 1) + avg2[ind1]

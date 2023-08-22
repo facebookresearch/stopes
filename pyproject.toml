@@ -11,9 +11,11 @@ dynamic = ["version", "description"]
 
 dependencies = [
   "hydra-core>=1.2.0",
+  "joblib",
   "submitit>=1.4.5",
   "tqdm",
   "joblib",
+  "posix_ipc",
 ]
 # zip_safe = false
 classifiers=[
@@ -36,11 +38,15 @@ classifiers=[
     "sentencepiece",
     "indic-nlp-library",
     "emoji",
+    "pythainlp",
+    "botok",
+    "khmer-nltk",
+    "laonlp",
   ]
   mining = [
     "requests",
     "fairscale",
-#    "fairseq==0.12.1",
+   # "fairseq==0.12.1",
     "faiss-cpu",
     "sentencepiece",
     "numpy>=1.21",
@@ -48,8 +54,21 @@ classifiers=[
   mining_gpu = [
     "faiss-gpu",
   ]
-  speech_mining = [
+  speech = [
+    "hanziconv",
+    "inflect",
+    "tnkeeh",
     "torchaudio",
+    "num2words",
+    "pandas",
+    "unidecode",
+    "transformers",
+    "encodec",
+    "demucs",
+  ]
+  sonar_mining = [
+    "sonar==0.1.0",
+    "fairseq2==0.1",
   ]
   dev = [
       # Test
@@ -59,10 +78,12 @@ classifiers=[
       "coverage[toml]>=5.1",
       # Format
       "black==22.3.0",
-      "isort>=5.10.1",
+      "isort>=5.12.0",
       # Linters
-      "mypy>=0.782",
+      "mypy>=1.1.1",
       "types-emoji",
+      "types-requests",
+      "types-PyYAML",
       "pylint>=2.8.0",
       # Release
       "flit>=3.5.1"
@@ -77,7 +98,7 @@ classifiers=[
     "xxhash",
   ]
   blaser = [
-    "spicy",
+    "scipy",
     "numpy",
     "torch",
   ]
@@ -95,12 +116,15 @@ classifiers=[
 [tool.isort]
 profile = "black"
 skip_gitignore = true
-skip_glob = ["website/*", "*.pyx"]
+skip_glob = ["website/*", "*.pyx", 'ust/*']
 
 [tool.mypy]
 python_version = "3.8"
 show_error_codes = true
 check_untyped_defs = true
+ignore_missing_imports = true
+implicit_optional = true
+implicit_reexport = true
 
 files = [
   "stopes/"
@@ -120,8 +144,6 @@ module = [
   "wandb",
   "xxhash",
 ]
-ignore_missing_imports = true
-
 
 [tool.pytest.ini_options]
 minversion = "6.0"

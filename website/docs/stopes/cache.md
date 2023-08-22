@@ -11,7 +11,9 @@ The cache is indexed on the configuration of the module, so if you change
 anything in the configuration input, the module will be executed from scratch
 and the new result will be cached with a different key. It's also important to
 remember that all inputs to the module that could change its results (and thus
-the caching) should be specified in the config input.
+the caching) should be specified in the config input. Please note there is one
+ exception to this mechanism: the `timeout_min` key will be ignored for caching
+so changing it won't invalidate the cache.
 
 If you change the code of your module to a point that would change its output,
 you can implement the `version() `method to return a new value so that the cache
@@ -60,3 +62,6 @@ shards.
 
 All this was done automatically. The person launching the pipeline doesn't have
 to micromanage what has already succeeded and what needs to be started when.
+
+Each module can specify the `get_config_for_cache` function in order to
+customize the keys that should be ignored or taken into account for the cache.

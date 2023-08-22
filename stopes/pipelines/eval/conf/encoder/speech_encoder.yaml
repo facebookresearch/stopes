@@ -5,7 +5,7 @@ encoder_model: ???
 spm_model: null
 spm_vocab: null
 max_sentences: null
-max_tokens: 12_000
+max_tokens: 1_280_000
 stable_sort: False
 normalize: False
 fp16: True

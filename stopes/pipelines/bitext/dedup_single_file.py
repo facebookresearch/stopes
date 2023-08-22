@@ -57,10 +57,7 @@ async def launch_dedup(
     return Path(deduped_file)
 
 
-async def dedup_single_file(config: DedupConfig):
-    # get a launcher as per the config
-    launcher = hydra.utils.instantiate(config.launcher)
-
+async def dedup_single_file(config: DedupConfig, launcher: Launcher) -> None:
     OmegaConf.save(
         config=config,
         f=str(Path(launcher.config_dump_dir) / "dedup_single_file.yaml"),
@@ -79,7 +76,8 @@ async def dedup_single_file(config: DedupConfig):
 
 @hydra.main(config_path="conf", config_name="dedup_single_file")
 def main(config: DedupConfig) -> None:
-    asyncio.run(dedup_single_file(config))
+    launcher: Launcher = hydra.utils.instantiate(config.launcher)  # type: ignore
+    asyncio.run(dedup_single_file(config, launcher))
 
 
 if __name__ == "__main__":

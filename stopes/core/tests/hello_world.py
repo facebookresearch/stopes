@@ -7,7 +7,7 @@
 import logging
 import time
 import typing as tp
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from omegaconf.omegaconf import MISSING, OmegaConf
 
@@ -20,14 +20,8 @@ class HelloWorldConfig:
     greet: str = "hello"
     person: str = "world"
     duration: tp.Optional[float] = 0.1
-
-
-class HelloWorldModule(StopesModule):
-    def __init__(self, config):
-        super().__init__(config, HelloWorldConfig)
-
-    def requirements(self):
-        return Requirements(
+    requirements: Requirements = field(
+        default=Requirements(
             nodes=1,
             mem_gb=10,
             tasks_per_node=1,
@@ -35,6 +29,15 @@ class HelloWorldModule(StopesModule):
             cpus_per_task=1,
             timeout_min=60,
         )
+    )
+
+
+class HelloWorldModule(StopesModule):
+    def __init__(self, config):
+        super().__init__(config, HelloWorldConfig)
+
+    def requirements(self):
+        return self.config.requirements
 
     def run(
         self,

@@ -68,86 +68,128 @@ default_spm: ${model_dir}/laser2.spm
 default_vocab: ${model_dir}/laser2.cvocab
 lang_configs:
   amh:
-    encoder_model: ${model_dir}/laser3-amh.v1.pt
-    spm_model: ${model_dir}/laser3-amh.v1.spm
-    spm_vocab: ${model_dir}/laser3-amh.v1.cvocab
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-amh.v1.pt
+        spm_model: ${model_dir}/laser3-amh.v1.spm
+        spm_vocab: ${model_dir}/laser3-amh.v1.cvocab
   fuv:
-    encoder_model: ${model_dir}/laser3-fuv.v1.pt
-    spm_model: ${model_dir}/laser3-fuv.v1.spm
-    spm_vocab: ${model_dir}/laser3-fuv.v1.cvocab
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-fuv.v1.pt
+        spm_model: ${model_dir}/laser3-fuv.v1.spm
+        spm_vocab: ${model_dir}/laser3-fuv.v1.cvocab
   hau:
-    encoder_model: ${model_dir}/laser3-hau.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-hau.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   ibo:
-    encoder_model: ${model_dir}/laser3-ibo.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-ibo.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   kam:
-    encoder_model: ${model_dir}/laser3-kam.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-kam.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   lin:
-    encoder_model: ${model_dir}/laser3-lin.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-lin.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   lug:
-    encoder_model: ${model_dir}/laser3-lug.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-lug.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   luo:
-    encoder_model: ${model_dir}/laser3-luo.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-luo.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   nso:
-    encoder_model: ${model_dir}/laser3-nso.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-nso.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   nya:
-    encoder_model: ${model_dir}/laser3-nya.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-nya.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   orm:
-    encoder_model: ${model_dir}/laser3-orm.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-orm.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   sna:
-    encoder_model: ${model_dir}/laser3-sna.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-sna.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   ssw:
-    encoder_model: ${model_dir}/laser3-ssw.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-ssw.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   swh:
-    encoder_model: ${model_dir}/laser3-swh.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-swh.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   tsn:
-    encoder_model: ${model_dir}/laser3-tsn.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-tsn.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   tso:
-    encoder_model: ${model_dir}/laser3-tso.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-tso.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   umb:
-    encoder_model: ${model_dir}/laser3-umb.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-umb.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   wol:
-    encoder_model: ${model_dir}/laser3-wol.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-wol.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   xho:
-    encoder_model: ${model_dir}/laser3-xho.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-xho.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   yor:
-    encoder_model: ${model_dir}/laser3-yor.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-yor.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}
   zul:
-    encoder_model: ${model_dir}/laser3-zul.v1.pt
-    spm_model: ${default_spm}
-    spm_vocab: ${default_vocab}
+    embed_text:
+      encoder:
+        encoder_model: ${model_dir}/laser3-zul.v1.pt
+        spm_model: ${default_spm}
+        spm_vocab: ${default_vocab}

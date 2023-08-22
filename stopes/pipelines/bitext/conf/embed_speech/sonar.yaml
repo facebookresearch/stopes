@@ -1,0 +1,6 @@
+defaults:
+  - /embed_text/preproc_and_encode@_here_
+  - encoder: sonar2_speech_encoder
+  - _self_
+
+preprocess: null

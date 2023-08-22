@@ -53,7 +53,7 @@ class MosesPreprocessModule(stopes_module.StopesModule):
     def array(self):
         return self.config.shards
 
-    def requirements(self):
+    def requirements(self) -> stopes_module.Requirements:
         return stopes_module.Requirements(
             nodes=1,
             tasks_per_node=1,

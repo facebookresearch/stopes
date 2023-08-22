@@ -1,0 +1,8 @@
+defaults:
+  - encode@_here_
+  - encoder: sonar_encoder
+
+# proper config structure
+
+encoder:
+  _name: ${name}

@@ -6,6 +6,7 @@
 
 import os
 import typing as tp
+from pathlib import Path
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -23,10 +24,9 @@ class HFTextEncoder(EncodeToNPY):
 
     def __init__(
         self,
-        encoder_model: str,
+        _name: str,
         input_file: str,
-        _name: str = "hf",
-        output_dir: str = ".",
+        output_dir: Path = Path("."),
         input_file_idx: int = 0,
         outfile_prefix: str = "encf",
         outfile_postfix: str = "",
@@ -45,7 +45,7 @@ class HFTextEncoder(EncodeToNPY):
             normalize=normalize,
             fp16=fp16,
         )
-        self.model = SentenceTransformer(encoder_model)
+        self.model = SentenceTransformer(_name)
 
     def name_output_file(self) -> str:
         shard_idx = extract_shard_id(self.input_file, default=self.input_file_idx)

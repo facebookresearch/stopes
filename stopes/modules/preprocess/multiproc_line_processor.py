@@ -4,8 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-
-import multiprocessing
 import os
 import random
 import shlex
@@ -19,7 +17,6 @@ from functools import partial
 from pathlib import Path
 
 import hydra
-from fairseq.file_chunker_utils import Chunker, find_offsets
 from joblib import Parallel, delayed
 from omegaconf import MISSING, DictConfig
 
@@ -29,6 +26,7 @@ from stopes.modules.preprocess.line_processor import (
     LineProcessorCallback,
     LineProcessorConfig,
 )
+from stopes.utils.file_chunker_utils import Chunker, find_offsets
 
 
 class MultiprocLineProcessorCallback(LineProcessorCallback):

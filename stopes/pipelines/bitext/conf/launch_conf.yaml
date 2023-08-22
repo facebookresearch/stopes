@@ -1,4 +1,10 @@
 defaults:
   - launcher: submitit
+  - _self_
 
 dry_run: false
+
+hydra:
+  searchpath:
+    # TODO: Replace with the public config store of stopes hub
+    - file:///large_experiments/seamless/hub/conf/

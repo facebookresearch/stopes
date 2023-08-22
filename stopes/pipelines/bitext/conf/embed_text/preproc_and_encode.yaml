@@ -1,11 +1,10 @@
 _target_: stopes.modules.preprocess.preprocess_encode_module.PreprocessEncodeModule
 
 defaults:
-  - config: standard_conf
-  - config/preprocess: moses
+  - encode@_here_
+  - /moses/standard_conf@preprocess
 
-config:
-  preprocess:
-    output_dir: ${..output_dir}/moses_preprocess
-    shards: ${..shards}
-    lang: ${..lang}
+preprocess:
+  output_dir: ${..output_dir}/moses_preprocess
+  shards: ${..shards}
+  lang: ${..lang}

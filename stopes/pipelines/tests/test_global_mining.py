@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import functools
 import typing as tp
 from pathlib import Path
 
@@ -14,7 +15,8 @@ from omegaconf import OmegaConf
 
 from stopes.core import utils
 from stopes.modules.preprocess.encode_to_npy import EncodeToNPY
-from stopes.pipelines.bitext.global_mining_pipeline import main as mining_main
+from stopes.pipelines.bitext import global_mining_pipeline
+from stopes.utils.embedding_utils import NpMatrix, NpVector
 from stopes.utils.mining_utils import extract_shard_id
 
 DIGIT_NAMES = {
@@ -35,7 +37,7 @@ def create_digits(
     n_max: int = 1000,
     suffix: str = "",
     use_meta: bool = True,
-):
+) -> None:
     """Create a file with n text representations of digits and a corresponding meta file."""
     with open(dir / f"{lang}{suffix}_text.tsv", "w") as data_file:
         for i in range(n_min, n_max):
@@ -60,16 +62,15 @@ def text2number(text: str) -> int:
     return int("".join(str(word2digit(w)) for w in text.split()))
 
 
-def digits2vec(text: str, dim: int = 1024) -> np.ndarray:
+def digits2vec(text: str, dim: int = 1024) -> NpVector:
     """Convert a text (e.g. "one three") to a number (e.g. 13) and then to the vector of its bits (e.g. [1,1,0,1])."""
     number = text2number(text) + 1  # to make sure the norm of the result is > 0
     b = format(number, "b").zfill(dim)
     return np.asarray([int(i) for i in b], dtype=np.float32)
 
 
-def test_digits2vec():
-    def asarr(arr):
-        return np.asarray(arr, dtype=np.float32)
+def test_digits2vec() -> None:
+    asarr = functools.partial(np.asarray, dtype=np.float32)
 
     assert np.array_equal(digits2vec("deux", 4), asarr([0, 0, 1, 1]))
     assert np.array_equal(digits2vec("un cinq", 6), asarr([0, 1, 0, 0, 0, 0]))
@@ -83,7 +84,7 @@ class ToyNumbersEncoder(EncodeToNPY):
         encoder_model: str,
         input_file: str,
         _name: str = "test_numbers_vectorizer",
-        output_dir: str = ".",
+        output_dir: Path = Path("."),
         input_file_idx: int = 0,
         outfile_prefix: str = "encf",
         outfile_postfix: str = "",
@@ -92,7 +93,7 @@ class ToyNumbersEncoder(EncodeToNPY):
         # ignored
         spm_vocab: str = "",
         spm_model: str = "",
-        **ignored_kwargs,
+        **ignored_kwargs: tp.Any,
     ) -> None:
         super().__init__(
             outfile_prefix=outfile_prefix,
@@ -115,18 +116,22 @@ class ToyNumbersEncoder(EncodeToNPY):
 
     def encode_to_np(
         self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]
-    ) -> np.ndarray:
+    ) -> NpMatrix:
         return np.stack([digits2vec(s) for (_, s) in lines_with_number])
 
 
 @pytest.mark.parametrize("split_langs", [True, False])
-@pytest.mark.parametrize(
-    "use_meta", [True, False]
-)  # when we split langs, different code branches merge them with and without meta files
+@pytest.mark.parametrize("use_meta", [True, False])
 @pytest.mark.parametrize("fp16", [True, False])
 def test_global_mining_pipeline(
     tmp_path: Path, split_langs: bool, use_meta: bool, fp16: bool
-):
+) -> None:
+    """
+    Test the mining pipeline with different settings.
+
+    In particular, when we split langs,
+    MergeShardsModule has a different behavior with and without meta files.
+    """
     n = 1000
 
     # prepare the test directories
@@ -183,7 +188,7 @@ def test_global_mining_pipeline(
         f"launcher.log_folder={tmp_path}/logs",
         f"local_tmp_dir={tmp_dir}",
         # fp16 flags
-        f"embed_text.config.encoder.fp16={fp16}",
+        f"embed_text.encoder.fp16={fp16}",
         f"train_index.config.fp16={fp16}",
         f"+populate_index.config.fp16={fp16}",
         f"+calculate_distances.config.fp16={fp16}",
@@ -201,7 +206,7 @@ def test_global_mining_pipeline(
     print(OmegaConf.to_yaml(cfg.embed_text))
     print("demo dir is", str(demo_dir))
     print("result is", str(output_dir))
-    out_texts_path, out_meta_path = mining_main(cfg)
+    out_texts_path, out_meta_path = global_mining_pipeline.main(cfg)
     print("out texts are", out_texts_path, out_meta_path)
 
     with utils.open(out_texts_path, "r") as f:

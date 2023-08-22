@@ -193,11 +193,6 @@ class NMTBitextEval:
             logger.info(f"\t - {str(dir)}")
 
 
-OmegaConf.register_new_resolver(
-    "config_sha", stopes.core.utils.config_sha, replace=True
-)
-
-
 @hydra.main(config_path="conf", config_name="nmt_bitext_eval")
 def main(config: NMTBitextEvalConfig) -> None:
     pipeline = NMTBitextEval(config)
