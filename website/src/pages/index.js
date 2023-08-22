@@ -53,12 +53,12 @@ const features = [
     description: (
       <>
         <Stopes /> was developed as part of the Meta AI No Language Left Behind research project.
-        It comes with state-of-the-art pipelines out of the box. You can run our global mining and distillation
+        It comes with state-of-the-art pipelines out of the box. You can run our multimodal mining and distillation
         pipelines and reproduce our research with just a few command lines.
       </>
     ),
     buttonTxt: "E.g. Start Data Mining",
-    buttonUrl: 'docs/pipelines/global_mining',
+    buttonUrl: 'docs/pipelines/speech_mining',
     imageUrl: 'img/pipelines.svg',
   },
 ];
@@ -265,7 +265,14 @@ function Banner() {
               'button button--secondary button--lg',
             )}
             to={useBaseUrl('docs/quickstart')}>
-            Mining Quickstart
+            Text Mining Quickstart
+          </Link>
+          <Link
+            className={clsx(
+              'button button--secondary button--lg',
+            )}
+            to={useBaseUrl('docs/pipelines/speech_mining')}>
+            Multimodal Mining
           </Link>
         </div>
         <div className="banner-meta" >

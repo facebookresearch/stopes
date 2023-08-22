@@ -54,6 +54,10 @@ The important parts of that preset config is:
    if you are only processing a few languages, you don't need so many entries,
    here we preset them for all languages from the WMT22 task
 
+## Speech Mining
+
+If you are interested in [SONAR](https://github.com/facebookresearch/SONAR) multimodal mining, check the [Speech Mining](https://facebookresearch.github.io/stopes/docs/pipelines/speech_mining) page for documentation.
+
 :::tip
 
 Language codes are important, but not standardized everywhere. The `stopes` library does not make any assumptions to what codes you are using. As you will see in the configuration and the prepare script, codes are mostly important in naming data input files. If you want to use a different coding scheme, make sure that the files and config use the same naming conventions.

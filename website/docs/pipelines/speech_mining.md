@@ -43,7 +43,7 @@ lang_configs:
       shard_glob: ${.data_shard_dir}/speech/*.ogg
       nl_file_template: "{lang}.nl"
 
-    embed_text:
+    embed_speech:
       preprocess: null
       encoder:
         _target_: stopes.modules.preprocess.mining_speech_encoder.Sonar2MiningSpeechEncoder
