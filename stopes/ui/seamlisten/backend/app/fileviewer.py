@@ -177,19 +177,16 @@ def gather_folder_contents(folder_path, max_depth=5):
         subfolders = []
         audio_files = []
 
-        for entry in os.listdir(folder_path):
-            entry_path = os.path.join(folder_path, entry)
-            if os.path.isdir(entry_path):
-                subfolders.append(
-                    gather_contents_recursive(entry_path, current_depth + 1)
-                )
-            elif entry.endswith((".wav", ".ms")):
-                audio_files.append(entry)
+        for entry in folder_path.iterdir():
+            if entry.is_dir():
+                subfolders.append(gather_contents_recursive(entry, current_depth + 1))
+            elif entry.suffix in {".wav", ".ms"}:
+                audio_files.append(entry.name)
 
         return {
-            "folder": folder_path,
+            "folder": str(folder_path),
             "subfolders": subfolders,
             "audio_files": audio_files,
         }
 
-    return gather_contents_recursive(folder_path, 1)
+    return gather_contents_recursive(Path(folder_path), 1)
