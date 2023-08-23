@@ -12,8 +12,8 @@ class Dataset:
     reference_tsv_column: str
     results_dirpath: str
     transcripts_path: str
+    asr_version: str
     audio_format: str = "n_pred.wav"
-    asr_version: str = "oct22"
 
 
 @dataclass
