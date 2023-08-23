@@ -89,6 +89,7 @@ classifiers=[
     # fairseq is also a dependency, but it must be installed separately
   ]
   asr_bleu = [
+    "openai-whisper"
     "pandas",
     "sacrebleu==2.2.0"
     "torch"

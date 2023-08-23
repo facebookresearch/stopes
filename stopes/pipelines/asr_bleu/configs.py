@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass
 class Dataset:
     lang: str
+    config_key: str
     audio_dirpath: str
     reference_path: str
     reference_format: str

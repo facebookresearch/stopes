@@ -7,6 +7,7 @@ from pathlib import Path
 import fairseq
 import torch
 from tqdm import tqdm
+import whisper
 
 from stopes.core import utils
 
@@ -32,18 +33,30 @@ class DownloadProgressBar(tqdm):
 
 
 def retrieve_asr_config(
+    config_key: str,
     lang_key: str,
     asr_version: str,
-    json_path: str
+    json_path: str,
 ) -> dict:
-    if len(lang_key) != 3:
-        raise ValueError(
-            f"'{lang_key}' lang key for language type must be 3 characters!"
-        )
-
-    with utils.open(json_path, "r") as f:
+    """
+    Retrieve the asr model configs
+    Args:
+        lang_key: the lanuage type as the key name
+        json_path: the path of the config json file
+    Returns:
+        Dict of all the configs in the json file
+    """
+    with open(json_path, "r") as f:
         asr_model_cfgs = json.load(f)
-    return asr_model_cfgs[lang_key][asr_version]
+    if config_key == "language":
+        return asr_model_cfgs[config_key][lang_key][asr_version]
+    else:
+        cfg = asr_model_cfgs[config_key][asr_version]
+        assert lang_key in cfg["lang"].split(
+            ","
+        ), f"Unsupported language {lang_key} for model {asr_version}"
+        return cfg
+
 
 
 class ASRContainer(object):
@@ -70,10 +83,14 @@ class ASRContainer(object):
 
         torchaudio.set_audio_backend("sox_io")
 
-        if self.model_cfg["model_type"] == "hf":
+        self.model_type = self.model_cfg["model_type"]
+        if self.model_type == "hf":
             self.prepare_hf_model(self.model_cfg)
-        elif self.model_cfg["model_type"] == "fairseq":
+        elif self.model_type == "fairseq":
             self.prepare_fairseq_model(self.model_cfg)
+        elif self.model_type == "whisper":
+            self.prepare_whisper_model(self.model_cfg)
+            return
         else:
             raise NotImplementedError(
                 f"Model type {self.model_cfg['model_type']} is not supported"
@@ -229,3 +246,11 @@ class ASRContainer(object):
 
         self.sampling_rate = saved_cfg.task.sample_rate
         self.normalize_input = saved_cfg.task.normalize
+
+    def prepare_whisper_model(self, model_cfg: dict) -> None:
+        """
+        Prepare the whisper asr model
+        Args:
+            model_cfg: dict with the relevant ASR config
+        """
+        self.model = whisper.load_model(model_cfg["sub_model_type"])

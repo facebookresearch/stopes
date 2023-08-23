@@ -17,6 +17,7 @@ from stopes.pipelines.asr_bleu.utils import ASRContainer, retrieve_asr_config
 @dataclass
 class TranscribeAudioJob:
     eval_manifest: tp.Dict[str, tp.List] = MISSING
+    config_key: str = MISSING
     lang: str = MISSING
     asr_version: str = MISSING
 
@@ -158,6 +159,26 @@ class TranscribeAudio(StopesModule):
             results.append(last_syllable)
         return " ".join(results)
 
+    def _transcribe_audiofile_whisper(
+        self,
+        asr_model,
+        audio_path: str,
+        lower=True
+    ) -> str:
+        """
+        Transcribe the audio into string using whisper model
+
+        Args:
+            audio_path: the input audio waveform
+            lower: the case of the transcriptions with lowercase as the default
+
+        Returns:
+            hypo: the transcription result
+        """
+        hypo = asr_model.model.transcribe(audio_path)["text"].strip()
+        return hypo.lower() if lower else hypo
+
+
     def _transcribe_audiofile(
         self,
         asr_model,
@@ -203,6 +224,7 @@ class TranscribeAudio(StopesModule):
         assert iteration_value is not None, "Iteration value is null"
         self.logger = logging.getLogger("stopes.asr_bleu.transcribe_audio")
         asr_config = retrieve_asr_config(
+            iteration_value.config_key,
             iteration_value.lang,
             iteration_value.asr_version,
             json_path="../../../conf/asr_model/asr_model_cfgs.json"
@@ -217,7 +239,10 @@ class TranscribeAudio(StopesModule):
             total=len(iteration_value.eval_manifest["prediction"]),
         ):
             self.logger.info(f"Transcribing {prediction}")
-            transcription = self._transcribe_audiofile(asr_model, prediction)
+            if "whisper" in iteration_value.asr_version:
+                transcription = self._transcribe_audiofile_whisper(asr_model, prediction)
+            else:
+                transcription = self._transcribe_audiofile(asr_model, prediction)
             prediction_transcripts.append(transcription.lower())
 
         if iteration_value.lang == "hok":
@@ -242,8 +267,9 @@ async def transcribe_audio(
     transcribe_audio_jobs = [
         TranscribeAudioJob(
             eval_manifest=retrieved_dataset[0],
-            lang=retrieved_dataset[1],
-            asr_version=retrieved_dataset[2]
+            config_key=retrieved_dataset[1],
+            lang=retrieved_dataset[2],
+            asr_version=retrieved_dataset[3]
         ) for retrieved_dataset in retrieved_data
     ]
     transcribe_audio_module = TranscribeAudio(

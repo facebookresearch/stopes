@@ -20,6 +20,7 @@ class RetrieveDataJob:
     audio_format: str = MISSING
     reference_format: str = MISSING
     reference_tsv_column: tp.Optional[str] = None
+    config_key: str = MISSING
     lang: str = MISSING
     asr_version: str = MISSING
 
@@ -142,6 +143,7 @@ class RetrieveData(StopesModule):
 
         return (
             eval_manifest,
+            iteration_value.config_key,
             iteration_value.lang,
             iteration_value.asr_version
         )
@@ -153,7 +155,7 @@ async def retrieve_data(
 ) -> tp.List[tp.Tuple[tp.Dict[str, tp.List], str, str]]:
     """
     Retrieve data for transcription
-    Returns a list of 3 tuples: (eval_manifest, lang, asr_version)
+    Returns a list of 4 tuples: (eval_manifest, config_key, lang, asr_version)
     """
     datasets = corpora_conf.datasets
     retrieve_data_jobs = [
@@ -163,6 +165,7 @@ async def retrieve_data(
             audio_format=datasets[corpus].audio_format,
             reference_format=datasets[corpus].reference_format,
             reference_tsv_column=datasets[corpus].reference_tsv_column,
+            config_key=datasets[corpus].config_key,
             lang=datasets[corpus].lang,
             asr_version=datasets[corpus].asr_version,
         ) for corpus in datasets
