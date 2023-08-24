@@ -208,19 +208,19 @@
             "desc": "Whisper large V1 multilingual model",
             "model_type": "whisper",
             "sub_model_type": "large-v1",
-            "lang": "eng,cmn,deu,spa,rus,ko,fra,jpn,pt,tr,pl,ca,nl,ar,sv,it,id,hi,fi,vi,he,uk,el,ms,cs,ro,da,hu,ta,no,th,ur,hr,bg,lt,la,mi,ml,cy,sk,te,fa,lv,bn,sr,az,sl,kn,et,mk,br,eu,is,hy,ne,mn,bs,kk,sq,sw,gl,mr,pa,si,km,sn,yo,so,af,oc,ka,be,tg,sd,gu,am,yi,lo,uz,fo,ht,ps,tk,nn,mt,sa,lb,my,bo,tl,mg,as,tt,haw,ln,ha,ba,jw,su"
+            "lang": "eng,cmn,deu,spa,rus,kor,fra,jpn,por,tur,pol,cat,nld,arb,swe,ita,ind,hin,fin,vie,heb,ukr,gre,ell,may,msa,cze,ces,rum,ron,dan,hun,tam,nor,tha,urd,hrv,bul,lit,lat,mao,mri,mal,wel,cym,slo,slk,tel,per,fas,lav,ben,srp,aze,slv,kan,est,mac,mkd,bre,baq,eus,ice,isl,arm,hye,nep,mon,bos,kaz,alb,sqi,swa,glg,mar,pan,sin,khm,sna,yor,som,afr,oci,geo,kat,bel,tgk,snd,guj,amh,yid,lao,uzb,fao,hat,pus,tuk,nno,mlt,san,ltz,bur,mya,tib,bod,tgl,mlg,asm,tat,haw,lin,hau,bak,jav,sun"
         },
         "whisper_large_v2":{
             "desc": "Whisper large V2 multilingual model",
             "model_type": "whisper",
             "sub_model_type": "large-v2",
-            "lang": "eng,cmn,deu,spa,rus,ko,fra,jpn,pt,tr,pl,ca,nl,ar,sv,it,id,hi,fi,vi,he,uk,el,ms,cs,ro,da,hu,ta,no,th,ur,hr,bg,lt,la,mi,ml,cy,sk,te,fa,lv,bn,sr,az,sl,kn,et,mk,br,eu,is,hy,ne,mn,bs,kk,sq,sw,gl,mr,pa,si,km,sn,yo,so,af,oc,ka,be,tg,sd,gu,am,yi,lo,uz,fo,ht,ps,tk,nn,mt,sa,lb,my,bo,tl,mg,as,tt,haw,ln,ha,ba,jw,su"
+            "lang": "eng,cmn,deu,spa,rus,kor,fra,jpn,por,tur,pol,cat,nld,arb,swe,ita,ind,hin,fin,vie,heb,ukr,gre,ell,may,msa,cze,ces,rum,ron,dan,hun,tam,nor,tha,urd,hrv,bul,lit,lat,mao,mri,mal,wel,cym,slo,slk,tel,per,fas,lav,ben,srp,aze,slv,kan,est,mac,mkd,bre,baq,eus,ice,isl,arm,hye,nep,mon,bos,kaz,alb,sqi,swa,glg,mar,pan,sin,khm,sna,yor,som,afr,oci,geo,kat,bel,tgk,snd,guj,amh,yid,lao,uzb,fao,hat,pus,tuk,nno,mlt,san,ltz,bur,mya,tib,bod,tgl,mlg,asm,tat,haw,lin,hau,bak,jav,sun"
         },
         "whisper_base": {   
             "desc": "Whisper base multilingual model",
             "model_type": "whisper",
             "sub_model_type": "base",
-            "lang": "eng,cmn,deu,spa,rus,ko,fra,jpn,pt,tr,pl,ca,nl,ar,sv,it,id,hi,fi,vi,he,uk,el,ms,cs,ro,da,hu,ta,no,th,ur,hr,bg,lt,la,mi,ml,cy,sk,te,fa,lv,bn,sr,az,sl,kn,et,mk,br,eu,is,hy,ne,mn,bs,kk,sq,sw,gl,mr,pa,si,km,sn,yo,so,af,oc,ka,be,tg,sd,gu,am,yi,lo,uz,fo,ht,ps,tk,nn,mt,sa,lb,my,bo,tl,mg,as,tt,haw,ln,ha,ba,jw,su"
+            "lang": "eng,cmn,deu,spa,rus,kor,fra,jpn,por,tur,pol,cat,nld,arb,swe,ita,ind,hin,fin,vie,heb,ukr,gre,ell,may,msa,cze,ces,rum,ron,dan,hun,tam,nor,tha,urd,hrv,bul,lit,lat,mao,mri,mal,wel,cym,slo,slk,tel,per,fas,lav,ben,srp,aze,slv,kan,est,mac,mkd,bre,baq,eus,ice,isl,arm,hye,nep,mon,bos,kaz,alb,sqi,swa,glg,mar,pan,sin,khm,sna,yor,som,afr,oci,geo,kat,bel,tgk,snd,guj,amh,yid,lao,uzb,fao,hat,pus,tuk,nno,mlt,san,ltz,bur,mya,tib,bod,tgl,mlg,asm,tat,haw,lin,hau,bak,jav,sun"
         }
     }    
 }
