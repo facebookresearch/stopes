@@ -1,12 +1,12 @@
-import os
 import logging
+import os
 import typing as tp
-import pandas as pd
 from dataclasses import dataclass
-from pathlib import Path
 from glob import glob
-from omegaconf.omegaconf import MISSING
+from pathlib import Path
 
+import pandas as pd
+from omegaconf.omegaconf import MISSING
 from stopes.core import utils
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule

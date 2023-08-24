@@ -1,17 +1,16 @@
-import torch
-import typing as tp
-import torchaudio
-import fairseq
 import logging
-from tqdm import tqdm
+import typing as tp
 from dataclasses import dataclass
 
+import fairseq
+import torch
+import torchaudio
 from fairseq.data.data_utils import lengths_to_padding_mask
 from omegaconf.omegaconf import MISSING
-
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.pipelines.asr_bleu.utils import ASRContainer, retrieve_asr_config
+from tqdm import tqdm
 
 
 @dataclass
@@ -178,7 +177,6 @@ class TranscribeAudio(StopesModule):
         hypo = asr_model.model.transcribe(audio_path)["text"].strip()
         return hypo.lower() if lower else hypo
 
-
     def _transcribe_audiofile(
         self,
         asr_model,
@@ -240,9 +238,15 @@ class TranscribeAudio(StopesModule):
         ):
             self.logger.info(f"Transcribing {prediction}")
             if "whisper" in iteration_value.asr_version:
-                transcription = self._transcribe_audiofile_whisper(asr_model, prediction)
+                transcription = self._transcribe_audiofile_whisper(
+                    asr_model,
+                    prediction,
+                )
             else:
-                transcription = self._transcribe_audiofile(asr_model, prediction)
+                transcription = self._transcribe_audiofile(
+                    asr_model,
+                    prediction,
+                )
             prediction_transcripts.append(transcription.lower())
 
         if iteration_value.lang == "hok":

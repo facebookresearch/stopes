@@ -1,9 +1,9 @@
 import logging
-import sacrebleu
 import typing as tp
 from dataclasses import dataclass
-from omegaconf.omegaconf import MISSING
 
+import sacrebleu
+from omegaconf.omegaconf import MISSING
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
 

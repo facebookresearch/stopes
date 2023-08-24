@@ -1,15 +1,14 @@
 import json
-import re
 import logging
+import re
 import urllib.request
 from pathlib import Path
 
 import fairseq
 import torch
-from tqdm import tqdm
 import whisper
-
 from stopes.core import utils
+from tqdm import tqdm
 
 try:
     import torchaudio
@@ -56,7 +55,6 @@ def retrieve_asr_config(
             ","
         ), f"Unsupported language {lang_key} for model {asr_version}"
         return cfg
-
 
 
 class ASRContainer(object):

@@ -1,15 +1,14 @@
 import asyncio
 import logging
-
-from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
-from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audio
-from stopes.pipelines.asr_bleu.retrieve_data import retrieve_data
-from stopes.pipelines.asr_bleu.compute_bleu_scores import compute_bleu_scores
-from stopes.core import utils
-
 from pathlib import Path
+
 import hydra
 from omegaconf import OmegaConf
+from stopes.core import utils
+from stopes.pipelines.asr_bleu.compute_bleu_scores import compute_bleu_scores
+from stopes.pipelines.asr_bleu.configs import AsrBleuConfig
+from stopes.pipelines.asr_bleu.retrieve_data import retrieve_data
+from stopes.pipelines.asr_bleu.transcribe_audio import transcribe_audio
 
 logger = logging.getLogger("asr_bleu")
 
