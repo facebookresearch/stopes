@@ -12,6 +12,7 @@ import "../../common/components/table/table.css";
 import LineSelector from "./table/LinesSelector";
 import Pagination from "./table/Pagination";
 import { Row } from "./table/Row";
+import DownloadButton from "../DownloadButton";
 
 type TableProps = {
   items: LineResult[];
@@ -103,6 +104,7 @@ function Table({
                   Column {cell_item_index + 1}
                 </th>
               ))}
+              <th>Action</th>
             </tr>
           </thead>
           <tbody ref={tbodyRef}>
