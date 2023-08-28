@@ -11,13 +11,13 @@ With the [Seamless Communication project](https://github.com/facebookresearch/se
 Speech mining requires the installation of [fairseq2](https://github.com/facebookresearch/fairseq2) and [SONAR](https://github.com/facebookresearch/SONAR). You can install these with:
 
 ```
-pip install 'stopes[speech,mining,speech_mining]'
+pip install 'stopes[speech,mining,speech_mining,sonar_mining]'
 ```
 
 or if you are installing a local checkout of this repository:
 
 ```
-pip install '.[speech,mining,speech_mining]'
+pip install '.[speech,mining,speech_mining,sonar_mining]'
 ```
 
 If fairseq2 does not provide a build for your hardware, see the installation instructions in the fairseq2 documentation to build the package for your own machine.

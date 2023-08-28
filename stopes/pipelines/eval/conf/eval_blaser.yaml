@@ -1,13 +1,10 @@
 defaults:
   - launcher: submitit
-  # TODO this is just for testing
-  - blaser_model: fb_fair
   - _self_
 
 output_dir: ???
 use_gpu: true
 batch_size: 16
-
 
 src_manifest: ???
 tgt_manifest: ???
@@ -21,6 +18,11 @@ ref_lang: ${tgt_lang}
 checkpoint_dir: ???
 
 max_tokens: 2_560_000
+
+blaser_model:
+  # use a preset and composition for this
+  model_checkpoint: ???
+  config_file: ???
 
 checkpoints:
   en: english.pt

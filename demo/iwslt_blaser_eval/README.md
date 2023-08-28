@@ -16,10 +16,11 @@ conda activate blaser
 python -m pip install --upgrade pip
 
 # install fairseq
-pip install fairseq==0.12.1
+pip install fairseq==0.12.2
+# clone this repository, then
 
 # install stopes+blaser
-pip install 'stopes[blaser]'
+pip install '.[blaser]'
 ```
 
 # Using BLASER
@@ -36,7 +37,7 @@ IWSLT'23 provides some test data, we'll also need the LASER encoders for the lan
 ./prepare.sh
 ```
 
-The script will have down three things:
+The script will have down a few things:
 
 - download the English eval data into data/en
 - download the English and Mandarin encoders in encoders/ (this will take a while as they are big)
@@ -59,14 +60,14 @@ Most of the config is already preset in `conf/eval_blaser.yaml`, please see the 
 file if you need to adjust anything. After that you can run the following command:
 
 ```bash
-DEMO_DIR=<PATH_TO_IWSLT_EVALDIRECTORY> python -m stopes.pipelines.eval.eval_blaser --config-dir $DEMO_DIR/conf tgt_manifest=<PATH_TARGET_MANIFEST.tsv> ref_manifest=<PATH_REFERENCE_MANIFEST.tsv>
+DEMO_DIR=<PATH_TO_IWSLT_EVALDIRECTORY> python -m stopes.pipelines.eval.eval_blaser --config-path $DEMO_DIR/conf tgt_manifest=<PATH_TARGET_MANIFEST.tsv> ref_manifest=<PATH_REFERENCE_MANIFEST.tsv>
 ```
 
 Make sure to replace:
 
 - `PATH_TO_IWSLT_EVALDIRECTORY` to the directory where you've run prepare.sh and downloaded everything
 - `PATH_TARGET_MANIFEST.tsv` to the manifest you've generated for the translation files
-- `PATH_REFERENCE_MANIFEST.tsv` to the manifest you've generated for the reference translations
+- `PATH_REFERENCE_MANIFEST.tsv` to the manifest you've generated with `prepare.sh` for the reference translations
 
 
 ## Citation

@@ -6,6 +6,9 @@ In this folder you can find tools to use BLASER to score speech translation and 
 
 BLASER relies on [SpeechLASER embeddings](https://github.com/facebookresearch/fairseq/blob/ust/examples/speech_matrix/speech_laser_encoders.md), follow the instructions there to download the embeddings and embed your speech segments.
 
+> [!NOTE]
+> BlaserV2.0 has now been released and lives in the [SONAR repository](https://github.com/facebookresearch/SONAR#predicting-sentence-similarity-with-blaser-20-models). We recommend using this new model and embedding space for your future uses of BLASER evalution
+
 ## Files
 
 - `model.py` contains the BLASER supervised model definition.

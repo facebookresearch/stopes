@@ -9,7 +9,6 @@ import logging
 import typing as tp
 from pathlib import Path
 
-import sentencepiece as spm
 from omegaconf import MISSING
 
 from stopes.core.stopes_module import Requirements, StopesModule
@@ -58,7 +57,8 @@ class TrainSpmModule(StopesModule):
     """
     Train a SPM model using module API.
 
-    python -m pdb launch_module.py train_spm.config.train_data_file=/checkpoint/guw/hmine/align/bel.v2.sents.bel.xz train_spm.config.output_dir=<output_dir> launcher.cluster=debug
+    python -m pdb launch_module.py train_spm.config.train_data_file=/checkpoint/guw/hmine/align/bel.v2.sents.bel.xz \
+        train_spm.config.output_dir=<output_dir> launcher.cluster=debug
     """
 
     def __init__(
@@ -122,6 +122,8 @@ def train_spm(
     train_data_file: Path,
     model_prefix_spm: Path,
 ) -> Vocab:
+    import sentencepiece as spm
+
     logger.info(
         f"train_data_file: {train_data_file}, model_prefix_spm: {model_prefix_spm}; "
     )
@@ -137,7 +139,7 @@ def train_spm(
         num_threads=spm_config.num_threads,
     )
 
-    logger.info(f"SPM Training completed")
+    logger.info("SPM Training completed")
     model_file = Path(f"{model_prefix_spm}.model").resolve()
     vocab_file = Path(f"{model_prefix_spm}.vocab").resolve()
     return Vocab(model_file=model_file, vocab_file=vocab_file)
