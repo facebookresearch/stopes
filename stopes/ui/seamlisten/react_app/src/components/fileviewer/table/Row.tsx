@@ -95,8 +95,8 @@ export const Row = ({
       ))}
       <td>
         <DownloadButton
-          id={rowKey}
-          blob={new Blob([JSON.stringify(item)], { type: "application/json" })}
+          // id={rowKey}
+          // blob={new Blob([JSON.stringify(item)], { type: "application/json" })}
         />
       </td>
     </tr>
