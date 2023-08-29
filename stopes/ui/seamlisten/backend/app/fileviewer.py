@@ -132,7 +132,7 @@ def get_annotations(
 async def general_query(query: DefaultQuery) -> Response:
     query_path = query.gz_path.strip()
     # Convert the path to an absolute path
-    query_path = Path(os.path.expanduser(query_path)).resolve()
+    query_path = Path(query_path). expanduser().resolve()
     # Check if the path is a directory
     print(query_path)
     if query_path.is_dir():
