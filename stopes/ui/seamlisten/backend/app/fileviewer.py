@@ -104,24 +104,22 @@ def open_zip_file(file: str, start_idx: int, end_idx: int) -> tp.List[LineResult
 
 
 @router.post("/annotations/")
-def get_annotations(
-    query: AnnotationQuery,
-) -> tp.List[LineResult]:
+def get_annotations(query: AnnotationQuery) -> tp.List[LineResult]:
     path = query.gz_path.strip()
-    if path.endswith(".tsv.gz") or path.endswith(".tsv"):
+    resolved_path = Path(path).expanduser().resolve()
+
+    if resolved_path.suffixes in ([".tsv.gz"], [".tsv"]):
         try:
-            return open_segment_tsv(path, query.start_idx, query.end_idx)
+            return open_segment_tsv(str(resolved_path), query.start_idx, query.end_idx)
         except FileNotFoundError:
             raise HTTPException(
                 status_code=404,
-                detail="""
-                File not found
-            """,
+                detail="File not found",
             )
-    elif path.endswith(".zip"):
-        if not Path(path).exists():
+    elif resolved_path.suffixes == [".zip"]:
+        if not resolved_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
-        return open_zip_file(path, query.start_idx, query.end_idx)
+        return open_zip_file(str(resolved_path), query.start_idx, query.end_idx)
     else:
         raise ValueError("Unknown format")
 
@@ -129,9 +127,12 @@ def get_annotations(
 @router.post("/general/")
 async def general_query(query: DefaultQuery) -> Response:
     query_path_str = query.gz_path.strip()
-    # Convert the path to an absolute path
-    query_path = Path.expanduser(query_path_str).resolve()
-    # Check if the path is a directory
+    query_path = Path(query_path_str).expanduser().resolve()
+    print(query_path)
+
+    if not query_path.exists():
+        raise HTTPException(status_code=400, detail="Path does not exist")
+
     if query_path.is_dir():
         result_data = gather_folder_contents(query_path)
         return result_data
