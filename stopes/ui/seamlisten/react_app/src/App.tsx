@@ -10,53 +10,9 @@ import Navbar from "react-bootstrap/Navbar";
 import { Outlet, NavLink } from "react-router-dom";
 
 import "bootstrap/dist/css/bootstrap.min.css";
-import Notebook, { Folder } from "./components/Notebook";
 
 export function App(): JSX.Element {
-  const folders : Folder[] = [
-      {
-        name: "folder1",
-        type: "folder",
-        content: [
-          {
-            name: "file1",
-            type: "file",
-            content: "file1 content"
-          },
-          {
-            name: "file2",
-            type: "file",
-            content: "file2 content"
-          },
-          {
-            name: "file3",
-            type: "file",
-            content: "file3 content"
-          }
-        ]
-      },
-      {
-        name: "folder2",
-        type: "folder",
-        content: [
-          {
-            name: "file1",
-            type: "file",
-            content: "file1 content"
-          },
-          {
-            name: "file2",
-            type: "file",
-            content: "file2 content"
-          },
-          {
-            name: "file3",
-            type: "file",
-            content: "file3 content"
-          }
-        ]
-      }
-  ];
+
   return (
     <div className="App">
       <header>
@@ -79,7 +35,6 @@ export function App(): JSX.Element {
         </Navbar>
       </header>
       <Outlet />
-      <Notebook folders={folders} />
     </div>
   );
 }

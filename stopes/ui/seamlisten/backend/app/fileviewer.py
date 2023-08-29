@@ -85,7 +85,6 @@ def open_segment_tsv(file: str, start_idx: int, end_idx: int) -> tp.List[LineRes
     with stutils.open(file) as f:
         for line in itertools.islice(f, start_idx, end_idx):
             results.append(auto_parse_line(line.strip()))
-            print("result", results)
     return results
 
 
@@ -109,7 +108,6 @@ def get_annotations(
     query: AnnotationQuery,
 ) -> tp.List[LineResult]:
     path = query.gz_path.strip()
-    print(path, query.start_idx, query.end_idx)
     if path.endswith(".tsv.gz") or path.endswith(".tsv"):
         try:
             return open_segment_tsv(path, query.start_idx, query.end_idx)
@@ -130,28 +128,27 @@ def get_annotations(
 
 @router.post("/general/")
 async def general_query(query: DefaultQuery) -> Response:
-    query_path = query.gz_path.strip()
+    query_path_str = query.gz_path.strip()
     # Convert the path to an absolute path
-    query_path = Path(query_path). expanduser().resolve()
+    query_path = Path.expanduser(query_path_str).resolve()
     # Check if the path is a directory
-    print(query_path)
     if query_path.is_dir():
         result_data = gather_folder_contents(query_path)
         return result_data
 
-    if query_path.endswith(".tsv.gz") or query_path.endswith(".zip"):
+    if query_path.suffixes(".tsv.gz") or query_path.suffixes(".zip"):
         return get_annotations(
             AnnotationQuery(
                 gz_path=query.gz_path, start_idx=query.start_idx, end_idx=query.end_idx
             )
         )
-    elif len(query_path.split(" ")) == 3:
+    elif len(query_path_str.split(" ")) == 3:
         path, start, end = query.gz_path.split(" ")
         result = await serve_file(
             AudioQuery(sampling="wav", path=path, start=int(start), end=int(end))
         )
         return result
-    elif len(query_path.split("|")) == 3:
+    elif len(query_path_str.split("|")) == 3:
         path, start, end = query.gz_path.split("|")
         result = await serve_file(
             AudioQuery(sampling="ms", path=path, start=int(start), end=int(end))
@@ -172,7 +169,12 @@ async def general_query(query: DefaultQuery) -> Response:
 def gather_folder_contents(folder_path, max_depth=5):
     def gather_contents_recursive(folder_path, current_depth):
         if current_depth > max_depth:
-            return {"folder": folder_path, "subfolders": [], "audio_files": []}
+            return {
+                "folder": str(folder_path),
+                "subfolders": None,
+                "audio_files": None,
+                "unexplored": True,
+            }
 
         subfolders = []
         audio_files = []
@@ -185,8 +187,9 @@ def gather_folder_contents(folder_path, max_depth=5):
 
         return {
             "folder": str(folder_path),
-            "subfolders": subfolders,
-            "audio_files": audio_files,
+            "subfolders": subfolders if subfolders else None,
+            "audio_files": audio_files if audio_files else None,
+            "unexplored": False,
         }
 
     return gather_contents_recursive(Path(folder_path), 1)
