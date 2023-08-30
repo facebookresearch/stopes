@@ -20,9 +20,12 @@ function CellRender({
   if (typeof object === "number") {
     return <span>{object.toString()}</span>;
   }
+  console.log("obj.kind", object.kind)
+  console.log("CellRender object:", object);
   switch (object.kind) {
     case "audio":
       return (
+        <>
         <PlayArea
           path={object.path}
           start={object.start}
@@ -44,11 +47,15 @@ function CellRender({
           currentPlayingID={currentPlayingID}
           currentPlayingIDHandler={currentPlayingIDHandler}
         ></PlayArea>
+        </>
       );
     case "text":
       return <span>{object.content}</span>;
+    default:
+      return <span>{object}</span>;
   }
 }
+
 
 export const Row = ({
   item,
@@ -88,3 +95,6 @@ export const Row = ({
     </tr>
   );
 };
+
+
+//add a sitch so that if obj.kind is undefinded it renders the text and audio

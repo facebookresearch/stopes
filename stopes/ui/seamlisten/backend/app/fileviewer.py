@@ -11,7 +11,7 @@ import zipfile
 from pathlib import Path
 
 import torchaudio
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, Response
 
@@ -21,7 +21,7 @@ from stopes.modules.speech.utils import LineResult, auto_parse_line
 
 from .query_types import AnnotationQuery, AudioQuery, DefaultQuery, LineQuery
 
-torchaudio.set_audio_backend("sox_io")
+torchaudio.set_audio_backend("soundfile")
 
 router = APIRouter(tags=["fileviewer"])
 
@@ -161,3 +161,32 @@ async def general_query(query: DefaultQuery) -> Response:
         a line with audio file, start and end timestamps
         """,
         )
+
+
+@router.post("/fetchFolders/")
+def gather_folder_contents(folder_path: str = Body(...), max_depth: int = Body(5)):
+    def gather_contents_recursive(folder_path, current_depth):
+        if current_depth > max_depth:
+            return {
+                "folder": str(folder_path),
+                "subfolders": None,
+                "audio_files": None,
+                "unexplored": True,
+            }
+        subfolders = []
+        audio_files = []
+
+        for entry in folder_path.iterdir():
+            if entry.is_dir():
+                subfolders.append(gather_contents_recursive(entry, current_depth + 1))
+            elif entry.suffix in {".wav", ".ms"}:
+                audio_files.append(entry.name)
+
+        return {
+            "folder": str(folder_path),
+            "subfolders": subfolders if subfolders else None,
+            "audio_files": audio_files if audio_files else None,
+            "unexplored": False,
+        }
+
+    return gather_contents_recursive(Path(folder_path), 1)
