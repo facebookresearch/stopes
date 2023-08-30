@@ -48,6 +48,15 @@ interface LineResult {
   columns: Array<number | TextAnswer | Audio>;
 }
 
+interface FileNode {
+  folder: string;
+  subfolders: FileNode[] | null;
+  audio_files: string[] | null;
+  unexplored: boolean;
+}
+
+type FolderStructure = FileNode;
+
 // controls:
 type CurrentPlayingIDHandler = (params: string) => void;
 type KeyDownHandler = (
@@ -91,6 +100,7 @@ export {
   LineQuery,
   UploadQuery,
   LineResult,
+  FolderStructure,
   Audio,
   TextAnswer,
   FaissResult,

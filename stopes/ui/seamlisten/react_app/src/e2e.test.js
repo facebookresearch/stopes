@@ -44,4 +44,37 @@ describe('File Viewer', () => {
     expect(helpTextVisible).toBe(true);
   });
 
+  test("should update the filename input with pasted data", async () => {
+    const filenameInput = await page.waitForSelector(
+      ".form-control.form-control-sm"
+    );
+    const pastedFilename = "/default/path/";
+
+    await page.evaluate(
+      //a function to simulate a paste action
+      (input, value) => {
+        const event = new Event("paste", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+        });
+        event.clipboardData = new DataTransfer();
+        event.clipboardData.setData("text/plain", value);
+        input.dispatchEvent(event);
+      },
+      // arguments for our function are passed here
+      filenameInput, // input
+      pastedFilename //value
+    );
+
+    // Wait for a moment to allow the paste event handler to run
+    await new Promise((r) => setTimeout(r, 100));
+
+    // check whether the inputvalue matches the pastedFileName
+    const inputValue = await page.$eval(
+      ".form-control.form-control-sm",
+      (el) => el.value
+    );
+    expect(inputValue).toBe(pastedFilename);
+  });
 });

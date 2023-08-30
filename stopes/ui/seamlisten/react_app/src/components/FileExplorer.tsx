@@ -11,6 +11,8 @@ import { default as BCol } from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import { default as BRow } from "react-bootstrap/Row";
 
+import FileTree from "./fileviewer/FileTree";
+
 import {
   Location,
   useLoaderData,
@@ -21,11 +23,12 @@ import WaveSurferComponent from "../common/components/audio/WaveSurfer";
 import InnerScale from "../common/components/spinners/spinner";
 import { config } from "../common/constants/config";
 import fetchFiles from "../common/fetchers/mining_result";
-import { LineResult } from "../common/types/api";
+import { LineResult, FolderStructure } from "../common/types/api";
 import Help from "./fileviewer/FileExplorerHelp";
 import Table from "./fileviewer/Table";
 
 import { text_to_audio } from "../common/components/audio/audioquery_constructor";
+import fetchFolders from "../common/fetchers/folder";
 
 const FILENAME_PARAM = "file";
 const PAGENUMBER_PARAM = "page";
@@ -37,6 +40,7 @@ type LoaderReturn = {
   numberLines: number;
   files: LineResult[];
   audioBlob: Blob;
+  folderData: FolderStructure | null;
   error: any;
 };
 
@@ -61,12 +65,14 @@ export async function loader({ request }): Promise<LoaderReturn> {
   const url = new URL(request.url);
 
   const { filename, numberLines, pageNumber } = parseParams(url.searchParams);
+
   const toRet = {
     filename,
     numberLines,
     pageNumber,
     files: [],
     audioBlob: undefined,
+    folderData: undefined,
     error: null,
   };
 
@@ -82,6 +88,14 @@ export async function loader({ request }): Promise<LoaderReturn> {
         end_idx: numberLines * pageNumber,
       });
       toRet.files = files;
+      return toRet;
+    }
+
+    if (filename.endsWith("t")) {
+      const folderData: FolderStructure = await fetchFolders(filename);
+      toRet.folderData = folderData;
+      console.log(folderData);
+      console.log(folderData);
       return toRet;
     }
 
@@ -123,8 +137,15 @@ function useFileNavigate() {
 const Files = (): JSX.Element => {
   const [displayHelper, setDisplayHelper] = useState(false);
   const navigate = useFileNavigate();
-  let { filename, pageNumber, numberLines, files, audioBlob, error } =
-    useLoaderData() as LoaderReturn;
+  let {
+    filename,
+    pageNumber,
+    numberLines,
+    files,
+    audioBlob,
+    error,
+    folderData,
+  } = useLoaderData() as LoaderReturn;
   const [newFilename, setNewFilename] = useState(
     filename || config.default_path
   );
@@ -168,6 +189,16 @@ const Files = (): JSX.Element => {
     [setFilename]
   );
 
+  // Add new function to handle paste events
+  const fileInputHandlePaste = useCallback(
+    (evt) => {
+      const pastedData = evt.clipboardData.getData("text");
+      setNewFilename(pastedData);
+      navigate(pastedData, pageNumber, numberLines);
+    },
+    [navigate, pageNumber, numberLines]
+  );
+
   return (
     <div style={{ marginTop: "10px" }}>
       <Form as={BRow}>
@@ -183,6 +214,7 @@ const Files = (): JSX.Element => {
                 onChange={setFilenameEventHandler}
                 value={newFilename}
                 onKeyDown={fileInputHandleChange}
+                onPaste={fileInputHandlePaste}
                 size="sm"
               />
               <Form.Text className="text-muted" />
@@ -225,6 +257,7 @@ const Files = (): JSX.Element => {
         <Error error={error} />
       ) : (
         <>
+          {folderData && <FileTree folderData={folderData} />}
           <Table
             items={files}
             page={pageNumber}
