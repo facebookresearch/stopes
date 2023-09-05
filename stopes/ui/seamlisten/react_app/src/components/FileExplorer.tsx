@@ -26,6 +26,7 @@ import Help from "./fileviewer/FileExplorerHelp";
 import Table from "./fileviewer/Table";
 
 import { text_to_audio } from "../common/components/audio/audioquery_constructor";
+import FolderTreeView from "./FolderTreeView";
 
 const FILENAME_PARAM = "file";
 const PAGENUMBER_PARAM = "page";
@@ -38,6 +39,7 @@ type LoaderReturn = {
   files: LineResult[];
   audioBlob: Blob;
   error: any;
+  folderContents: any;
 };
 
 function parseParams(searchParams) {
@@ -59,7 +61,6 @@ function parseLocation(location: Location) {
 
 export async function loader({ request }): Promise<LoaderReturn> {
   const url = new URL(request.url);
-
   const { filename, numberLines, pageNumber } = parseParams(url.searchParams);
   const toRet = {
     filename,
@@ -88,10 +89,8 @@ export async function loader({ request }): Promise<LoaderReturn> {
     else if (isDirectoryPath(filename)){
       const folderContents = await processFolder(filename);
       toRet.folderContents = folderContents;
-      console.log("folderContents", folderContents);
       return toRet;
     }
-
     const audioResult = await text_to_audio(filename, 1);
     if (audioResult) {
       toRet.audioBlob = audioResult;
@@ -105,6 +104,7 @@ export async function loader({ request }): Promise<LoaderReturn> {
   return toRet;
 }
 
+// todo: needs to be enhanced
 function isDirectoryPath(path) {
   // Implement a logic to check if the provided path is a directory
   // You might use regular expressions or other methods to check.
@@ -137,7 +137,7 @@ function useFileNavigate() {
 const Files = (): JSX.Element => {
   const [displayHelper, setDisplayHelper] = useState(false);
   const navigate = useFileNavigate();
-  let { filename, pageNumber, numberLines, files, audioBlob, error } =
+  let { filename, pageNumber, numberLines, files, audioBlob, error, folderContents } =
     useLoaderData() as LoaderReturn;
   const [newFilename, setNewFilename] = useState(
     filename || config.default_path
@@ -233,6 +233,9 @@ const Files = (): JSX.Element => {
         </BCol>
       </Form>
       <Help displayHelper={displayHelper} />
+      <FolderTreeView
+      folderContents={folderContents}
+    />
       {loading ? (
         <InnerScale loading={loading} />
       ) : error ? (
