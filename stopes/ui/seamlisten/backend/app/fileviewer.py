@@ -46,7 +46,6 @@ def _read_audio(path: str, frame_offset: int, num_frames: int) -> tp.Any:
                 return torchaudio.load(
                     f, frame_offset=frame_offset, num_frames=num_frames
                 )
-
     return torchaudio.load(path, frame_offset=frame_offset, num_frames=num_frames)
 
 
@@ -108,7 +107,7 @@ def get_annotations(query: AnnotationQuery) -> tp.List[LineResult]:
     path = query.gz_path.strip()
     resolved_path = Path(path).expanduser().resolve()
 
-    if resolved_path.suffixes in ([".tsv.gz"], [".tsv"]):
+    if resolved_path.suffixes in ([".gz"], [".tsv"]):
         try:
             return open_segment_tsv(str(resolved_path), query.start_idx, query.end_idx)
         except FileNotFoundError:
@@ -128,7 +127,6 @@ def get_annotations(query: AnnotationQuery) -> tp.List[LineResult]:
 async def general_query(query: DefaultQuery) -> Response:
     query_path_str = query.gz_path.strip()
     query_path = Path(query_path_str).expanduser().resolve()
-    print(query_path)
 
     if not query_path.exists():
         raise HTTPException(status_code=400, detail="Path does not exist")
@@ -137,7 +135,7 @@ async def general_query(query: DefaultQuery) -> Response:
         result_data = gather_folder_contents(query_path)
         return result_data
 
-    if query_path.suffixes(".tsv.gz") or query_path.suffixes(".zip"):
+    if query_path.suffixes in ([".gz"], [".tsv"], [".zip"]):
         return get_annotations(
             AnnotationQuery(
                 gz_path=query.gz_path, start_idx=query.start_idx, end_idx=query.end_idx
