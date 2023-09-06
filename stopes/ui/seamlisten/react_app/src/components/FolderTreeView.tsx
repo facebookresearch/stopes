@@ -9,6 +9,9 @@ import { alpha, styled } from '@mui/material/styles';
 import { TreeView } from '@mui/x-tree-view/TreeView';
 import { TreeItem, TreeItemProps, treeItemClasses } from '@mui/x-tree-view/TreeItem';
 import React from 'react';
+import 'font-awesome/css/font-awesome.min.css';
+import "./FolderTreeView.css"
+
 
 
 function MinusSquare(props: SvgIconProps) {
@@ -122,25 +125,12 @@ const FolderTreeView = ({ folderContents }) => {
     };
   
     return (
-      <button onClick={download}
-        style={{
-          marginTop: "10px",
-          border: "none",
-          padding: "10px",
-          borderRadius: "5px",
-          backgroundColor: "#4CAF50",
-          color: "white",
-          textAlign: "center",
-          textDecoration: "none",
-          display: "inline-block",
-          fontSize: "16px",
-        }}
-
-        >
-        Download
+      <button onClick={download} className="download-button">
+        <i className="fa fa-download fa-lg"
+        ></i>
       </button>
     );
-  }
+  };
 
 
 

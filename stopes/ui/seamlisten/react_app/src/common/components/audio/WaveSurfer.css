@@ -12,4 +12,5 @@
 
 .playPauseIcon :hover {
   color: #2bad60;
+  cursor: pointer;
 }
