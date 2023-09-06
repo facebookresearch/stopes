@@ -142,39 +142,49 @@ const FolderTreeView = ({ folderContents }) => {
 
     return (
       <TreeView
-      aria-label="customized"
-      defaultExpanded={['1']}
-      defaultCollapseIcon={<MinusSquare />}
-      defaultExpandIcon={<PlusSquare />}
-      defaultEndIcon={<CloseSquare />}
-      sx={{ height: 264, flexGrow: 1, maxWidth: 400, overflowY: 'auto' }}
+        aria-label="customized"
+        defaultExpanded={['1']}
+        defaultCollapseIcon={<MinusSquare />}
+        defaultExpandIcon={<PlusSquare />}
+        defaultEndIcon={<CloseSquare />}
+        sx={{ height: 264, flexGrow: 1, maxWidth: 400, overflowY: 'auto' }}
       >
-        <div style={{ flex: 1 }}>
-          <StyledTreeItem
-            key={folderData.folder}
-            nodeId={folderData.folder}
-            label={folderData.folder}
-            onClick={(event) => handleNodeToggle(event, [folderData.folder])}
-          >
-            {folderData.subfolders && folderData.subfolders.length > 0 && (
-              folderData.subfolders.map((subfolder) => renderFolderTree(subfolder))
-            )}
-            {folderData.audio_files && folderData.audio_files.length > 0 && (
-              folderData.audio_files.map((audioFile) => (
+        <StyledTreeItem
+          key={folderData.folder}
+          nodeId={folderData.folder}
+          label={folderData.folder}
+          onClick={(event) => handleNodeToggle(event, [folderData.folder])}
+        >
+          {folderData.subfolders && folderData.subfolders.length > 0 && (
+            folderData.subfolders.map((subfolder) => (
+              <TreeView key={subfolder.folder} defaultExpanded={['1']} sx={{}}>
                 <StyledTreeItem
-                  key={audioFile}
-                  nodeId={audioFile}
-                  label={audioFile}
-                  onClick={() => handleAudioFileClick(
-                    `${folderData.folder}/${audioFile}`
-                  )}
-                />
-              ))
-            )}
-          </StyledTreeItem>
-        </div>
+                  key={subfolder.folder}
+                  nodeId={subfolder.folder}
+                  label={subfolder.folder}
+                  onClick={(event) => handleNodeToggle(event, [subfolder.folder])}
+                >
+                  {renderFolderTree(subfolder)}
+                </StyledTreeItem>
+              </TreeView>
+            ))
+          )}
+          {folderData.audio_files && folderData.audio_files.length > 0 && (
+            folderData.audio_files.map((audioFile) => (
+              <StyledTreeItem
+                key={audioFile}
+                nodeId={audioFile}
+                label={audioFile}
+                onClick={() => handleAudioFileClick(
+                  `${folderData.folder}/${audioFile}`
+                )}
+              />
+            ))
+          )}
+        </StyledTreeItem>
       </TreeView>
     );
+    
   };
 
   return (

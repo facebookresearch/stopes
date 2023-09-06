@@ -233,9 +233,7 @@ const Files = (): JSX.Element => {
         </BCol>
       </Form>
       <Help displayHelper={displayHelper} />
-      <FolderTreeView
-      folderContents={folderContents}
-    />
+
       {loading ? (
         <InnerScale loading={loading} />
       ) : error ? (
@@ -264,6 +262,9 @@ const Files = (): JSX.Element => {
           )}
         </>
       )}
+            <FolderTreeView
+      folderContents={folderContents}
+    />
     </div>
   );
 };
