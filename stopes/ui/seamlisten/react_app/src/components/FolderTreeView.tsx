@@ -3,8 +3,6 @@ import TreeView from "@mui/lab/TreeView";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import TreeItem from "@mui/lab/TreeItem";
-import { processFolder } from "../common/fetchers/mining_result";
-import PlayArea from "../common/components/audio/PlayArea";
 import { text_to_audio } from "../common/components/audio/audioquery_constructor";
 import WaveSurferComponent from "../common/components/audio/WaveSurfer";
 
@@ -22,7 +20,6 @@ const FolderTreeView = ({ folderContents }) => {
     } else {
       // Node is collapsed, expand it and fetch its contents
       expandedFolders.add(clickedNodeId);
-      fetchFolderContents(clickedNodeId);
     }
 
     setExpandedFolders(new Set(expandedFolders));
@@ -36,18 +33,7 @@ const FolderTreeView = ({ folderContents }) => {
     }
   };
 
-  const fetchFolderContents = async (folderPath) => {
-    try {
-      // Make a request to fetch the contents of the clicked folderPath
-      const folderContents = await processFolder(folderPath);
 
-      // Handle the fetched data and update your state accordingly
-      // For example, you can update your state with the new folder contents
-      // and re-render the component.
-    } catch (error) {
-      console.error("Error fetching folder contents:", error);
-    }
-  };
 
   const DownloadButton = ({ blob, filename }) => {
     const download = () => {
