@@ -115,7 +115,7 @@ def get_annotations(query: AnnotationQuery) -> tp.List[LineResult]:
                 status_code=404,
                 detail="File not found",
             )
-    elif resolved_path.suffixes == [".zip"]:
+    elif resolved_path.suffixes[-1] == ".zip":
         if not resolved_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
         return open_zip_file(str(resolved_path), query.start_idx, query.end_idx)
