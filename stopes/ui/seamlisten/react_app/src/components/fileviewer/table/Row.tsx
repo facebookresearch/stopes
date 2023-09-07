@@ -47,6 +47,8 @@ function CellRender({
       );
     case "text":
       return <span>{object.content}</span>;
+    default:
+      return <span>{object}</span>;
   }
 }
 

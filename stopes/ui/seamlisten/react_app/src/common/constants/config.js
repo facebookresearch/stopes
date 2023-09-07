@@ -4,7 +4,7 @@
 // This source code is licensed under the license found in the
 // LICENSE file in the root directory of this source tree.
 
-const BACKEND_PORT = process.env.NODE_ENV === "development" ? "8000" : "8800";
+const BACKEND_PORT = process.env.NODE_ENV === "development" ? "8080" : "8800";
 
 export const config = {
   host: "http://localhost",

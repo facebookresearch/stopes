@@ -9,12 +9,11 @@ import itertools
 import typing as tp
 import zipfile
 from pathlib import Path
-
+import os
 import torchaudio
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, Response
-
 import stopes.core.utils as stutils
 import stopes.modules.speech.utils as stopes_speech
 from stopes.modules.speech.utils import LineResult, auto_parse_line
@@ -47,7 +46,6 @@ def _read_audio(path: str, frame_offset: int, num_frames: int) -> tp.Any:
                 return torchaudio.load(
                     f, frame_offset=frame_offset, num_frames=num_frames
                 )
-
     return torchaudio.load(path, frame_offset=frame_offset, num_frames=num_frames)
 
 
@@ -105,52 +103,56 @@ def open_zip_file(file: str, start_idx: int, end_idx: int) -> tp.List[LineResult
 
 
 @router.post("/annotations/")
-def get_annotations(
-    query: AnnotationQuery,
-) -> tp.List[LineResult]:
+def get_annotations(query: AnnotationQuery) -> tp.List[LineResult]:
     path = query.gz_path.strip()
-    print(path, query.start_idx, query.end_idx)
-    if path.endswith(".tsv.gz") or path.endswith(".tsv"):
+    resolved_path = Path(path).expanduser().resolve()
+
+    if resolved_path.suffixes in ([".gz"], [".tsv"]):
         try:
-            return open_segment_tsv(path, query.start_idx, query.end_idx)
+            return open_segment_tsv(str(resolved_path), query.start_idx, query.end_idx)
         except FileNotFoundError:
             raise HTTPException(
                 status_code=404,
-                detail="""
-                File not found
-            """,
+                detail="File not found",
             )
-    elif path.endswith(".zip"):
-        if not Path(path).exists():
+    elif resolved_path.suffixes[-1] == ".zip":
+        if not resolved_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
-        return open_zip_file(path, query.start_idx, query.end_idx)
+        return open_zip_file(str(resolved_path), query.start_idx, query.end_idx)
     else:
         raise ValueError("Unknown format")
 
 
 @router.post("/general/")
 async def general_query(query: DefaultQuery) -> Response:
-    query_path = query.gz_path.strip()
-    print(query_path.split(" "))
-    if query_path.endswith(".tsv.gz") or query_path.endswith(".zip"):
+    query_path_str = query.gz_path.strip()
+    query_path = Path(query_path_str).expanduser().resolve()
+
+    if not query_path.exists():
+        raise HTTPException(status_code=400, detail="Path does not exist")
+
+    if query_path.is_dir():
+        result_data = gather_folder_contents(query_path)
+        return result_data
+
+    if query_path.suffixes[-1] in (".gz", ".tsv", ".zip"):
         return get_annotations(
             AnnotationQuery(
                 gz_path=query.gz_path, start_idx=query.start_idx, end_idx=query.end_idx
             )
         )
-    elif len(query_path.split(" ")) == 3:
+    elif len(query_path_str.split(" ")) == 3:
         path, start, end = query.gz_path.split(" ")
         result = await serve_file(
             AudioQuery(sampling="wav", path=path, start=int(start), end=int(end))
         )
         return result
-    elif len(query_path.split("|")) == 3:
+    elif len(query_path_str.split("|")) == 3:
         path, start, end = query.gz_path.split("|")
         result = await serve_file(
             AudioQuery(sampling="ms", path=path, start=int(start), end=int(end))
         )
         return result
-
     else:
         raise HTTPException(
             status_code=500,
@@ -161,3 +163,32 @@ async def general_query(query: DefaultQuery) -> Response:
         a line with audio file, start and end timestamps
         """,
         )
+
+
+def gather_folder_contents(folder_path, max_depth=5):
+    def gather_contents_recursive(folder_path, current_depth):
+        if current_depth > max_depth:
+            return {
+                "folder": str(folder_path),
+                "subfolders": None,
+                "audio_files": None,
+                "unexplored": True,
+            }
+
+        subfolders = []
+        audio_files = []
+
+        for entry in folder_path.iterdir():
+            if entry.is_dir():
+                subfolders.append(gather_contents_recursive(entry, current_depth + 1))
+            elif entry.suffix in {".wav", ".ms"}:
+                audio_files.append(entry.name)
+
+        return {
+            "folder": str(folder_path),
+            "subfolders": subfolders if subfolders else None,
+            "audio_files": audio_files if audio_files else None,
+            "unexplored": False,
+        }
+
+    return gather_contents_recursive(Path(folder_path), 1)

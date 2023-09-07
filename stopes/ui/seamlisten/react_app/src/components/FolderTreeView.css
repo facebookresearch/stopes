@@ -1,0 +1,19 @@
+/* Style the button container */
+.download-button {
+    background-color:  #7a26c1;; /* Set the background color */
+    color: #ffffff; /* Set the text color */
+    border: none; /* Remove the default button border */
+    border-radius: 4px; /* Add some border radius for rounded corners */
+    padding: 10px 20px; /* Add padding to make the button larger */
+    cursor: pointer; /* Show a pointer cursor on hover */
+    transition: background-color 0.3s ease; /* Add a smooth background color transition on hover */
+    margin-top: 1rem;
+    /* Center the icon and text vertically and horizontally */
+
+  }
+  
+  /* Style the button on hover */
+  .download-button:hover {
+    background-color: #2bad60; /* Change the background color on hover */
+  }
+  

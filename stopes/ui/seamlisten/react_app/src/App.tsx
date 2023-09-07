@@ -12,6 +12,7 @@ import { Outlet, NavLink } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 export function App(): JSX.Element {
+
   return (
     <div className="App">
       <header>
