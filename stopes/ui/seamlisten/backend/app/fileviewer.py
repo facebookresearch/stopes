@@ -135,7 +135,7 @@ async def general_query(query: DefaultQuery) -> Response:
         result_data = gather_folder_contents(query_path)
         return result_data
 
-    if query_path.suffixes in ([".gz"], [".tsv"], [".zip"]):
+    if query_path.suffixes[-1] in (".gz", ".tsv", ".zip"):
         return get_annotations(
             AnnotationQuery(
                 gz_path=query.gz_path, start_idx=query.start_idx, end_idx=query.end_idx
