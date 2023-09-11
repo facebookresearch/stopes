@@ -1,14 +1,15 @@
 import logging
-import torch
 import typing as tp
 from dataclasses import dataclass
 
+import torch
 from m4t_scripts.evaluate.asr_bleu import ASRBleu
 from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.pipelines.asr_bleu.configs import Dataset
+
 
 @dataclass
 class ComputeASRBleuJob:
