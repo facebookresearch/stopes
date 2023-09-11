@@ -1,4 +1,5 @@
 import logging
+import torch
 import typing as tp
 from dataclasses import dataclass
 
@@ -7,8 +8,7 @@ from omegaconf.omegaconf import MISSING
 
 from stopes.core.launcher import Launcher
 from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.pipelines.asr_bleu.configs import DatasetsConfig
-
+from stopes.pipelines.asr_bleu.configs import Dataset
 
 @dataclass
 class ComputeASRBleuJob:
@@ -31,6 +31,7 @@ class ComputeASRBleu(StopesModule):
     def __init__(self, config: ComputeASRBleuConfig):
         super().__init__(config=config, config_class=ComputeASRBleuConfig)
         self.asrbleu = ASRBleu(config.output_dir)
+        self.logger = logging.getLogger("stopes.asr_bleu")
 
     def array(self):
         return self.config.compute_asrbleu_jobs
@@ -39,7 +40,7 @@ class ComputeASRBleu(StopesModule):
         return Requirements(
             nodes=1,
             tasks_per_node=1,
-            gpus_per_node=0,
+            gpus_per_node=1,
             cpus_per_task=1,
             timeout_min=24 * 60,
         )
@@ -51,7 +52,6 @@ class ComputeASRBleu(StopesModule):
     ):
         """Runs compute_asr_bleu for each ComputeASRBleuJob"""
         assert iteration_value is not None, "iteration value is null"
-        self.logger = logging.getLogger("stopes.asr_bleu")
         self.logger.info(f"Running compute_asr_bleu on {iteration_value.lang_dir}")
         self.asrbleu.compute_asr_bleu(
             iteration_value.lang_dir,
@@ -70,13 +70,13 @@ async def compute_asr_bleu(
     model_name: str,
     eval_first_pass: bool,
     dataset_name: str,
-    datasets_conf: DatasetsConfig,
+    audio_format: str,
+    datasets: tp.Dict[str, Dataset],
     launcher: Launcher,
 ) -> tp.List[tp.Tuple[tp.Dict[str, tp.List], str, str]]:
     """
     Compute ASRBleu on specified datasets
     """
-    datasets = datasets_conf.datasets
     compute_asrbleu_jobs = [
         ComputeASRBleuJob(
             lang_dir=datasets[dataset].lang_dir,
@@ -85,6 +85,7 @@ async def compute_asr_bleu(
             model_name=model_name,
             eval_first_pass=eval_first_pass,
             dataset=dataset_name,
+            audio_format=audio_format,
         )
         for dataset in datasets
     ]

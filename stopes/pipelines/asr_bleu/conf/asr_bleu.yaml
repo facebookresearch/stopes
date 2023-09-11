@@ -4,7 +4,7 @@ defaults:
 
 output_dir: ???
 split: "test"
-model_name: "SeamlessM4T_medium"
+model_name: "seamlessM4T_medium"
 eval_first_pass: True
 dataset: "fleurs"
 audio_format: "n_pred.wav"

@@ -9,11 +9,6 @@ class Dataset:
 
 
 @dataclass
-class DatasetsConfig:
-    datasets: tp.Dict[str, Dataset]
-
-
-@dataclass
 class AsrBleuConfig:
     output_dir: str
     split: str
@@ -22,4 +17,4 @@ class AsrBleuConfig:
     dataset: str
     audio_format: str
     launcher: tp.Dict[str, tp.Any]
-    datasets: DatasetsConfig
+    datasets: tp.Dict[str, Dataset]

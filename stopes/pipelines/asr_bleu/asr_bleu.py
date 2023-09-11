@@ -32,7 +32,8 @@ class AsrBleu:
             self.config.split,
             self.config.model_name,
             self.config.eval_first_pass,
-            self.config.dataset_name,
+            self.config.dataset,
+            self.config.audio_format,
             self.config.datasets,
             self.launcher,
         )
