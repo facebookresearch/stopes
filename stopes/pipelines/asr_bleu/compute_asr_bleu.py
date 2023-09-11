@@ -2,7 +2,6 @@ import logging
 import typing as tp
 from dataclasses import dataclass
 
-import torch
 from m4t_scripts.evaluate.asr_bleu import ASRBleu
 from omegaconf.omegaconf import MISSING
 
