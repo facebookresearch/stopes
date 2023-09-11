@@ -55,8 +55,10 @@ classifiers=[
     "faiss-gpu",
   ]
   speech = [
+    "fairseq2",
     "hanziconv",
     "inflect",
+    "seamless_communication",
     "tnkeeh",
     "torchaudio",
     "num2words",
