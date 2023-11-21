@@ -1,0 +1,11 @@
+scikit-learn
+pandas
+numpy
+sacrebleu
+unbabel-comet==2.2.0
+sentence_transformers==2.2.2
+laser-encoders==0.0.1
+transformers==4.31.0
+sonar-space==0.1.0
+fairseq2==0.1.1
+POT==0.8.2
