@@ -29,10 +29,12 @@ jobs:
       - name: Install
         # Fairseq doesn't install with pip==22.1 we need to upgrade past it.
         # Also the version on pypi is from before Oct 2020.
+        # wheel is required by fasttext to be installed correctly with recent pip versions
         run: |
           python --version
           python -m pip install --upgrade 'pip>=22.1.2'
           python -m pip show pip
+          python -m pip install wheel
           python -m pip install 'git+https://github.com/facebookresearch/fairseq.git@v0.12.1'
           python -m pip install -e '.[dev,mono,mining,audio_comparator,speech]'
 
