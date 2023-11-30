@@ -27,7 +27,7 @@ import stopes.modules.speech.vad_segment_audio
 import stopes.modules.speech.vad_trim_audio
 import stopes.modules.speech.whisper
 import stopes.modules.train_fairseq_module
-import stopes.repo.stopes.modules.speech.segment_dataset
+import stopes.modules.speech.segment_dataset
 from stopes.eval.local_prosody.unity2_forced_aligner_f2 import (
     UnitY2F2ForcedAlignerConfig,
 )
@@ -386,7 +386,7 @@ def test_configs(tmp_path: Path, openned_files: tp.Set[Path]) -> None:
     # If you're seeing this error it means you either:
     # * added a new config file, please add a test for it.
     # * added a new config test, please decrement the counter
-    assert len(unvalidated) == 50
+    assert len(unvalidated) == 48
 
 
 def normalize_paths(files: tp.Iterable[Path]) -> tp.Set[Path]:
