@@ -20,7 +20,6 @@ import stopes.modules.nmt_bitext_eval_utils
 import stopes.modules.preprocess
 import stopes.modules.speech.audio_zip
 import stopes.modules.speech.denoise
-import stopes.repo.stopes.modules.speech.segment_dataset
 import stopes.modules.speech.shas_segment_audio
 import stopes.modules.speech.speech_units
 import stopes.modules.speech.speechbrain_lid
@@ -28,6 +27,7 @@ import stopes.modules.speech.vad_segment_audio
 import stopes.modules.speech.vad_trim_audio
 import stopes.modules.speech.whisper
 import stopes.modules.train_fairseq_module
+import stopes.repo.stopes.modules.speech.segment_dataset
 from stopes.eval.local_prosody.unity2_forced_aligner_f2 import (
     UnitY2F2ForcedAlignerConfig,
 )
