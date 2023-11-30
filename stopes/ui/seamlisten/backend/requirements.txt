@@ -1,0 +1,8 @@
+fastapi==0.85.1
+omegaconf==2.1.0 # this version is required since >=2.2 won't have ._utils.get_ref_type and <2.1 don't have .resolve attr
+fire==0.4.0
+uvicorn==0.19.0
+onnxruntime
+python-multipart==0.0.5
+python-dotenv
+mosestokenizer

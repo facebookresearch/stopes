@@ -1,0 +1,12 @@
+defaults:
+  - launcher: local
+  - _self_
+
+shards: []
+column: ???
+output_dir: ""
+encoder_model: ???
+
+max_tokens: 1280000
+nshards: 1
+gpu: true

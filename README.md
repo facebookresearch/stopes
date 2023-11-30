@@ -1,6 +1,5 @@
 ![stopes](/website/static/img/banner.png?raw=true "stopes by NLLB.")
 
-
 # `stopes`: A library for preparing data for machine translation research
 
 As part of the FAIR No Language Left Behind (NLLB) ([Paper](https://research.facebook.com/publications/no-language-left-behind/), [Website](https://ai.facebook.com/research/no-language-left-behind/), [Blog](https://ai.facebook.com/blog/nllb-200-high-quality-machine-translation/))
@@ -32,6 +31,8 @@ Languages](https://statmt.org/wmt22/large-scale-multilingual-translation-task.ht
 stopes uses [flit](https://flit.pypa.io/) to manage its setup, you will need a recent version of
 pip for the install to work. We recommend that you first upgrade pip:
 `python -m pip install --upgrade pip`
+Warning: the latest pip (about `23.3`) seems to no longer support the way the dependencies are declared in `fasttext`
+and maybe other packages without `pyproject.toml`. To bypass the associated problems, consider installing the `wheel` package.
 
 The mining pipeline relies on fairseq to run LASER encoders, because of competing dependency version, you'll have to first install fairseq with pip separately:
 
@@ -64,6 +65,8 @@ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cud
 ### Speech package installing
 
 Some speech packages like the MMS Text-to-Speech(TTS) require additional library installation, see [here](stopes/speech/README.md) for more details.
+
+In addition, the [UST library](ust/README.md) has its own set of extra dependencies.
 
 ## How `stopes` works
 

@@ -1,0 +1,21 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+out_dir: ???
+niter: ???
+max_points_per_centroid: ???
+
+requirements:
+  nodes: 1
+  tasks_per_node: 1
+  gpus_per_node: 8
+  cpus_per_task: 10
+  mem_gb: 480
+  timeout_min: 4320
+  constraint: volta32gb
+
+launcher:
+  partition: ??? # set as null if running locally
+  cache:
+    caching_dir: ${out_dir}/cache  # Cache won't be re-used if you change the out_dir.

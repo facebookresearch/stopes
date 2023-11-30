@@ -66,6 +66,7 @@ class GlobalMiningConfig:
     index_type: tp.Optional[str] = None
     existing_index_path: tp.Optional[str] = None
     existing_embedding_glob: tp.Optional[str] = None
+    existing_aux_embedding_glob: tp.Optional[str] = None
 
 
 @dataclass
@@ -79,6 +80,7 @@ class Lang:
     shard_sizes: tp.List[int]
     # these fields may be filled later if they are not precomputed
     embeddings: tp.List[str] = field(default_factory=list)
+    aux_embeddings: tp.Optional[tp.List[str]] = None
     merged_index: tp.Optional[str] = None
     index_type: tp.Optional[str] = None
 
@@ -254,8 +256,10 @@ class GlobalMiningPipeline:
         # TODO: there is something fishy here:
         # If you make a copy of this object, then you get different results.
         embed_cfg = config.embed_text
+        aux_embed_cfg = getattr(config, "aux_embed", None)
 
         embedded_files_glob = getattr(config, "existing_embedding_glob", None)
+        aux_embedded_files_glob = getattr(config, "existing_aux_embedding_glob", None)
         result.merged_index = getattr(config, "existing_index_path", None)
 
         result.index_type = getattr(
@@ -291,6 +295,34 @@ class GlobalMiningPipeline:
             embedded_files = await self.launcher.schedule(embed_module)
             embedded_files = [str(f) for f in embedded_files]
         result.embeddings = embedded_files
+
+        if aux_embedded_files_glob:
+            # we already have precomputed the auxiliary embedding files
+            aux_embedded_files = sorted(
+                glob.glob(aux_embedded_files_glob), key=extract_shard_id
+            )
+            assert (
+                len(aux_embedded_files) > 0
+            ), f"couldn't find any aux embeddings for {lng.lang_name} with {aux_embedded_files_glob}"
+            logger.info(
+                f"aux embeddings already provided for {lng.lang_name}, found"
+                f" {len(aux_embedded_files)} embeddings"
+            )
+            result.aux_embeddings = aux_embedded_files
+        elif aux_embed_cfg:
+            aux_embed_module = StopesModule.build(
+                aux_embed_cfg,
+                lang=lng.lang_name,
+                lang_shard_name=lng.split_name,
+                shards=lng.data_shards,
+            )
+            aux_embedded_files = await self.launcher.schedule(aux_embed_module)
+            aux_embedded_files = [str(f) for f in aux_embedded_files]
+            result.aux_embeddings = aux_embedded_files
+        # ensure if auxiliary embeddings are provided they match the length of the main embeddings
+        assert not result.aux_embeddings or len(result.aux_embeddings) == len(
+            result.embeddings
+        )
 
         if lng.merged_index:
             assert os.path.exists(
@@ -455,6 +487,8 @@ class GlobalMiningPipeline:
             src2tgt_index_files=src2tgt_index_files,
             tgt2src_dist_files=tgt2src_dist_files,
             tgt2src_index_files=tgt2src_index_files,
+            src_aux_embeddings=src.aux_embeddings,
+            tgt_aux_embeddings=tgt.aux_embeddings,
         )
         mined_indexes = await self.launcher.schedule(mine_indexes_module)
 

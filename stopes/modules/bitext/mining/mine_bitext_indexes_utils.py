@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 from __future__ import annotations
 
+import contextlib
 import logging
 import typing as tp
 from collections import Counter, namedtuple
@@ -13,6 +14,12 @@ from enum import Enum
 from pathlib import Path
 
 import numpy as np
+import torch
+from scipy.special import softmax
+from sklearn.metrics.pairwise import cosine_similarity
+
+from stopes.eval.auto_pcp.audio_comparator import Comparator, get_model_pred
+from stopes.utils.embedding_utils import Embedding
 
 # TODO: maybe import that from calculate_distances_utils once merged or
 # ideally, rely on the filenames returned by the module within global_mining_pipeline.py
@@ -80,6 +87,7 @@ class Neighbors:
     # arrays are organized with fwd scores/index in front, then backwards scores/index,
     # this is the index in the ndarray from which backwards data starts
     backward_starts_at: tp.Optional[int] = None
+    blended_scores: tp.Optional[np.ndarray] = None
 
     @staticmethod
     def concat_neighbors(
@@ -122,6 +130,11 @@ def mine(
     mine_type: str,
     sort_neighbors: bool,
     logger: logging.Logger,
+    src_aux_embeddings: tp.Optional[tp.List[str]] = None,
+    tgt_aux_embeddings: tp.Optional[tp.List[str]] = None,
+    alpha: float = 0.5,
+    comparator_path: tp.Optional[Path] = None,
+    symmetrize_comparator: bool = False,
 ) -> Alignments:
     logger.info(
         f"Processing distance files: load k_extract={k_extract} dists and compute global avg"
@@ -164,7 +177,18 @@ def mine(
         else None
     )
     del list_of_dists_y2x
-
+    if src_aux_embeddings and tgt_aux_embeddings:
+        comparator_model = Comparator.load(comparator_path) if comparator_path else None
+        logger.info(f"Starting blended retrieval with alpha: {alpha}")
+        neighbors_x2y, neighbors_y2x = blended_retrieval(
+            neighbors_x2y,
+            neighbors_y2x,
+            src_aux_embeddings,
+            tgt_aux_embeddings,
+            alpha,
+            comparator_model,
+            symmetrize_comparator,
+        )
     logger.info("Starting fastmax retrieval with threshold {:f}".format(threshold))
     fastmax_neighbors = fastmax_retrieval(neighbors_x2y, neighbors_y2x, threshold)
 
@@ -216,7 +240,6 @@ def load_distances_and_compute_average(
     k_extract: int,
     mean_is_last: bool,
 ) -> (tp.List[np.ndarray], np.ndarray):
-
     # compute avg from all k columns as a single array for all files
     # copy and return k_extract distances from each file as list of batches
     nb_elements = 0
@@ -243,7 +266,6 @@ def load_distances_and_compute_average_single_file(
     k_extract: int,
     mean_is_last: bool,
 ) -> (np.ndarray, np.ndarray):
-
     # load mmap as read-only
     tmp = np.load(dists_path, mmap_mode="r")
 
@@ -356,6 +378,181 @@ def build_neighbors_single_file(
 
     # return the "k" chosen neighbors
     return Neighbors(dists=dists[:, :k_extract], indices=ind1[:, :k_extract])
+
+
+def get_cosine_similarity(src_emb: np.ndarray, neighbor_embs: np.ndarray) -> np.ndarray:
+    assert (
+        src_emb.shape[1] == neighbor_embs.shape[1]
+    ), f"{src_emb.shape[1]} != {neighbor_embs.shape[1]}"
+    src_embs = np.repeat(
+        src_emb, neighbor_embs.shape[0], axis=0
+    )  # repeat src embedding
+    cosine_scores = cosine_similarity(src_embs, neighbor_embs).diagonal()
+    return cosine_scores
+
+
+def get_comparator_scores(
+    src_emb: np.ndarray,
+    neighbor_embs: np.ndarray,
+    comparator_model: tp.Any,
+    symmetrize_comparator: bool,
+) -> np.ndarray:
+    src_embs = np.repeat(src_emb, neighbor_embs.shape[0], axis=0)
+    a = torch.from_numpy(src_embs).unsqueeze(1)  # restore depth dim
+    b = torch.from_numpy(neighbor_embs).unsqueeze(1)
+    res = get_comparator_preds(a, b, comparator_model, symmetrize_comparator)
+    scores_softmax = softmax(res)
+    return np.array(scores_softmax)
+
+
+def get_comparator_preds(
+    src_emb: torch.Tensor, tgt_emb: torch.Tensor, model: tp.Any, symmetrize: bool
+):
+    preds = (
+        get_model_pred(
+            model,
+            src=src_emb[:, 0],
+            mt=tgt_emb[:, 0],
+            use_gpu=model.use_gpu,
+            batch_size=1,
+        )[:, 0]
+        .cpu()
+        .numpy()
+    )
+    if symmetrize:
+        preds2 = (
+            get_model_pred(
+                model,
+                src=tgt_emb[:, 0],
+                mt=src_emb[:, 0],
+                use_gpu=model.use_gpu,
+                batch_size=1,
+            )[:, 0]
+            .cpu()
+            .numpy()
+        )
+        preds = (preds2 + preds) / 2
+    return preds
+
+
+def get_sharded_embeddings(
+    indices: list[int], embedding_list: tp.List[np.ndarray], emb_idx_map: dict
+) -> np.ndarray:
+    embeddings = []
+    for index in indices:
+        x, y = emb_idx_map[index]
+        embedding = embedding_list[x][y]
+        embeddings.append(embedding)
+    return np.vstack(embeddings)
+
+
+def get_aux_scores(
+    src_emb: np.ndarray,
+    neighbor_embs: np.ndarray,
+    comparator_model: tp.Any,
+    symmetrize_comparator: bool,
+) -> np.ndarray:
+    return (
+        get_comparator_scores(
+            src_emb, neighbor_embs, comparator_model, symmetrize_comparator
+        )
+        if comparator_model
+        else get_cosine_similarity(src_emb, neighbor_embs)
+    )
+
+
+def get_blended_best_neighbor(
+    neighbors: tp.Optional[Neighbors],
+    src_embeddings: tp.List[np.ndarray],
+    tgt_embeddings: tp.List[np.ndarray],
+    src_emb_idx_map: dict,
+    tgt_emb_idx_map: dict,
+    alpha: float,
+    comparator_model: tp.Optional[tp.Any] = None,
+    symmetrize_comparator: bool = False,
+) -> Neighbors:
+    if not neighbors:
+        return None
+    predictions = []
+    nbex = neighbors.dists.shape[0]
+    for src_index in range(nbex):
+        margin_scores = neighbors.dists[src_index]
+        neighbor_inds = neighbors.indices[src_index].tolist()
+        neighbor_embs = get_sharded_embeddings(
+            neighbor_inds, tgt_embeddings, tgt_emb_idx_map
+        )
+        src_emb = get_sharded_embeddings([src_index], src_embeddings, src_emb_idx_map)
+        aux_scores = get_aux_scores(
+            src_emb, neighbor_embs, comparator_model, symmetrize_comparator
+        )
+        assert margin_scores.shape == aux_scores.shape
+        blended_scores = alpha * margin_scores + (1 - alpha) * aux_scores
+        blended_neighbor_idx = blended_scores.argmax()
+        predictions.append(np.arange(blended_scores.shape[0]) == blended_neighbor_idx)
+    preds = np.vstack(predictions)
+    return Neighbors(
+        dists=np.expand_dims(neighbors.dists[preds], axis=1),
+        indices=np.expand_dims(neighbors.indices[preds], axis=1),
+        blended_scores=np.expand_dims(np.asarray(blended_scores), axis=1),
+    )
+
+
+def get_emb_idx_map(embedding_list: tp.List[np.ndarray]) -> dict:
+    cumsum = np.cumsum([len(emb) for emb in embedding_list])
+    emb_idx_map = {
+        j + (cumsum[i - 1] if i > 0 else 0): [i, j]
+        for i, emb in enumerate(embedding_list)
+        for j in range(len(emb))
+    }
+    return emb_idx_map
+
+
+def blended_retrieval(
+    neighbors_x2y: tp.Optional[Neighbors],
+    neighbors_y2x: tp.Optional[Neighbors],
+    src_aux_embeddings: tp.List[str],
+    tgt_aux_embeddings: tp.List[str],
+    alpha: float,
+    comparator_model: tp.Any,
+    symmetrize_comparator: bool = False,
+) -> tp.Tuple[Neighbors, Neighbors]:
+    """
+    return neighbor with highest blend of both margin and auxiliary scores
+    """
+    with contextlib.ExitStack() as stack:
+        # load memory-mapped embeddings
+        src_embeddings = [
+            stack.enter_context(Embedding(fname).open_for_read())
+            for fname in src_aux_embeddings
+        ]
+        tgt_embeddings = [
+            stack.enter_context(Embedding(fname).open_for_read())
+            for fname in tgt_aux_embeddings
+        ]
+        # map global (combined) indices from FAISS index to sharded files
+        src_emb_idx_map = get_emb_idx_map(src_embeddings)
+        tgt_emb_idx_map = get_emb_idx_map(tgt_embeddings)
+        best_blended_neighbor_x2y = get_blended_best_neighbor(
+            neighbors_x2y,
+            src_embeddings,
+            tgt_embeddings,
+            src_emb_idx_map,
+            tgt_emb_idx_map,
+            alpha,
+            comparator_model,
+            symmetrize_comparator,
+        )
+        best_blended_neighbor_y2x = get_blended_best_neighbor(
+            neighbors_y2x,
+            tgt_embeddings,
+            src_embeddings,
+            tgt_emb_idx_map,
+            src_emb_idx_map,
+            alpha,
+            comparator_model,
+            symmetrize_comparator,
+        )
+    return best_blended_neighbor_x2y, best_blended_neighbor_y2x
 
 
 def fastmax_retrieval(

@@ -12,4 +12,3 @@ from .moses_cli_module import MosesPreprocessModule as MosesPreprocessModule
 from .train_spm import TrainSpmConfig as TrainSpmConfig
 from .train_spm import TrainSpmModule as TrainSpmModule
 from .uromanize_cli_module import UromanPreprocessConfig as UromanPreprocessConfig
-from .wav2vec_laser_speech_encoder import LaserEmbeddingConfig as LaserEmbeddingConfig

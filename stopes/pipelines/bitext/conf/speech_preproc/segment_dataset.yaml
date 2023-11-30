@@ -1,0 +1,16 @@
+_target_: stopes.modules.speech.segment_dataset.SegmentDATASETModule
+
+defaults:
+  - /speech_preproc@segment: vad
+  # /speech_preproc@segment: shas
+  - _self_
+
+output_dir: ???
+dataset_dir: ???
+# Number of DATASET folder per manifest
+folders_per_manifest: 20
+job_limit: -1
+
+segment:
+  shards: []
+  output_dir: ${..output_dir}

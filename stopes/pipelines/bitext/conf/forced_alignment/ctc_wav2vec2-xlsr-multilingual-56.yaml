@@ -1,0 +1,5 @@
+# A recommended config to use with stopes/eval/local_prosody/ctc_forced_aligner.py
+aligner_type: Wav2Vec2
+
+config:
+  model_name: voidful/wav2vec2-xlsr-multilingual-56

@@ -1,0 +1,9 @@
+_target_: stopes.modules.evaluation.sentence_transformers_similarity.SentenceTransformersSimilarityModule
+
+input_glob: null
+input_files: null
+model_name_or_path: "sentence-transformers/LaBSE"
+src_column: "lang1_text"
+tgt_column: "lang2_text"
+batch_size: 16
+result_file_suffix: "labse_sim"

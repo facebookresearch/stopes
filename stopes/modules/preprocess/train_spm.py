@@ -57,7 +57,7 @@ class TrainSpmModule(StopesModule):
     """
     Train a SPM model using module API.
 
-    python -m pdb launch_module.py train_spm.config.train_data_file=/checkpoint/guw/hmine/align/bel.v2.sents.bel.xz \
+    python -m pdb launch_module.py train_spm.config.train_data_file=... \
         train_spm.config.output_dir=<output_dir> launcher.cluster=debug
     """
 

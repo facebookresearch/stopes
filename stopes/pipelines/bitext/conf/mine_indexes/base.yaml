@@ -10,6 +10,12 @@ config:
     tgt2src_dist_files: ???
     tgt2src_index_files: ???
 
+    src_aux_embeddings: null
+    tgt_aux_embeddings: null
+    alpha: 0.5
+    comparator_path: null
+    symmetrize_comparator: False
+
     output_dir: ???
     knn_dist: 16
     src_k: 16

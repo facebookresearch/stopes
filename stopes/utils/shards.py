@@ -466,18 +466,10 @@ def make_shards(
 
     """
     assert nshards > 0, f"invalid number of shards ({nshards})"
-
     if isinstance(input, tp.List):
         return [
             s
             for f in input
-            for s in make_shards(f, 1, algo, header, sep, cache_dir, **kwargs)
-        ]
-    # TODO: Do we really need the form "f1,f2,f3,.." ? hydra accepts in this case only a list
-    elif isinstance(input, str) and "," in input:
-        return [
-            s
-            for f in input.split(",")
             for s in make_shards(f, 1, algo, header, sep, cache_dir, **kwargs)
         ]
     elif (p := Path(input)).is_dir():

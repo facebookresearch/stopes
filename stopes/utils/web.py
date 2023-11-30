@@ -8,11 +8,15 @@ import functools
 import gzip
 import io
 import logging
+import shutil
+import tempfile
 import time
 import typing as tp
+import zipfile
 from pathlib import Path
 
 import requests
+from tqdm.auto import tqdm
 
 from stopes.core import utils
 
@@ -20,6 +24,8 @@ log = logging.getLogger(__name__)
 
 # not sure it helps since connections are reseted anyway.
 _session = functools.lru_cache()(requests.Session)
+
+STOPES_CACHE_DIR = Path("~/.cache/stopes").expanduser()
 
 
 def request_get_content(url: str, n_retry: int = 6, **kwargs) -> bytes:
@@ -81,3 +87,53 @@ def open_remote_file(
 
     with f:
         yield from f
+
+
+def cached_file_download(
+    url: str,
+    filename: str,
+    force_redownload: bool = False,
+    base_dir: Path = STOPES_CACHE_DIR,
+    unzip: bool = False,
+    warning_size: float = 1024**3,
+) -> Path:
+    """
+    If the `filename` file or directory exists in the `base_dir`, and `force_redownload` is false, just return its full path.
+    Otherwise, download the file from `url`, save it to this path (optionally, extract from a zip archive), and return it.
+    """
+    local_file_path = base_dir / filename
+    if local_file_path.exists():
+        if force_redownload:
+            log.info(f"{filename} already downloaded; removing it for redownload")
+            if local_file_path.is_dir():
+                shutil.rmtree(local_file_path)
+            else:
+                local_file_path.unlink()
+        else:
+            log.info(f"{filename} already downloaded")
+            return local_file_path
+
+    log.info(f"Downloading {filename}...")
+    f = tempfile.NamedTemporaryFile(delete=False)
+    temp_file_path = f.name
+
+    with f:
+        response = requests.get(url, stream=True)
+        total_size = int(response.headers.get("Content-Length", 0))
+        if total_size >= warning_size:
+            log.warning(f"Downloading a large file ({total_size:,d} bytes) from {url}")
+        progress_bar = tqdm(total=total_size, unit_scale=True, unit="B")
+
+        for chunk in response.iter_content(chunk_size=1024):
+            f.write(chunk)
+            progress_bar.update(len(chunk))
+        progress_bar.close()
+
+    local_file_path.parent.mkdir(parents=True, exist_ok=True)
+    if unzip:
+        with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
+            zip_ref.extractall(local_file_path)
+        Path(temp_file_path).unlink()
+    else:
+        shutil.move(temp_file_path, local_file_path)
+    return local_file_path

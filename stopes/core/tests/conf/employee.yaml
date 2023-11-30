@@ -1,0 +1,6 @@
+defaults:
+  - employment: department
+  - _self_
+
+person: Meta employee
+duration: 0.5

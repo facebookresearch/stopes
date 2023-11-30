@@ -41,6 +41,10 @@ class BLASER(nn.Module):
 
         if input_form == "comet":
             idim = 6 * idim
+        elif input_form == "comet-src":
+            idim = 7 * idim
+        elif input_form == "qe":
+            idim = 4 * idim
         else:
             raise Exception(f"Unrecognized input format: {input_form}")
 
@@ -103,14 +107,41 @@ class BLASER(nn.Module):
         if self.use_gpu:
             self.cuda()
 
+    @classmethod
+    def from_pretrained(cls, ckpt_dir: Path, use_gpu=True):
+        cfg_file, ckpt_file = None, None
+        for item in Path(ckpt_dir).iterdir():
+            if item.suffix == ".config":
+                cfg_file = item
+            if item.suffix == ".pt":
+                ckpt_file = item
+        if not cfg_file or not ckpt_file:
+            raise FileNotFoundError(
+                f"Directory {ckpt_dir} does not contain a .config file and a .ckpt file for BLASER"
+            )
+        model_config = torch.load(cfg_file)
+        model = BLASER(
+            idim=model_config["idim"],
+            odim=model_config["odim"],
+            nhid=model_config["nhid"],
+            dropout=model_config["dropout"],
+            input_form=model_config["input_form"],
+            output_act=model_config["output_act"],
+            activation=model_config["activation"],
+            norm_emb=model_config["norm_emb"],
+            use_gpu=use_gpu,
+        )
+        model.load_from_ckpt_file(ckpt_file)
+        return model
+
     def forward(self, src: torch.tensor, ref: torch.tensor, mt: torch.tensor):
         proc = self._process_input(
             self._norm_vec(src), self._norm_vec(ref), self._norm_vec(mt)
         )
         return self.mlp(proc)
 
-    def _norm_vec(self, emb: torch.tensor):
-        if self.norm_emb:
+    def _norm_vec(self, emb: tp.Optional[torch.tensor]):
+        if self.norm_emb and emb is not None:
             return F.normalize(emb)
         else:
             return emb
@@ -125,6 +156,29 @@ class BLASER(nn.Module):
                     ref * mt,
                     torch.absolute(mt - src),
                     torch.absolute(mt - ref),
+                ],
+                dim=-1,
+            )
+        elif self.input_form == "comet-src":
+            processed = torch.cat(
+                [
+                    src,
+                    ref,
+                    mt,
+                    src * mt,
+                    ref * mt,
+                    torch.absolute(mt - src),
+                    torch.absolute(mt - ref),
+                ],
+                dim=-1,
+            )
+        elif self.input_form == "qe":
+            processed = torch.cat(
+                [
+                    src,
+                    mt,
+                    src * mt,
+                    torch.absolute(mt - src),
                 ],
                 dim=-1,
             )

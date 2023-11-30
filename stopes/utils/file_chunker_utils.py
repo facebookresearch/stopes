@@ -6,6 +6,7 @@
 
 import os
 import typing as tp
+from pathlib import Path
 
 
 def _safe_readline(fd) -> str:
@@ -18,7 +19,7 @@ def _safe_readline(fd) -> str:
             fd.seek(pos)  # search where this character begins
 
 
-def find_offsets(filename: str, num_chunks: int) -> tp.List[int]:
+def find_offsets(filename: tp.Union[str, Path], num_chunks: int) -> tp.List[int]:
     """
     given a file and a number of chuncks, find the offsets in the file
     to be able to chunk around full lines.
@@ -33,6 +34,27 @@ def find_offsets(filename: str, num_chunks: int) -> tp.List[int]:
             offsets[i] = f.tell()
         offsets[-1] = size
         return offsets
+
+
+def find_line_numbers(
+    filename: tp.Union[str, Path], start_offsets: tp.List[int]
+) -> tp.List[int]:
+    """
+    given a file and a number of start byte offsets, return the numbers of the
+    lines that would correspond to the beginning of the chunk, i.e. would
+    read through those offsets
+    """
+    line_cnt = 0
+    offset_idx = 0
+    line_nos = []
+    with open(filename, "r", encoding="utf-8") as f:
+        while offset_idx < len(start_offsets):
+            f.readline()
+            if start_offsets[offset_idx] <= f.tell():
+                line_nos.append(line_cnt)
+                offset_idx += 1
+            line_cnt += 1
+    return line_nos
 
 
 class ChunkLineIterator:

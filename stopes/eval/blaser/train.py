@@ -52,6 +52,9 @@ class BlaserTrainConfig:
     nhid: tp.List = field(default_factory=lambda: [3072, 1536])
     dropout: float = 0.1
     activation: str = "TANH"
+    weight_decay: float = 0.0
+    loss_fn: str = "mse"
+    early_stop: bool = True
     use_gpu: bool = True
 
 
@@ -112,6 +115,8 @@ def run(config: BlaserTrainConfig) -> tp.Tuple[Path, Path]:
             train_list,
             val_list,
             config.use_gpu,
+            loss_fn=config.loss_fn,
+            early_stop=config.early_stop,
         )
         model.save(output_dir)
 
@@ -129,27 +134,36 @@ def train_iterations(
     train_dset: tp.List[torch.tensor],
     val_dset: tp.List[torch.tensor],
     use_gpu: bool,
+    loss_fn: str = "mse",
+    weight_decay: float = 0.0,
+    early_stop: bool = True,
 ):
-    opt = torch.optim.Adam(
-        params=filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate
+    opt = torch.optim.AdamW(
+        params=filter(lambda p: p.requires_grad, model.parameters()),
+        lr=learning_rate,
+        weight_decay=weight_decay,
     )
     logger.info(f"classifier filename: {model.filename}")
 
     if learning_rate_scheduler:
+        training_steps = train_dset[0].shape[0] // batch_size * train_epoch
+        opt_scheduler = get_linear_schedule_with_warmup(opt, 0, training_steps)
+    loss_fn = F.l1_loss if loss_fn == "mae" else F.mse_loss
 
-        opt_scheduler = get_linear_schedule_with_warmup(
-            opt, 0, 30000 * 100 // batch_size
-        )
-
-    best_corr = -1.0
+    best_corr, curr_corr = -1.0, -1.0
+    run_losses, losses, corrs, corrs_train = [], [], [], []
     best_mlp = model.mlp
     for epoch in range(train_epoch):
         train_batch = shuffle_data(train_dset, batch_size)
+        run_losses = []
+        run_preds = []
+        run_targets = []
         for step, (src, ref, mt, label) in enumerate(zip(*train_batch)):
             model.train(mode=True)
             if use_gpu:
                 label = label.cuda()
-            loss = F.mse_loss(model(src, ref, mt).squeeze(1), label)
+            pred = model(src, ref, mt).squeeze(1)
+            loss = loss_fn(pred, label)
             loss.backward()
             opt.step()
             if learning_rate_scheduler:
@@ -159,6 +173,9 @@ def train_iterations(
                 logger.info(
                     f"epoch: {epoch}, step: {step}, loss: {loss.cpu().item():.4f}"
                 )
+            run_preds.append(pred.squeeze().detach().cpu())
+            run_targets.append(label.squeeze().cpu())
+            run_losses.append(loss.item())
             if val_dset is not None and (
                 (step + 1) % 200 == 0 or step + 1 == len(train_dset[0]) // batch_size
             ):
@@ -178,8 +195,23 @@ def train_iterations(
                     best_mlp = copy.deepcopy(model.mlp)
                     best_corr = curr_corr
                     logger.info(f"best val corr updated to {best_corr:.4f}")
-    if val_dset is not None:
+        corrs_train.append(
+            get_pearson_corr(
+                model,
+                None,
+                None,
+                None,
+                label=torch.cat(run_targets),
+                model_pred=torch.cat(run_preds),
+                use_gpu=use_gpu,
+            )
+        )
+        corrs.append(curr_corr)
+        losses.append(sum(run_losses) / len(run_losses))
+        run_losses = []
+    if val_dset is not None and early_stop:
         model.mlp = best_mlp
+    return model, losses, corrs_train, corrs
 
 
 @hydra.main(config_path="conf", config_name="train")

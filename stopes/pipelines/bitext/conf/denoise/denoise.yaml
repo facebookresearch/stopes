@@ -1,0 +1,11 @@
+_target_: stopes.modules.speech.denoise.DenoiserModule
+
+
+shards: ???
+output_dir: ???
+
+model_name: mdx_extra
+source_id: vocals
+dry_wet: 0.01
+use_cuda: True
+compute_snr: False

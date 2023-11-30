@@ -1,0 +1,24 @@
+_target_: stopes.modules.speech.segment_and_lid.SegmentLIDModule
+
+defaults:
+  - /speech_preproc@segment: vad
+  - speechbrain_lid@lid
+
+shards: ???
+output_dir: ???
+segment_model: ???
+lid_model: ???
+max_duration_in_seconds: 86400
+
+segment:
+  shards: ${..shards}
+  output_dir: ${..output_dir}/segment
+  model: ${..segment_model}
+  lang: "UNK"
+
+lid:
+  shards: ${..shards}
+  output_dir: ${..output_dir}/lid
+  line_processor:
+    config:
+      model: ${....lid_model}

@@ -24,6 +24,7 @@ local_tmp_dir: /tmp
 index_type: null
 existing_index_path: null
 existing_embedding_glob: null
+existing_aux_embedding_glob: null
 
 embedding_sample:
   max_num_workers: 40

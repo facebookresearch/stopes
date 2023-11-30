@@ -34,6 +34,14 @@ class MineBitextConfig:
     #  the faiss index
     tgt2src_index_files: tp.List[str] = MISSING
 
+    # optional auxiliary embeddings
+    src_aux_embeddings: tp.Optional[tp.List[str]] = None
+    tgt_aux_embeddings: tp.Optional[tp.List[str]] = None
+    # parameter to control blended alignment score
+    alpha: float = 0.5
+    comparator_path: tp.Optional[Path] = None
+    symmetrize_comparator: bool = False
+
     index_type: str = MISSING
 
     output_dir: str = MISSING
@@ -52,7 +60,7 @@ class MineBitextConfig:
         default=Requirements(
             nodes=1,
             tasks_per_node=1,
-            gpus_per_node=0,
+            gpus_per_node=1,
             cpus_per_task=40,
             timeout_min=600,
         )
@@ -105,6 +113,11 @@ class MineBitextIndexesModule(StopesModule):
             self.config.mine_type,
             self.config.sort_neighbors,
             logger,
+            self.config.src_aux_embeddings,
+            self.config.tgt_aux_embeddings,
+            self.config.alpha,
+            self.config.comparator_path,
+            self.config.symmetrize_comparator,
         )
 
         meta = Path(self.config.output_dir) / (

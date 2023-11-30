@@ -2,6 +2,7 @@ _target_: stopes.modules.preprocess.sonar_sentence_encoder.SonarTextEncoder
 
 # SONAR name of the model, e.g. "text_sonar_basic_encoder"
 _name: ???
+encoder_model: null
 normalize: False
 fp16: False
 

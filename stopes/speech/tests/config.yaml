@@ -1,0 +1,4 @@
+_target_: stopes.speech.tests.test_speech_tokenizer.MockSpeechTokenizer
+mock_attr: fake_lang
+mock_checkpoint: my_ckpt
+max_frames_chunk: 1600000

@@ -1,0 +1,15 @@
+_target_: stopes.modules.speech.whisper.WhisperModule
+
+shards: ???
+output_dir: ???
+column: ???
+model: ???
+# set `lang` to null if we want Whisper to predict the language
+lang: null
+longest_segment: ???
+
+parallel_audio_read: false
+output_timestamp: false
+output_info: true
+
+tmp_dir: null

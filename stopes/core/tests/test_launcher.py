@@ -16,12 +16,16 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-import submitit
 from omegaconf import OmegaConf
 from submitit import AutoExecutor
 
 from stopes.core.cache import Cache, FileCache
-from stopes.core.launcher import Launcher, ThrottleConfig
+from stopes.core.launcher import (
+    ArrayTaskError,
+    Launcher,
+    TaskExecutionError,
+    ThrottleConfig,
+)
 from stopes.core.stopes_module import Requirements, StopesModule
 from stopes.core.tests.hello_world import (
     HelloWorldArrayConfig,
@@ -142,11 +146,11 @@ async def test_single_cache(tmp_path: Path, launcher: Launcher, cache: Cache):
         assert mock_submit.call_count == 2
 
         # another module instance with the same config except `gpus_per_node`,
-        # should submit again
+        # should use cache
         mod2_config.requirements.gpus_per_node += 1
         result6 = await launcher.schedule(HelloWorldModule(mod2_config))
         assert result6 == "Hello Bar !"
-        assert mock_submit.call_count == 3
+        assert mock_submit.call_count == 2
 
 
 async def test_array_cache(tmp_path: Path, launcher: Launcher, cache: Cache):
@@ -212,6 +216,53 @@ async def test_array_cache(tmp_path: Path, launcher: Launcher, cache: Cache):
         assert mock_batch.call_count == expected_batch
 
 
+def test_cache_with_transient_config(tmp_path: Path, launcher: Launcher, cache: Cache):
+    from dataclasses import field, make_dataclass
+
+    TransientConfig = make_dataclass(
+        "NewHelloWorldConfig",
+        [("duration", tp.Optional[float], field(default=0.1, metadata={"transient": True}))],  # type: ignore
+        bases=(HelloWorldConfig,),
+    )
+    with _setup_mocked_launcher(tmp_path) as (mock_submit, _):
+        mod1 = HelloWorldModule(
+            TransientConfig(greet="Hello", person="Foo", duration=None), TransientConfig
+        )
+        mod2 = HelloWorldModule(
+            TransientConfig(greet="Hello", person="Foo", duration=0.3), TransientConfig
+        )
+        mod3 = HelloWorldModule(
+            TransientConfig(
+                greet="Hello",
+                person="Foo",
+                duration=None,
+                requirements=Requirements(nodes=3),
+            ),
+            TransientConfig,
+        )
+
+        # first call
+        result = asyncio.run(launcher.schedule(mod1))
+
+        assert result == "Hello Foo !"
+        # we should submit the module when it's not cached
+        assert mock_submit.call_count == 1
+
+        assert cache.get_cache(mod1) == result
+
+        # second call is cached
+        result2 = asyncio.run(launcher.schedule(mod2))
+        assert result2 == "Hello Foo !"
+        # we should NOT submit the module once it's been cached
+        assert mock_submit.call_count == 1
+
+        # third call is also cached
+        result3 = asyncio.run(launcher.schedule(mod3))
+        assert result3 == "Hello Foo !"
+        # we should NOT submit the module once it's been cached
+        assert mock_submit.call_count == 1
+
+
 ##########
 # retries
 ##########
@@ -270,7 +321,7 @@ class RetryableModuleTest(StopesModule):
         return "ValueError" in str_ex and "retry is " in str_ex
 
 
-async def test_retry_single(launcher):
+async def test_retry_single(launcher: Launcher):
     launcher.max_retries = 3
 
     # # 1. we should not retry if we don't want to
@@ -279,7 +330,7 @@ async def test_retry_single(launcher):
         do_retries=False,
     )
 
-    with pytest.raises(submitit.core.utils.FailedJobError):
+    with pytest.raises(TaskExecutionError):
         await launcher.schedule(non_retriable)
 
     # 2. should retry at most max_retries
@@ -288,7 +339,7 @@ async def test_retry_single(launcher):
         do_retries=True,
     )
 
-    with pytest.raises(submitit.core.utils.FailedJobError):
+    with pytest.raises(TaskExecutionError):
         await launcher.schedule(retriable)
     assert retriable.retry_counts[0] == 3
 
@@ -302,7 +353,7 @@ async def test_retry_single(launcher):
     assert val == "DONE"
 
 
-async def test_retry_array(launcher):
+async def test_retry_array(launcher: Launcher):
     launcher.max_retries = 3
     # 1. we should not retry if we don't want to
     non_retriable = RetryableModuleTest(
@@ -310,8 +361,12 @@ async def test_retry_array(launcher):
         do_retries=False,
     )
 
-    with pytest.raises(submitit.core.utils.FailedJobError):
+    with pytest.raises(ArrayTaskError) as e_info:
         await launcher.schedule(non_retriable)
+        assert [(0, "a"), (2, "aaa")] == e_info.value.results
+        assert len(e_info.value.exceptions) == 1
+        assert 1 == e_info.value.exceptions[0][0]
+        assert isinstance(e_info.value.exceptions[0][1], TaskExecutionError)
     assert len(non_retriable.retry_counts) == 3
     assert all([cnt == 0 for cnt in non_retriable.retry_counts])
 
@@ -321,8 +376,12 @@ async def test_retry_array(launcher):
         do_retries=True,
     )
 
-    with pytest.raises(submitit.core.utils.FailedJobError):
+    with pytest.raises(ArrayTaskError) as e_info:
         await launcher.schedule(retriable)
+        assert [(0, "a"), (2, "aaa")] == e_info.value.results
+        assert len(e_info.value.exceptions) == 1
+        assert 1 == e_info.value.exceptions[0][0]
+        assert isinstance(e_info.value.exceptions[0][1], TaskExecutionError)
     assert len(retriable.retry_counts) == 3
     assert retriable.retry_counts[1] == 3
 
@@ -359,7 +418,7 @@ class ThrottleModuleTest(StopesModule):
         return f"throttle-{self.config.idx}"
 
 
-async def test_throttling(tmp_path):
+async def test_throttling(tmp_path: Path):
     wait_time = 1.5
     shared_name = f"/test_throttling{uuid.uuid4()}"
 
@@ -392,15 +451,14 @@ async def test_throttling(tmp_path):
         ends.append(res)
 
     ends.sort()
-    for (end1, end2) in zip(ends, ends[1:]):
+    for end1, end2 in zip(ends, ends[1:]):
         t_diff = end2 - end1
         assert (
             t_diff.total_seconds() >= wait_time
         ), f"{t_diff} is too short, should have waited {wait_time} at least in the semaphore."
 
 
-async def test_throttling_timeout(tmp_path):
-
+async def test_throttling_timeout(tmp_path: Path):
     launcher1 = Launcher(
         cache=None,
         config_dump_dir=tmp_path / "conf",

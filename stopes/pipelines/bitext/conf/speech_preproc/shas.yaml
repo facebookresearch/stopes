@@ -1,0 +1,13 @@
+_target_: stopes.modules.speech.shas_segment_audio.SHASSegmentAudioModule
+
+shards: ???
+lang: "no_lid"
+max_duration_in_seconds: null
+output_dir: ???
+model: ???
+max_segment_length: 5
+min_segment_length: 1
+inference_batch_size: 20
+inference_segment_length: 20
+dac_threshold: 0.5
+inference_times: 2

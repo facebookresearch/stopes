@@ -67,3 +67,16 @@ class TestFileChunker(unittest.TestCase):
                 self.assertListEqual(
                     all_lines, [self._line_content for _ in range(len(all_lines))]
                 )
+
+    def test_find_line_numbers(self):
+        from stopes.utils.file_chunker_utils import find_line_numbers, find_offsets
+
+        assert self._tmpfile
+        offsets = find_offsets(self._tmpfile, self._num_splits)
+        (*start_offsets, last) = offsets
+        expected_line_nos = list(
+            range(0, self._num_lines, self._num_lines // self._num_splits)
+        )
+
+        line_nos = find_line_numbers(self._tmpfile, start_offsets)
+        self.assertListEqual(line_nos, expected_line_nos)

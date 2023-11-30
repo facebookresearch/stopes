@@ -1,0 +1,17 @@
+_target_: stopes.modules.speech.speech_units.SpeechUnitsModule
+
+# Input/output
+shards: ???
+output_dir: ???
+
+# column should be 'audio' / 'tgt_audio' or index ( 1 / 2)
+column: ???
+suffix: ".tsv.gz"
+
+# To process e.g. only the top 1000 rows, specify nrows
+# nrows: 1000
+nshards: 1
+algo: chunk
+
+# If no speech_tokenizer is specified, use "encodec_24khz" as default
+tokenizer: ${oc.select:..speech_tokenizer,encodec_24khz}

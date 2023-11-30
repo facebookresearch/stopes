@@ -1,0 +1,23 @@
+_target_: stopes.modules.preprocess.line_processor.LineProcessorModule
+
+output_dir: ???
+shards: ???
+outfile_prefix: speechbrain_lid
+outfile_postfix: pred
+buffer_size: 10_000
+requirements:
+  nodes: 1
+  tasks_per_node: 1
+  gpus_per_node: 1
+  cpus_per_task: 4
+  timeout_min: 2880
+
+line_processor:
+  _target_: stopes.modules.speech.speechbrain_lid.SpeechbrainLidCallback
+  config:
+    model: ???
+    max_seconds: 600.0
+    min_seconds: 1.1
+    extend_seconds: 1.0
+    max_tokens: 10_000_000
+    split_to_mono: True

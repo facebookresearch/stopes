@@ -1,0 +1,16 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+kwargs:
+  {
+    model_name: seamlessM4T_v2_large,
+    vocoder_name: vocoder_v2,
+    whisper_model_name: large,
+    ref_field: _tgt_text,
+  }
+
+launcher:
+  partition: ??? # set as null if running locally
+  cache:
+    caching_dir: ${output_dir}/cache # Cache won't be re-used if you change the output_dir.

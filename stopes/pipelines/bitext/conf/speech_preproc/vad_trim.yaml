@@ -1,0 +1,12 @@
+_target_: stopes.modules.speech.vad_trim_audio.VADTrimAudioModule
+
+shards: ???
+audio_column: ???
+output_dir: ???
+model: ???
+save_trimmed_audio: True
+speech_threshold: 0.3
+min_speech_duration_ms: 250
+min_silence_duration_ms: 100
+window_size_samples: 1536
+speech_pad_ms: 30

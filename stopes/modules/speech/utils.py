@@ -3,7 +3,9 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-
+#
+# Different helper functions to interface with fairseq
+#
 
 import functools
 import io
@@ -13,6 +15,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+import librosa
+import torch
 import torchaudio
 
 if tp.TYPE_CHECKING:
@@ -334,7 +338,11 @@ def read_audio(
             path, frame_offset=start_frame, num_frames=end_frame - start_frame
         )
     else:
-        wav, sr = torchaudio.load(path)
+        if any(map(path.endswith, (".webm", ".flac", ".m4a"))):
+            wav, sr = librosa.load(path, sr=sampling_rate)
+            wav = torch.from_numpy(wav).unsqueeze(0)
+        else:
+            wav, sr = torchaudio.load(path)
 
     if wav.size(0) > 1:
         wav = wav.mean(dim=0, keepdim=True)

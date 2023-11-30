@@ -31,6 +31,31 @@ if tp.TYPE_CHECKING:
 logger = logging.getLogger("stopes.launcher")
 
 
+@dataclasses.dataclass(frozen=True)
+class TaskExecutionError(RuntimeError):
+    """Error raised when stopes task execution fails on slurm cluster.
+    It encapsulates the submitit exception and behaves the same way.
+    """
+
+    task: "Task"
+    """Failing task."""
+    inner_exception: Exception
+    """Exception raised when executing job on cluster."""
+
+    def __str__(self) -> str:
+        return self.inner_exception.__str__()
+
+
+@dataclasses.dataclass(frozen=True)
+class ArrayTaskError(Exception):
+    """Exception raised if at least one task fails when using an array job"""
+
+    exceptions: tp.List[tp.Tuple[int, Exception]]
+    """list of tuples containing the task iteration value with corresponding exception"""
+    results: tp.List[tp.Tuple[int, tp.Any]]
+    """list of tuples containing the task iteration value with corresponding result"""
+
+
 @dataclasses.dataclass
 class Task:
     module: "StopesModule"
@@ -46,6 +71,8 @@ class Task:
     _tries: tp.List[submitit.Job] = dataclasses.field(default_factory=list, init=False)
     # _must_release is True when _job was launched by acquiring a semaphore
     _must_release: bool = dataclasses.field(init=False, default=False)
+    # _exception contains the exception instance in case of task runtime error
+    _exception: tp.Optional[Exception] = dataclasses.field(init=False, default=None)
 
     def done_from_cache(
         self,
@@ -106,7 +133,9 @@ class Task:
             iteration_index=self.iteration_index,
             iteration_value=self.iteration_value,
         ):  # we should fail hard here
-            raise ex
+            self._exception = ex
+            self._done = True
+            raise TaskExecutionError(task=self, inner_exception=ex)
 
         assert self._job is not None, "No _job on pending task."
         self._tries.append(self._job)
@@ -146,6 +175,14 @@ class Task:
             self._done
         ), "you need to make sure that Task is done before inspecting results"
         return self._result
+
+    @property
+    def exception(self) -> tp.Optional[Exception]:
+        """returns task exception in case of failure or None for success."""
+        assert (
+            self._done
+        ), "you need to make sure that Task is done before inspecting the exception"
+        return self._exception
 
     @property
     def done(self) -> bool:
@@ -447,6 +484,7 @@ class Launcher:
             if task._job is not None:
                 self._track_job(task._job, module)
 
+        error = False
         # now await for the results of each iteration.
         # we want to show progress as soon as a result returns. Jobs might not return
         # in order, so we use asyncio.as_completed to catch them as they arrive
@@ -456,12 +494,35 @@ class Launcher:
         ):
             try:
                 await _res
-            # TODO: handle exception, eg we could decide to cancel the full job array
+            except TaskExecutionError as ex:
+                error = True
+                assert ex.task._job is not None, "No _job on failing task."
+                logger.warning(
+                    f"Failed job {ex.task._job.job_id} when executing Array Task. Logs can be found at paths:"
+                    f"\n  - {ex.task._job.paths.stderr}"
+                    f"\n  - {ex.task._job.paths.stdout}"
+                    "\nWill continue executing remaining tasks and raise an exception when all tasks finish."
+                )
+                continue  # Exceptions are captured in task
             finally:
                 self.progress_job_end()
 
-        # return the results that were already cached with the ones that just got computed
-        return [task.final_result for task in tasks]
+        if error:
+            raise ArrayTaskError(
+                exceptions=[
+                    (task.iteration_index, task.exception)
+                    for task in tasks
+                    if task.exception is not None
+                ],
+                results=[
+                    (task.iteration_index, task.final_result)
+                    for task in tasks
+                    if task.exception is None
+                ],
+            )
+        else:
+            # return the results that were already cached with the ones that just got computed
+            return [task.final_result for task in tasks]
 
     def _track_job(self, submitit_job: submitit.Job, module: "StopesModule"):
         """
@@ -477,5 +538,4 @@ class Launcher:
         )
         # Registering job into registry
         self.jobs_registry.register_job(stopes_job)
-        logger.debug(stopes_job.get_job_info_log())
         logger.debug(stopes_job.get_job_info_log())

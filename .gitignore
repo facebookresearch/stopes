@@ -135,5 +135,9 @@ demo/*.gz
 demo/models/
 demo/mining/*.gz
 demo/mining/models/
+demo/halomi/data
 .pytest_cache
 .pytest_cache
+
+executor_logs/
+config_logs/

@@ -1,0 +1,12 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+input_dir: ???
+output_dir: ???
+directions: ???
+toxlist_dir: ???
+
+max_n_per_source: 5_000_000
+min_word_pair_count: 5
+examples_per_pair: 3

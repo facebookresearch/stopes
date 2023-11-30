@@ -1,0 +1,4 @@
+_target_: stopes.speech.tests.test_speech_tokenizer.MockSpeechTokenizer
+mock_attr: ???
+mock_checkpoint: ???
+max_frames_chunk: 1600000

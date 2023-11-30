@@ -8,6 +8,7 @@ import asyncio
 import builtins
 import contextlib
 import dataclasses
+import fcntl
 import gzip
 import hashlib
 import heapq
@@ -28,11 +29,7 @@ from zipfile import ZipFile
 
 import omegaconf
 import posix_ipc
-import requests  # type: ignore[import]
-
-if tp.TYPE_CHECKING:
-    from stopes.core import StopesModule
-
+import requests  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +160,7 @@ def open_write(output: Path, mode: str = "wt", **kwargs) -> tp.Iterator[tp.IO]:
 
 def audio_duration(file: Path) -> float:
     """audio file duration in seconds"""
-    # use M2C2 metadata if available
+    # use DATASET metadata if available
     json_file = file.with_suffix(".json")
     if json_file.exists():
         json_info = json.loads(json_file.read_text())
@@ -191,7 +188,7 @@ def make_duration_batches(
     files: tp.Iterable[Path], max_duration: tp.Optional[float]
 ) -> tp.List[tp.List[Path]]:
     if max_duration is None:
-        # Sometime the data is already sharded (eg M2C2), we don't need to reshard them
+        # Sometime the data is already sharded (eg DATASET), we don't need to reshard them
         return [[f] for f in files]
 
     all_batches = []
@@ -488,6 +485,32 @@ def count_lines(filename: str) -> int:
     lines_numbers = [int(line) for line in out.split() if line]
     assert len(lines_numbers) == 1
     return lines_numbers[0]
+
+
+class FileLock:
+    """
+    This class locks a shared directory from concurrent read / write
+
+    One use case: Download AWS files into /share/XYZ in an stopes
+    array module with many concurrent runs. We want to make sure
+    no other process reads the incomplete files before the download
+    is finished.
+
+    with FileLock(lock_file_path):
+        do_something_with_file()
+    """
+
+    def __init__(self, key_path: Path):
+        key_path.parent.resolve().mkdir(exist_ok=True, parents=True)
+        self._key_path = key_path
+
+    def __enter__(self):
+        self.f = open(self._key_path, "w")
+        fcntl.flock(self.f.fileno(), fcntl.LOCK_EX)
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        fcntl.flock(self.f.fileno(), fcntl.LOCK_UN)
+        self.f.close()
 
 
 @contextlib.contextmanager

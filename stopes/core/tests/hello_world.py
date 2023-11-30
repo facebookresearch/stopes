@@ -33,8 +33,8 @@ class HelloWorldConfig:
 
 
 class HelloWorldModule(StopesModule):
-    def __init__(self, config):
-        super().__init__(config, HelloWorldConfig)
+    def __init__(self, config, config_class=HelloWorldConfig):
+        super().__init__(config, config_class)
 
     def requirements(self):
         return self.config.requirements

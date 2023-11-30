@@ -1,0 +1,21 @@
+defaults:
+  - launcher: submitit
+  - _self_
+
+launcher:
+  partition: learnaccel
+  cache: 
+    caching_dir: /tmp/zh_tts
+
+vits_inference:
+  lang: "cmn"
+  model_path: ???
+  input_tsv: ???
+  text_col: ???
+  id_col: "id"
+  output_dir: ???
+  nshards: 10
+  text_cleaner: ""
+  prosody_manipulate: false
+  silero_vad_prob: 0.3
+  torch_hub_cache: ???

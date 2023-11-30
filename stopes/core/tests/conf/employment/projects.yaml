@@ -1,0 +1,6 @@
+_target_: stopes.core.tests.test_modules.ProjectConfig
+
+employee_id: 1
+projects:
+  - seamless
+  - nllb

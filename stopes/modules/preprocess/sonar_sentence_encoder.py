@@ -25,6 +25,7 @@ class SonarTextEncoder(EncodeToNPY):
     def __init__(
         self,
         _name: str,
+        encoder_model: str,
         input_file: str,
         output_dir: Path = Path("."),
         input_file_idx: int = 0,

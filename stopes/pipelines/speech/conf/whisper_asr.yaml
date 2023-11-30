@@ -1,0 +1,18 @@
+defaults:
+  - launcher: local
+  - _self_
+
+
+whisper: 
+  shards: []
+  output_dir: ''
+  model: small
+  lang: null
+  longest_segment: False
+  parallel_audio_read: false
+
+input_manifest: ???
+output_dir: ???
+input_column: 0
+sort_inputs: True
+max_shard_size: null

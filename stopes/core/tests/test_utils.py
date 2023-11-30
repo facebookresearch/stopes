@@ -9,13 +9,14 @@ import datetime
 import os
 import random
 import tempfile
+import time
 from pathlib import Path
 
 import posix_ipc
 import pytest
 
 from stopes.core import utils
-from stopes.core.utils import gather_optionals, sort_file
+from stopes.core.utils import FileLock, gather_optionals, sort_file
 
 
 def test_batch():
@@ -97,6 +98,67 @@ async def _sem_test_function(sem_name, wait_time=0):
             await asyncio.sleep(wait_time)
         # inside here, we have aquired the semaphore, value should be 0
         return sem.value, datetime.datetime.now()
+
+
+def unsafe_download(tmp_path):
+    for i in range(10):
+        (tmp_path / "unsafe" / f"{i}").touch()
+        time.sleep(0.1)
+
+
+def safe_download(tmp_path):
+    with FileLock(tmp_path / "lock"):
+        for i in range(10):
+            print(f"Create {i} safely")
+            (tmp_path / "safe" / f"{i}").touch()
+            time.sleep(0.1)
+
+
+def unsafe_list_files(tmp_path, q: list):
+    time.sleep(0.1)
+    download_files = os.listdir(tmp_path / "unsafe")
+    q.extend(download_files)
+
+
+def safe_list_files(tmp_path, q: list):
+    time.sleep(0.1)
+    with FileLock(tmp_path / "lock"):
+        download_files = os.listdir(tmp_path / "safe")
+        q.extend(download_files)
+
+
+async def test_file_lock(tmp_path: Path):
+    import multiprocessing as mp
+
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / "unsafe").mkdir()
+    (tmp_path / "safe").mkdir()
+    manager = mp.Manager()
+
+    unsafe_t1 = mp.Process(target=unsafe_download, args=(tmp_path,))
+    unsafe_values = manager.list()
+    unsafe_t2 = mp.Process(target=unsafe_list_files, args=(tmp_path, unsafe_values))
+
+    unsafe_t1.start()
+    unsafe_t2.start()
+    unsafe_t1.join()
+    unsafe_t2.join()
+
+    # read process should kicks in and result in an incomplete content
+    assert len(list(unsafe_values)) < 10
+
+    safe_t1 = mp.Process(target=safe_download, args=(tmp_path,))
+    safe_values = manager.list()
+    safe_t2 = mp.Process(target=safe_list_files, args=(tmp_path, safe_values))
+
+    safe_t1.start()
+    safe_t2.start()
+    safe_t1.join()
+    unsafe_t2.join()
+
+    # read process should wait until the download is finished
+    # and return in an full download list
+    assert len(list(safe_values)) == 10
 
 
 async def test_semaphore():

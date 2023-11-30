@@ -354,15 +354,14 @@ def margin_ratio(
 
 
 def main(file: Path, lang: str = "swh"):
-    MODEL_DIR = Path("/private/home/kevinheffernan/nllb.200.models")
+    MODEL_DIR = Path(".")
 
     cfg = LaserScorerConfig(
         input_file=file,
         model_path=MODEL_DIR / f"laser3-{lang}_Latn.v1.pt",
         spm_path=MODEL_DIR / f"laser2.spm",
         spm_vocab_path=str(MODEL_DIR / "laser2.cvocab"),
-        # spm_vocab_path="/checkpoint/guw/laser2/spm100v1.xx.50k.cvocab",
-        fasttext_model="/large_experiments/seamless/nllb/mmt/lidruns/lid_models/2022-02-18_ft_model.bin",
+        fasttext_model="/PATHTO/2022-02-18_ft_model.bin",
         src_lang=lang,
         tgt_lang="eng",
         gpu=True,

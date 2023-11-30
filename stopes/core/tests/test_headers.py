@@ -83,6 +83,7 @@ def test_all_files_have_a_copyright_header(autofix: bool = False):
             ".prettierrc",
             ".nojekyll",
             "moses-config.lowercase",
+            "LICENSE",
             "parse_options.sh",
         ):
             continue

@@ -80,7 +80,7 @@ def get_checkpoint_file(lang: str) -> str:
     return checkpoint_file
 
 
-async def speech_laser_embeddings(config: LaserEmbeddingConfig) -> None:
+async def speech_laser_embeddings(config: LaserEmbeddingConfig):
     logger.info(config)
     split_tsv_files(config.data_dir, config.lang_dirs, config.num_chunks)
     utils.ensure_dir(config.out_dir)

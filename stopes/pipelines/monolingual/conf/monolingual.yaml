@@ -15,7 +15,7 @@ skip_dedup: false
 
 split_algo: default
 
-dist_tmp_dir: /checkpoint/${oc.env:USER}/monolingual_tmp
+dist_tmp_dir: /tmp/monolingual_tmp
 # update this if you are running local
 local_tmp_dir: /scratch/slurm_tmpdir/
 max_shard_size: 15G

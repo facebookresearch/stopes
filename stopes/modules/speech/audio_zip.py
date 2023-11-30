@@ -8,6 +8,7 @@ import contextlib
 import dataclasses
 import logging
 import typing as tp
+import uuid
 import zipfile
 from pathlib import Path
 
@@ -78,7 +79,7 @@ class AudioZipModule(StopesModule):
             raise ValueError(f"Input tsv_file not found: {self.config.tsv_file}")
 
         self.output_dir = Path(self.config.output_dir).resolve()
-        self.output_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(exist_ok=True, parents=True)
         self.output_prefix = (
             self.config.output_prefix
             if self.config.output_prefix is not None
@@ -97,7 +98,7 @@ class AudioZipModule(StopesModule):
         )
 
     def requirements(self) -> Requirements:
-        return Requirements(timeout_min=240)
+        return Requirements(timeout_min=1440)
 
     def array(self) -> tp.List[Shard]:
         return list(
@@ -129,59 +130,43 @@ class AudioZipModule(StopesModule):
         assert output_zip and output_manifest
 
         column_offset = shard.resolve_column_index(self.config.column)
-        with contextlib.ExitStack() as stack:
-            progress = stack.enter_context(shard)
-            manifest_o = stack.enter_context(utils.open(output_manifest, "w"))
-            zip_o = stack.enter_context(
-                zipfile.ZipFile(output_zip, "w", compression=zipfile.ZIP_STORED)
+        sample_rate = self.config.sample_rate
+        audio_format = self.config.audio_format
+        with shard as progress:
+            zip_comment = (
+                f"Audio segments extracted from {shard.input_file} [{shard.index}]"
             )
-            zip_o.comment = bytes(
-                f"Audio segments extracted from {shard.input_file} [{shard.index}]",
-                encoding="utf-8",
-            )
-            lines = iter(progress)
-            sample_rate = self.config.sample_rate
-            audio_format = self.config.audio_format
 
-            for line, audio in tqdm(
-                speech_units.parallel_audio_read(
-                    lines,
-                    column_offset,
-                    sampling_factor=int(sample_rate / 1000),
-                    **self.kwargs,
-                ),
-                unit="segment",
-            ):
-                columns = line.rstrip("\n").split("\t")
-                audio = torch.tensor(audio, dtype=torch.float)
-                if audio.ndim == 1:
-                    audio = audio.unsqueeze(
-                        0
-                    )  # input needs to be 2D for torchaudio.save
-                frame_length = audio.size(-1)
-                # The file names inside the zip archive look like this (with the spaces in them):
-                # /path/to/audio.mp3 1981501 2033072 16.ogg
-                sample_name = f"{columns[column_offset]}.{audio_format}"
-
-                with zip_o.open(sample_name, mode="w") as sample_o:
-                    sample_start = int(sample_o._fileobj.tell())  # type: ignore[attr-defined]
-
-                    torchaudio.save(sample_o, audio, sample_rate, format=audio_format)
-                    sample_end = int(sample_o._fileobj.tell())  # type: ignore[attr-defined]
-
-                # Note: this can also be recreated from the .zip using zip_o.getinfo(sample_name)
-                # the lines look like this:
-                # /abs/output_dir/mined.en-de.en.zip:121:14700
-                outputs = [f"{output_zip}:{sample_start}:{sample_end - sample_start}"]
-                if self.config.store_num_frames:
-                    outputs.append(str(frame_length))
-                if self.config.store_input_line:
-                    outputs.append(line.rstrip("\n"))
-                print(
-                    "\t".join(outputs),
-                    flush=True,
-                    file=manifest_o,
-                )
+            with AudioZipWriter(
+                output_zip=output_zip,
+                manifest_path=output_manifest,
+                audio_format=audio_format,
+                add_header=False,
+                zip_comment=zip_comment,
+            ) as writer:
+                lines = iter(progress)
+                for line, audio in tqdm(
+                    speech_units.parallel_audio_read(
+                        lines,
+                        column_offset,
+                        sampling_factor=int(sample_rate / 1000),
+                        **self.kwargs,
+                    ),
+                    unit="segment",
+                ):
+                    columns = line.rstrip("\n").split("\t")
+                    audio = torch.tensor(audio, dtype=torch.float)
+                    metadata_column_values = []
+                    if self.config.store_num_frames:
+                        metadata_column_values.append(str(audio.size(-1)))
+                    if self.config.store_input_line:
+                        metadata_column_values.append(line.rstrip("\n"))
+                    writer.append(
+                        audio=audio,
+                        sampling_rate=sample_rate,
+                        filepath=f"{columns[column_offset]}.{audio_format}",
+                        metadata_column_values=metadata_column_values,
+                    )
         validate(
             output_manifest,
             output_zip,
@@ -189,6 +174,28 @@ class AudioZipModule(StopesModule):
             self.config.output_validation_token,
         )
         return output_zip, output_manifest
+
+    def name(self):
+        """
+        implement this if you want to give a fancy name to your job
+        """
+        # TODO ideally use hydra override_dirname here
+        return "_".join(
+            [
+                self.__class__.__name__,
+                str(self.config.output_prefix),
+                str(self.config.nshards),
+            ]
+        )
+
+    def should_retry(
+        self,
+        ex: Exception,
+        attempt: int,
+        iteration_value: tp.Optional[tp.Any] = None,
+        iteration_index: int = 0,
+    ) -> bool:
+        return True
 
 
 def validate(
@@ -294,8 +301,10 @@ class PostAudioZipModule(AudioZipModule):
     def combine_zips(self):
         output_zip_finals = []
         current_combined_zip_file_no = 0
-        current_combined_zip_filename = self.output_zip.with_stem(  # type: ignore[attr-defined]
-            self.output_zip.stem + f"_{current_combined_zip_file_no:05}"
+        current_combined_zip_filename = self.output_zip.parent / (
+            self.output_zip.stem
+            + f"_{current_combined_zip_file_no:05}"
+            + self.output_zip.suffix
         )
         current_combined_zip_file = zipfile.ZipFile(current_combined_zip_filename, "w")
         byte_offset = 0
@@ -309,8 +318,10 @@ class PostAudioZipModule(AudioZipModule):
                         current_combined_zip_file.close()
                         output_zip_finals.append(current_combined_zip_file.filename)
                         current_combined_zip_file_no += 1
-                        current_combined_zip_filename = self.output_zip.with_stem(  # type: ignore[attr-defined]
-                            self.output_zip.stem + f"_{current_combined_zip_file_no:05}"
+                        current_combined_zip_filename = self.output_zip.parent / (
+                            self.output_zip.stem
+                            + f"_{current_combined_zip_file_no:05}"
+                            + self.output_zip.suffix
                         )
                         current_combined_zip_file = zipfile.ZipFile(
                             current_combined_zip_filename, "w"
@@ -342,6 +353,163 @@ class PostAudioZipModule(AudioZipModule):
 
                 self.zip_dict[k] = v
                 byte_offset = byte_offset + len(f.FileHeader()) + f.file_size
+
+    def name(self):
+        """
+        implement this if you want to give a fancy name to your job
+        """
+        # TODO ideally use hydra override_dirname here
+        return "_".join([self.__class__.__name__, str(self.config.output_prefix)])
+
+
+class AudioZipWriter:
+    def __init__(
+        self,
+        output_zip: Path,
+        manifest_path: Path,
+        audio_column_name="audio",
+        audio_format: str = "ogg",
+        metadata_column_names: tp.Optional[tp.List[str]] = None,
+        add_header: bool = True,
+        zip_comment: tp.Optional[str] = None,
+    ):
+        """
+        output_zip:
+            The path to save audio zip
+        manifest_path:
+            The path to save the manifest file
+            each line in the manifest file has at least the following format:
+                /path/to/your/zip:bytes_start:bytes_length
+            where:
+                `bytes_start` is the start position in bytes of the audio in this line,
+                `bytes_length` is the length in bytes of the audio in this line.
+        audio_column_name:
+            The name for the audio path column (default "audio").
+        audio_format:
+            The format for the audio (default "ogg").
+        metadata_column_names:
+            Not required if add_header is False.
+            By default the manifest has only one column name "audio" indicating the location of the audio.
+            Specify `metadata_column_names` if you want to have more meta information.
+            The values of the metadata (`metadata_column_values` in append()) should be appended in the same order as the `metadata_column_names`
+        add_header:
+            Whether to add the header for the manifest file (default True).
+        """
+        self.output_zip = output_zip
+        self.manifest_path = manifest_path
+        self.audio_column_name = audio_column_name
+        self.audio_format = audio_format
+        self.metadata_column_names = (
+            metadata_column_names if metadata_column_names is not None else []
+        )
+        self.add_header = add_header
+        self.zip_comment = zip_comment
+
+    def __enter__(self):
+        self.zip_file = zipfile.ZipFile(
+            self.output_zip,
+            mode="w",
+            compression=zipfile.ZIP_STORED,
+        )
+        if self.zip_comment is not None:
+            self.zip_file.comment = bytes(
+                self.zip_comment,
+                encoding="utf-8",
+            )
+        self.manifest_file = open(
+            self.manifest_path,
+            mode="w",
+            encoding="utf-8",
+        )
+        if self.add_header:
+            col_names = [
+                self.audio_column_name,
+            ] + self.metadata_column_names
+            header_line = "\t".join(col_names)
+            self.manifest_file.write(f"{header_line}\n")
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.zip_file.close()
+        self.manifest_file.close()
+
+    def _append_audio(
+        self, audio: torch.Tensor, sampling_rate: int, filename: tp.Optional[str] = None
+    ) -> speech_utils.AudioBytes:
+        audio_name = (
+            filename
+            if filename is not None
+            else f"{str(uuid.uuid4())}.{self.audio_format}"
+        )
+        with self.zip_file.open(audio_name, mode="w") as audio_file:  # type: ignore
+            bytes_start = int(audio_file._fileobj.tell())  # type: ignore[attr-defined]
+            torchaudio.save(
+                audio_file,
+                audio,
+                sampling_rate,
+                format=self.audio_format,
+            )
+            bytes_length = int(audio_file._fileobj.tell()) - bytes_start  # type: ignore[attr-defined]
+        return speech_utils.AudioBytes(
+            path=audio_name,
+            byte_offset=bytes_start,
+            length=bytes_length,
+            sample_rate=sampling_rate,
+        )
+
+    def _get_manifest_line(
+        self,
+        audio_bytes: speech_utils.AudioBytes,
+        metadata_column_values: tp.Optional[tp.List[str]] = None,
+    ):
+        if metadata_column_values is None:
+            metadata_column_values = []
+        zipaudio_filename = ":".join(
+            [
+                str(self.output_zip.absolute()),
+                str(audio_bytes.byte_offset),
+                str(audio_bytes.length),
+            ]
+        )
+        return "\t".join([zipaudio_filename] + metadata_column_values)
+
+    def _append_to_manifest(
+        self,
+        audio_bytes: speech_utils.AudioBytes,
+        metadata_column_values: tp.Optional[tp.List[str]] = None,
+    ):
+        line = self._get_manifest_line(
+            audio_bytes,
+            metadata_column_values,
+        )
+        self.manifest_file.write(f"{line}\n")
+
+    def append(
+        self,
+        audio: torch.Tensor,
+        sampling_rate: int,
+        filepath: tp.Optional[str] = None,
+        metadata_column_values: tp.Optional[tp.List[str]] = None,
+    ):
+        """
+        audio: The audio tensor that you want to append into the audiozip.
+        sampling_rate: Sampling rate.
+        filepath: The original audio file path if applicable, when it is None, a random name would be used.
+        metadata_column_values: A list of metadata values you want to append for the manifest file,
+            the size of `metadata_column_values` should be equal to the size of `self.metadata_column_names`. when add_header is True
+        """
+        if self.add_header and metadata_column_values is not None:
+            assert len(metadata_column_values) == len(self.metadata_column_names), (
+                f"The number of metadata values should be equal to the number of metadata columns, "
+                f"got number of metadata values: {len(metadata_column_values)}, number of metadata columns: {len(self.metadata_column_names)}"
+            )
+        if len(audio.size()) == 1:
+            # torchaudio.save expects to have a 2D tensor
+            audio = audio.unsqueeze(0)
+        if audio.is_cuda:
+            audio = audio.cpu()
+        audio_bytes = self._append_audio(audio, sampling_rate, filepath)
+        self._append_to_manifest(audio_bytes, metadata_column_values)
 
 
 if __name__ == "__main__":

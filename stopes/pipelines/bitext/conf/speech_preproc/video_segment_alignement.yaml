@@ -1,0 +1,14 @@
+_target_:  stopes.modules.speech.video_alignement.video_segment_aligner.LocalAlignmentModule
+dataset_root: ???
+output_dir: ???
+language_pairs: Null
+sibling_ids: Null
+max_normalized_gap: 1.5
+min_duration_ratio: 0.3
+min_text_sim: 0.4
+min_speech_sim: 0.5
+min_blaser_score: 3
+speech_sim_weight: 1.
+text_sim_weight: 2.
+small_segment_boost: 20. 
+sentence_force: 0.1

@@ -1,0 +1,10 @@
+defaults:
+  - base@_here_
+
+comparator_url: https://dl.fbaipublicfiles.com/speech_expressivity_evaluation/AutoPCP-multilingual-v2.zip
+# the comparator model gets downloaded and unzipped into ~/.cache/stopes/AutoPCP_multilingual_v2
+comparator_save_name: AutoPCP_multilingual_v2
+encoder_path: facebook/wav2vec2-large-xlsr-53
+pick_layer: 9
+symmetrize: true
+use_cuda: True

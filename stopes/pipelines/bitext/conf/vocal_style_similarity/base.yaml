@@ -1,0 +1,16 @@
+_target_: stopes.eval.vocal_style_similarity.vocal_style_sim_module.VocalStyleSimilarityModule
+
+# inputs
+input_file: null
+input_files: null
+named_columns: false
+src_audio_column: 1
+tgt_audio_column: 2
+
+# outputs
+output_file: ???
+
+# model
+model_type: valle
+model_path: ???
+use_cuda: true

@@ -6,6 +6,7 @@
 
 from .cache import Cache as Cache
 from .cache import FileCache as FileCache
+from .launcher import ArrayTaskError as ArrayTaskError
 from .launcher import Launcher as Launcher
 from .stopes_module import Requirements as Requirements
 from .stopes_module import StopesModule as StopesModule

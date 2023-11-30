@@ -1,0 +1,5 @@
+__pycache__
+app/__pycache__
+backend/app/static/
+backend/app/data/*
+backend/data/**

@@ -263,7 +263,7 @@ class PostProcessAudioModule(StopesModule):
 
 
 @hydra.main(
-    config_path="../../pipelines/tests/conf/fb_preset",
+    config_path="../../pipelines/tests/conf/",
     config_name="postprocess_audio",
     version_base=None,
 )

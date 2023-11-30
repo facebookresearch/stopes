@@ -1,0 +1,4 @@
+_target_: stopes.core.tests.test_modules.DepartmentConfig
+
+employee_id: 1
+department: FAIR

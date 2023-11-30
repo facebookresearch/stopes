@@ -20,8 +20,6 @@ First, fill out any missing fields in distillation.yaml (labeled ???). Then,
 You can also override distillation.yaml fields manually through the CLI as such:
 `python stopes/pipeliens/distillation/distillation_pipeline.py src_langs="[eng,mai]" tgt_langs="[fra,deu]" mono_data_dir=<path_to_predownloaded_mono_data> output_dir=<path_to_output_dir>`.
 
-For internal FAIR users, feel free to add the `+fb_preset=nllb` argument to the CLI command to use some preset config settings.
-
 Note: Testing performance can be done with a separate STOPES module, `/stopes/modules/evaluation/generate_multi_bleu_detok_module.py`.
 
 ## Useful overrides

@@ -1,0 +1,13 @@
+_target_: stopes.modules.evaluation.compare_audio_module.CompareAudiosModule
+input_file: null
+input_files: null
+output_file: ???
+comparator_path: ???
+src_audio_column: 1
+tgt_audio_column: 2
+encoder_path: "facebook/wav2vec2-large-xlsr-53"
+pick_layer: 7
+use_cuda: True
+batch_size: 16
+num_process: 1
+symmetrize: false

@@ -6,6 +6,7 @@ output_dir: ???
 use_gpu: true
 batch_size: 16
 
+
 src_manifest: ???
 tgt_manifest: ???
 ref_manifest: null
@@ -20,9 +21,8 @@ checkpoint_dir: ???
 max_tokens: 2_560_000
 
 blaser_model:
-  # use a preset and composition for this
-  model_checkpoint: ???
   config_file: ???
+  model_checkpoint: ???
 
 checkpoints:
   en: english.pt

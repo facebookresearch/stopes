@@ -1,0 +1,14 @@
+_target_:  stopes.modules.speech.video_alignment.video_segmentor.WhisperSegmentorModule
+shards: ???
+output_dir: ???
+parquet_file_name: "segments"
+langs: Null
+sibling_ids: Null
+whisper_model: "large-v2"
+text_model: "LaBSE"
+batch_size_: 5
+segment_padding: 0.07
+min_segment_length: 0.15
+pause_ngram_depth: 10
+max_segment_length: 20
+max_pause_duration: 1.5

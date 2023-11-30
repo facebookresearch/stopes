@@ -82,6 +82,7 @@ class StopesModule(ABC):
         OmegaConf.resolve(self.config)
         OmegaConf.set_readonly(self.config, True)
         self.retry_counts = [0]
+        self.transient_configs = self._get_transient_configs(config_class)
 
     def __call__(
         self,
@@ -97,6 +98,40 @@ class StopesModule(ABC):
         if cache is not None:
             cache.save_cache(self, res, iteration_value, iteration_index)
         return res
+
+    @classmethod
+    def _get_transient_configs(cls, config_class: tp.Optional[tp.Type[tp.Any]] = None):
+        """Parse the config definition and get the transient config attributes"""
+
+        def inspect_transiency(field: dataclasses.Field, states: dict):
+            # get transient attributes from the field definition
+            if field.metadata.get("transient", False):
+                states[field.name] = True
+
+            # Requirements are always transient
+            elif field.name == "requirements":
+                states[field.name] = True
+            else:
+                states[field.name] = {}
+                if dataclasses.is_dataclass(field.type):
+                    for sub_field in dataclasses.fields(field.type):
+                        inspect_transiency(sub_field, states[field.name])
+                # If a normal Python class, check if `transient_attributes` exists
+                elif hasattr(field.type, "transient_attributes"):
+                    for transient_attr in getattr(field.type, "transient_attributes"):
+                        states[field.name][transient_attr] = True
+                if len(states[field.name]) == 0:
+                    del states[field.name]
+
+        transient_configs: tp.Dict[str, tp.Any] = {}
+        if config_class is None:
+            # Attempt to infer the config class from the stopes module class itself
+            config_class = tp.get_type_hints(cls).get("config")
+        if dataclasses.is_dataclass(config_class):
+            for field in dataclasses.fields(config_class):
+                inspect_transiency(field, transient_configs)
+
+        return transient_configs
 
     @abstractmethod
     def run(
@@ -147,9 +182,8 @@ class StopesModule(ABC):
 
     def get_config_for_cache(self):
         """
-        We want the cache to be agnostic to the timeout. Here we are returning
-        a python dictionary corresponding to the config, except the value for
-        the key `timeout_min`.
+        Return a dictionary corresponding to the config. Here transient attributes,
+        attributes of stopes.core.stopes_modules.Requirements will be excluded
         """
         config_for_cache = OmegaConf.to_container(self.config, resolve=False)
         assert isinstance(
@@ -157,14 +191,36 @@ class StopesModule(ABC):
         ), "StopesModule.config need to be a dict config."
         OVERWRITE_VALUE_FOR_CACHE = -1
 
-        def deep_overwrite(dct: dict):
+        def deep_overwrite(dct: dict, transient_cfg: dict):
             for k, v in dct.items():
+                if k in transient_cfg:
+                    if transient_cfg[k] is True:
+                        dct[k] = OVERWRITE_VALUE_FOR_CACHE
+                        continue
+                    elif isinstance(transient_cfg[k], dict):
+                        transient_cfg = transient_cfg[k]
                 if isinstance(v, dict):
-                    deep_overwrite(v)
-                elif k == "timeout_min":
-                    dct[k] = OVERWRITE_VALUE_FOR_CACHE
+                    # Some configs are defined dynamically within the root module's compose config
+                    if "_target_" in v:
+                        sub_cls = hydra.utils.get_class(v["_target_"])
 
-        deep_overwrite(config_for_cache)
+                        # If sub_cls is a config / dataclass
+                        if dataclasses.is_dataclass(sub_cls):
+                            sub_transient_cfg = self._get_transient_configs(sub_cls)
+                        # sub_cls is a normal Python class, merge from the class property
+                        # `transient_attributes` if exists
+                        elif hasattr(sub_cls, "transient_attributes"):
+                            sub_transient_cfg = {
+                                k: True
+                                for k in getattr(sub_cls, "transient_attributes")
+                            }
+                        else:
+                            sub_transient_cfg = {}
+
+                        transient_cfg = {**transient_cfg, **sub_transient_cfg}
+                    deep_overwrite(v, transient_cfg)
+
+        deep_overwrite(config_for_cache, self.transient_configs)
         return config_for_cache
 
     # TODO: @functools.cached_property()

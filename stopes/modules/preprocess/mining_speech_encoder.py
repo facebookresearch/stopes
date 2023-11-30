@@ -9,10 +9,12 @@ import os
 import typing as tp
 from pathlib import Path
 
+import hydra.utils as hydra_utils
 import torch
 
 from stopes.core import utils as core_utils
 from stopes.modules.preprocess.encode_to_npy import EncodeToNPY
+from stopes.modules.speech import utils as speech_utils
 from stopes.modules.speech.speech_units import parallel_audio_read
 from stopes.utils.embedding_utils import NpMatrix
 from stopes.utils.mining_utils import extract_shard_id
@@ -59,6 +61,13 @@ class MiningSpeechEncoder(EncodeToNPY):
         self.gpu = gpu
         self.num_processes = num_processes
         self.kwargs = kwargs
+        self._read_audio_func = speech_utils.read_audio
+        if "read_audio_func" in self.kwargs:
+            r_audio_func = self.kwargs.get("read_audio_func")
+            if callable(r_audio_func):
+                self._read_audio_func = r_audio_func
+            elif isinstance(r_audio_func, str):
+                self._read_audio_func = hydra_utils.get_method(r_audio_func)
 
     @property
     def encoder(self):
@@ -122,7 +131,7 @@ class MiningSpeechEncoder(EncodeToNPY):
         In this case, we read the second column to fetch the audio signal
         information.
         """
-        from stopes.modules.preprocess.wav2vec_laser_speech_encoder import AudioDataset
+        from stopes.modules.speech.wav2vec.utils import WavesDataset
 
         audio_signals = []
         with core_utils.measure("parallel_audio_read", self.logger):
@@ -132,6 +141,7 @@ class MiningSpeechEncoder(EncodeToNPY):
                 gpu=self.gpu,
                 fp16=self.fp16,
                 num_process=self.num_processes,
+                read_audio_func=self._read_audio_func,
             ):
                 audio_signals.append(audio)
 
@@ -139,7 +149,7 @@ class MiningSpeechEncoder(EncodeToNPY):
 
         """Given a list of audios, compute their matrix of embeddings."""
         sizes = [signal.size for signal in audio_signals]
-        dataset = AudioDataset(
+        dataset = WavesDataset(
             audio_signals, sizes, fbank_features=self.encoder.fbank_features
         )
         batch_sampler = dataset.batch_by_size(
@@ -157,7 +167,7 @@ class Sonar2MiningSpeechEncoder(MiningSpeechEncoder):
     Both `fairseq2` and `sonar` are required.
     """
 
-    SONAR_PAD_TOKEN = 2
+    SONAR_PAD_TOKEN = 0
     SAMPLING_RATE = 16000
 
     @MiningSpeechEncoder.encoder.getter  # type: ignore[attr-defined]
@@ -168,7 +178,9 @@ class Sonar2MiningSpeechEncoder(MiningSpeechEncoder):
             device = torch.device(
                 "cuda" if self.gpu and torch.cuda.is_available() else "cpu"
             )
-            fbank_dtype = torch.float16 if self.fp16 else torch.float32
+
+            # layer_norm does not work well with fp16 in CPU mode
+            fbank_dtype = torch.float16 if (self.fp16 and self.gpu) else torch.float32
 
             self._encoder = SpeechToEmbeddingModelPipeline(
                 encoder=self.encoder_model,
@@ -188,13 +200,16 @@ class Sonar2MiningSpeechEncoder(MiningSpeechEncoder):
                 gpu=self.gpu,
                 fp16=self.fp16,
                 num_process=self.num_processes,
+                read_audio_func=self._read_audio_func,
             ):
                 audio_tensor = torch.from_numpy(audio)
                 if audio_tensor.ndim == 1:
                     audio_tensor = audio_tensor.unsqueeze(0)
                 audio_signals.append(audio_tensor)
 
-        mini_batch_size = self.kwargs.get("mini_batch_size", len(audio_signals))
+        mini_batch_size = self.kwargs.get("mini_batch_size")
+        if mini_batch_size is None:
+            mini_batch_size = len(audio_signals)
 
         return (
             self.encoder.predict(

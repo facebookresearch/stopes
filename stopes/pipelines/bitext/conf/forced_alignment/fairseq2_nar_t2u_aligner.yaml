@@ -1,0 +1,14 @@
+# A recommended config to use with stopes/eval/local_prosody/unity2_forced_aligner_f2.py
+aligner_type: UnitY2F2
+
+config:
+  aligner_name: nar_t2u_aligner
+  unit_extractor_name: xlsr2_1b_v2
+  unit_extractor_output_layer_n: 35
+  unit_extractor_kmeans_uri: https://dl.fbaipublicfiles.com/seamlessM4T/models/unit_extraction/kmeans_10k.npy
+  device: cuda
+  # the default speech tokenizer produces 20ms frames, i.e. 50 per second
+  fps: 50.0
+  allow_empty_characters: true
+  # this option is recommended for detecting pauses in the end, but by default it is false, for backward compatibility
+  append_sow: false
