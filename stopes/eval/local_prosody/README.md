@@ -154,7 +154,6 @@ We support 3 different implementations of forced alignment:
 | `ctc_forced_aligner.py`       | Forced decoding with a pretrained ASR model (Wav2Vec2ForCTC)                                                                                                                            | `ctc_wav2vec2-xlsr-multilingual-56` | `transformers`                       |
 | `unity2_forced_aligner_f2.py` | [Aligner](https://github.com/facebookresearch/seamless_communication/blob/main/docs/m4t/unity2_aligner_README.md) for the non-autoregressive text-to-unit decoder (UnitY2 architecture) | `fairseq2_nar_t2u_aligner`          | `fairseq2`, `seamless_communication` |
 
-
 We recommend the `fairseq2_nar_t2u_aligner` algorithm as a more accurate one, and use it by default in the pipeline.
 It was used in for evaluation of the `Seamless Expressive` models.
 

@@ -179,7 +179,6 @@ exclude = [
   "stopes/modules/bitext/mining/mine_bitext_sentences_utils.py", # 9
   "stopes/eval/blaser/score.py", # 9
   "stopes/eval/alti/alignment/align.py", # 9
-  "stopes/pipelines/bitext/global_mining_pipeline.py", # 8
   "stopes/modules/tests/test_mine_index_utils.py", # 8
   "stopes/modules/preprocess/laser_sentence_encoder.py", # 8
   "stopes/utils/embedding_utils.py", # 7
@@ -254,6 +253,6 @@ python_files = [
 asyncio_mode = "auto"
 norecursedirs = [
   "ust/*",
-  "stopes/ust_common/generation/aligner_utils/*", # it imports from a hidden branch of fairseq
+  "stopes/utils/aligner_utils", # it imports from a non-main branch of fairseq
   "stopes/eval/local_prosody/unity2_forced_aligner_f1", # it imports the package above
 ]

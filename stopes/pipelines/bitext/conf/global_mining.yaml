@@ -2,6 +2,7 @@ defaults:
   # base configs for the sub modules
   - count_lines: count_lines
   - embed_text: laser3
+  - embed_speech: null
   - train_index: train_faiss
   - populate_index: populate_faiss
   - merge_indexes: merge_faiss

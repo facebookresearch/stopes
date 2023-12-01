@@ -14,10 +14,10 @@ pair-extension = ${input-extension}-${output-extension}
 
 working-dir = {OUTPUT_DIR}/${pair-extension}
 data-dir = ${working-dir}/data
-moses-src-dir = ...
-moses-script-dir = ...
-moses-bin-dir = ...
-external-bin-dir = ...
+moses-src-dir = {CODE_ROOT}/mosesdecoder/
+moses-script-dir = {CODE_ROOT}/mosesdecoder/scripts
+moses-bin-dir = {CODE_ROOT}/mosesdecoder/bin
+external-bin-dir = {CODE_ROOT}/github/moses_deps
 
 ttable-binarizer = "$moses-src-dir/bin/processPhraseTableMin"
 decoder = $moses-src-dir/bin/moses

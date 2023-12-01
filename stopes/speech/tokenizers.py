@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 @dc.dataclass
 class HifiGANVocoderConfig:
-    """The arguments of a hifiGAN vocoder as used in `ust_common.evaluation:hifigan_vocoder_generate()`"""
+    """The arguments of a hifiGAN vocoder"""
 
     checkpoint: OptionalPath_ = None
     config_path: OptionalPath_ = None

@@ -6,7 +6,6 @@ output_dir: ???
 use_gpu: true
 batch_size: 16
 
-
 src_manifest: ???
 tgt_manifest: ???
 ref_manifest: null

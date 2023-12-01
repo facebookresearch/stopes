@@ -47,7 +47,7 @@ class GlobalMiningConfig:
     model_dir: str
     count_lines: DictConfig
     split_in_shards: DictConfig
-    embed_text: DictConfig
+    embed_text: tp.Optional[DictConfig]
     embedding_sample: DictConfig
     train_index: DictConfig
     populate_index: DictConfig
@@ -60,6 +60,7 @@ class GlobalMiningConfig:
     lang_configs: tp.Dict[str, "GlobalMiningConfig"] = field(default_factory=dict)
     # if a language has more lines than `max_shard_size`, it will be split into sub-languages to mine separately.
     max_shard_size: tp.Optional[int] = None
+    embed_speech: tp.Optional[DictConfig] = None
     # example of sharded_langs: {"eng": ["eng0", "eng1", "eng2"]}
     sharded_langs: tp.Optional[tp.Dict[str, tp.List[str]]] = None
     local_tmp_dir: str = "/tmp"
@@ -104,7 +105,7 @@ class GlobalMiningPipeline:
     ) -> tp.List[str]:
         shard_list = getattr(config.data, "shard_list", None)
         if shard_list:
-            shard_list_conf = OmegaConf.load(shard_list)
+            shard_list_conf = tp.cast(dict, OmegaConf.load(shard_list))
             shards = shard_list_conf["shard_list"]
             return shards
 
@@ -148,8 +149,11 @@ class GlobalMiningPipeline:
         return result
 
     async def _segment_data_shards(
-        self, lang: str, shards: tp.List[Path], segment_audio_cfg: DictConfig
-    ):
+        self,
+        lang: str,
+        shards: tp.Union[tp.List[Path], tp.List[str]],
+        segment_audio_cfg: DictConfig,
+    ) -> tp.List[tp.Tuple[tp.Any, tp.Any]]:
         segment_audio_module = StopesModule.build(
             segment_audio_cfg,
             lang=lang,
@@ -157,6 +161,7 @@ class GlobalMiningPipeline:
         )
         segmented_audio = await self.launcher.schedule(segment_audio_module)
 
+        # Output is (segment file name, file's no. of lines)
         return segmented_audio
 
     async def _process_lang(
@@ -180,7 +185,7 @@ class GlobalMiningPipeline:
             )
             processed_shards = await asyncio.gather(
                 *[
-                    self._process_lang(lang_shard, check_size=False)
+                    self._process_lang(config, lang_shard, check_size=False)
                     for lang_shard in precomputed_shards
                 ]
             )  # do not split the shards for the second time
@@ -193,21 +198,24 @@ class GlobalMiningPipeline:
                 shard.lang_name = lang
             return results
         data_shards = self._find_data_shards(config, lang)
+
         if getattr(config, "segment_audio", None):
             data_segment_shards = await self._segment_data_shards(
                 lang, data_shards, config.segment_audio
             )
-            data_shards, shard_sizes = zip(*data_segment_shards)
+            data_shards, shard_sizes = tuple(zip(*data_segment_shards))  # type: ignore
         else:
-            shard_sizes = self._read_nl_file(lang, config.data)
+            shard_sizes = self._read_nl_file(lang, getattr(config, "data"))  # type: ignore
             if shard_sizes is not None and len(shard_sizes) == len(data_shards):
                 logger.info(f"Using cached shard sizes from a .nl file for {lang}.")
             else:
                 line_counter = StopesModule.build(
-                    config.count_lines, shards=data_shards
+                    getattr(config, "count_lines"), shards=data_shards
                 )
                 shard_sizes = await self.launcher.schedule(line_counter)
         logger.debug(f"Shards are: {list(zip(data_shards, shard_sizes))}")
+
+        assert isinstance(shard_sizes, list)
         nb_sent = sum(shard_sizes)
 
         meta_shards = None
@@ -255,7 +263,17 @@ class GlobalMiningPipeline:
         result = lng
         # TODO: there is something fishy here:
         # If you make a copy of this object, then you get different results.
-        embed_cfg = config.embed_text
+        embed_text_cfg = getattr(config, "embed_text", None)
+        embed_speech_cfg = getattr(config, "embed_speech", None)
+
+        # embed_speech and embed_text cannot co-exist. If they do, we will ignore the embed_text
+        if embed_speech_cfg:
+            embed_cfg = embed_speech_cfg
+        elif embed_text_cfg:
+            embed_cfg = embed_text_cfg
+        else:
+            raise ValueError("Must specify either `embed_text` or `embed_speech`")
+
         aux_embed_cfg = getattr(config, "aux_embed", None)
 
         embedded_files_glob = getattr(config, "existing_embedding_glob", None)
@@ -333,6 +351,10 @@ class GlobalMiningPipeline:
 
         else:
             sample_shards = getattr(config.embedding_sample, "sample_shards", False)
+
+            assert hasattr(
+                embed_cfg, "encoder"
+            ), "encoder must be defined within embed_speech or embed_text"
             if sample_shards:
                 logger.info(f"collecting index training sample for {lng.lang_name}")
                 sample_mod = SampleEmbeddingModule(
@@ -342,7 +364,7 @@ class GlobalMiningPipeline:
                         data=config.data,
                         output_dir=config.train_index.config.output_dir,
                         embedding_dimensions=config.train_index.config.embedding_dimensions,
-                        fp16=embed_cfg.encoder.fp16,
+                        fp16=getattr(embed_cfg.encoder, "fp16", False),
                         sample_size=config.embedding_sample.sample_sz,
                         tmp_dir=config.local_tmp_dir,
                         max_num_workers=config.embedding_sample.max_num_workers,
@@ -358,7 +380,7 @@ class GlobalMiningPipeline:
                 data=config.data,
                 embedding_file=index_training_sample,
                 lang=lng.split_name,
-                fp16=embed_cfg.encoder.fp16,
+                fp16=getattr(embed_cfg.encoder, "fp16", False),
             )
             trained_index = await self.launcher.schedule(train_index_module)
 
@@ -394,13 +416,13 @@ class GlobalMiningPipeline:
             result.merged_index = str(merged)
             return result
 
-    def run(self) -> tp.Tuple[str, str]:
+    def run(self) -> tp.Tuple[Path, Path]:
         loop = asyncio.get_event_loop()
         if self.config.launcher.cluster == "debug":
             loop.set_debug(True)
         return loop.run_until_complete(self.arun())
 
-    async def arun(self) -> tp.Tuple[str, str]:
+    async def arun(self) -> tp.Tuple[Path, Path]:
         """Run the global mining pipeline and return the paths of the mined text and metadata files"""
         output_dir = Path(self.config.output_dir).resolve()
         output_dir.mkdir(exist_ok=True, parents=True)
@@ -416,17 +438,17 @@ class GlobalMiningPipeline:
 
         (src_list, trg_list) = await asyncio.gather(
             self._process_lang(
-                config=src_lang_config,
+                config=src_lang_config,  # type: ignore
                 lang=self.config.src_lang,
             ),
             self._process_lang(
-                config=tgt_lang_config,
+                config=tgt_lang_config,  # type: ignore
                 lang=self.config.tgt_lang,
             ),
         )
         mined_pairs = await asyncio.gather(
             *[
-                self._process_pair(self.config, l1, l2)
+                self._process_pair(self.config, l1, l2)  # type: ignore
                 for l1 in src_list
                 for l2 in trg_list
             ]
@@ -471,12 +493,12 @@ class GlobalMiningPipeline:
 
         # each schedule returns a list of dist+index files
         # we unzip that in two separate lists for each direction (four lists)
-        (src2tgt_dist_files, src2tgt_index_files) = zip(*src2tgt_dist)
-        (tgt2src_dist_files, tgt2src_index_files) = zip(*tgt2src_dist)
-        src2tgt_dist_files = [str(path) for path in src2tgt_dist_files]
-        tgt2src_dist_files = [str(path) for path in tgt2src_dist_files]
-        src2tgt_index_files = [str(path) for path in src2tgt_index_files]
-        tgt2src_index_files = [str(path) for path in tgt2src_index_files]
+        (src2tgt_dist_files, src2tgt_index_files) = tuple(zip(*src2tgt_dist))
+        (tgt2src_dist_files, tgt2src_index_files) = tuple(zip(*tgt2src_dist))
+        src2tgt_dist_files = [str(path) for path in src2tgt_dist_files]  # type: ignore
+        tgt2src_dist_files = [str(path) for path in tgt2src_dist_files]  # type: ignore
+        src2tgt_index_files = [str(path) for path in src2tgt_index_files]  # type: ignore
+        tgt2src_index_files = [str(path) for path in tgt2src_index_files]  # type: ignore
 
         mine_indexes_module = StopesModule.build(
             config.mine_indexes,
@@ -545,7 +567,7 @@ class GlobalMiningPipeline:
             logger.info(
                 f"splitting as monotext, becase there is no meta files: {lng.meta_shards}"
             )
-            file_processor = MultiprocLineProcessorModule(
+            file_processor = MultiprocLineProcessorModule(  # type: ignore
                 config=MultiprocLineProcessorConfig(
                     line_processor=DictConfig(
                         {
@@ -596,13 +618,15 @@ class GlobalMiningPipeline:
         self, mined_pairs: tp.List[tp.Tuple[Path, Path]]
     ) -> tp.Tuple[Path, Path]:
         """Merge the pairs of sentences and the corresponding metadata"""
-        merge_module = StopesModule.build(self.config.merge_shards, pairs=mined_pairs)
+        merge_module = StopesModule.build(
+            getattr(self.config, "merge_shards"), pairs=mined_pairs
+        )
         merged_text, merged_meta = await self.launcher.schedule(merge_module)
         return merged_text, merged_meta
 
 
 @hydra.main(config_path="conf", config_name="global_mining", version_base=None)
-def main(config: GlobalMiningConfig) -> tp.Tuple[str, str]:
+def main(config: GlobalMiningConfig) -> tp.Tuple[Path, Path]:
     return GlobalMiningPipeline(config).run()
 
 

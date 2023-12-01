@@ -50,7 +50,7 @@ class SpeechbrainLidCallback(LineProcessorCallback):
 
     python -m stopes.modules \
         +speech_preproc=speechbrain_lid \
-        speech_preproc.output_dir=. \
+        speech_preproc.output_dir=test-lid-thai \
         speech_preproc.shards="thai_example.mp3" \
         speech_preproc.line_processor.config.model=$MODEL \
         launcher.cluster=debug

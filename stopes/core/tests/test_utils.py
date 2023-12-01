@@ -60,11 +60,11 @@ async def test_gather_optionals():
 @pytest.mark.parametrize("no_duplicate", [False, True])
 def test_sort_files(no_duplicate):
     # Force external merge sort with intermediate files
-    os.environ["STOPES_SHARD_CHUNK_SIZE"] = "100"
+    os.environ["STOPES_SHARD_CHUNK_SIZE"] = "10"
     with tempfile.TemporaryDirectory() as tmp_dir:
-        big_array = list(range(1000)) * 2
+        big_array = list(range(100000)) * 2
         if no_duplicate:
-            expected_array = sorted(list(range(1000)), key=str)
+            expected_array = sorted(list(range(100000)), key=str)
         else:
             expected_array = sorted(big_array, key=str)
         random.shuffle(big_array)

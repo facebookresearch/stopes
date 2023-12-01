@@ -353,15 +353,20 @@ def margin_ratio(
     return x.dot(y) / ((x2y_mean + y2x_mean) / 2)
 
 
-def main(file: Path, lang: str = "swh"):
-    MODEL_DIR = Path(".")
+def main(
+    file: Path,
+    lang: str = "swh",
+    model_dir: str = "nllb.200.models",
+    fasttext_model: str = "lid_models/2022-02-18_ft_model.bin",
+):
+    MODEL_DIR = Path(model_dir)
 
     cfg = LaserScorerConfig(
         input_file=file,
         model_path=MODEL_DIR / f"laser3-{lang}_Latn.v1.pt",
         spm_path=MODEL_DIR / f"laser2.spm",
         spm_vocab_path=str(MODEL_DIR / "laser2.cvocab"),
-        fasttext_model="/PATHTO/2022-02-18_ft_model.bin",
+        fasttext_model=fasttext_model,
         src_lang=lang,
         tgt_lang="eng",
         gpu=True,

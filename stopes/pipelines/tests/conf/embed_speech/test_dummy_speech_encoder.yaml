@@ -8,7 +8,8 @@ lang_shard_name: null
 encoder:
   _target_: stopes.pipelines.tests.test_global_mining.ToyNumbersEncoder
   _name: number_encoder
-  encoder_model: null
+  # simulate the fact that encoder_model is mandatory in embed_speech
+  encoder_model: ???
   spm_model: null
   spm_vocab: null
   fp16: False

@@ -57,7 +57,7 @@ class SegmentDATASETModule(StopesModule):
         +speech_preproc=segment_dataset \
         speech_preproc.dataset_dir=??? \
         speech_preproc.segment.model=??? \
-        speech_preproc.output_dir=??? \
+        speech_preproc.output_dir=~/dataset/vad/ \
         speech_preproc.job_limit=2 \
         launcher.cluster=debug
 
@@ -66,7 +66,7 @@ class SegmentDATASETModule(StopesModule):
         speech_preproc.dataset_dir=??? \
         speech_preproc.segment.model=??? \
         speech_preproc@speech_preproc.segment=shas \
-        speech_preproc.output_dir=??? \
+        speech_preproc.output_dir=~/dataset/shas/ \
         laucher.cluster=debug
     """
 

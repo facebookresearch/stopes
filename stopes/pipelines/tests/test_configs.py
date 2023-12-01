@@ -20,7 +20,7 @@ import stopes.modules.nmt_bitext_eval_utils
 import stopes.modules.preprocess
 import stopes.modules.speech.audio_zip
 import stopes.modules.speech.denoise
-import stopes.repo.stopes.modules.speech.segment_dataset
+import stopes.modules.speech.segment_dataset
 import stopes.modules.speech.shas_segment_audio
 import stopes.modules.speech.speech_units
 import stopes.modules.speech.speechbrain_lid
@@ -43,7 +43,6 @@ from stopes.pipelines.bitext.added_toxicity_mining import (
     AddedToxicityMiningPipelineConfig,
 )
 from stopes.pipelines.m4t_eval.config_def import M4TEvalConfig
-from stopes.pipelines.speech.vits_tts_inference import VITSInferencePipelineConfig
 from stopes.pipelines.speech.whisper_asr import WhisperPipelineConfig
 
 STOPES = Path(__file__).parents[2]
@@ -271,7 +270,6 @@ def test_configs(tmp_path: Path, openned_files: tp.Set[Path]) -> None:
         STOPES / "pipelines" / "bitext" / "conf" / "audio_zip" / "base.yaml",
         stopes.modules.speech.audio_zip.AudioZipConfig,
     )
-
     validate_conf(
         STOPES / "pipelines" / "bitext" / "conf" / "compare_audios" / "base.yaml",
         CompareAudiosConfig,
@@ -292,10 +290,6 @@ def test_configs(tmp_path: Path, openned_files: tp.Set[Path]) -> None:
     validate_conf(
         STOPES / "pipelines" / "speech" / "conf" / "whisper_asr.yaml",
         WhisperPipelineConfig,
-    )
-    validate_conf(
-        STOPES / "pipelines" / "speech" / "conf" / "vits_tts_inference.yaml",
-        VITSInferencePipelineConfig,
     )
     validate_conf(
         STOPES / "pipelines" / "bitext" / "conf" / "mine_added_toxicity.yaml",
@@ -386,7 +380,7 @@ def test_configs(tmp_path: Path, openned_files: tp.Set[Path]) -> None:
     # If you're seeing this error it means you either:
     # * added a new config file, please add a test for it.
     # * added a new config test, please decrement the counter
-    assert len(unvalidated) == 50
+    assert len(unvalidated) == 46
 
 
 def normalize_paths(files: tp.Iterable[Path]) -> tp.Set[Path]:

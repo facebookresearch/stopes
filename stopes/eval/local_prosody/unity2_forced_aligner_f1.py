@@ -21,7 +21,7 @@ from stopes.eval.local_prosody.forced_aligner_utils import (
 from stopes.eval.local_prosody.utterance import Utterance
 from stopes.hub import speech_tokenizer
 from stopes.pipelines.monolingual.utils.word_tokenization import get_word_tokenizer
-from stopes.ust_common.generation.aligner_utils.aligner import Aligner
+from stopes.utils.aligner_utils import Aligner
 
 logger = logging.getLogger(__name__)
 

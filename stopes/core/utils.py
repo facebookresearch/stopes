@@ -16,6 +16,7 @@ import json
 import logging
 import lzma
 import os
+import resource
 import shlex
 import shutil
 import subprocess
@@ -160,7 +161,7 @@ def open_write(output: Path, mode: str = "wt", **kwargs) -> tp.Iterator[tp.IO]:
 
 def audio_duration(file: Path) -> float:
     """audio file duration in seconds"""
-    # use DATASET metadata if available
+    # use M2C2 metadata if available
     json_file = file.with_suffix(".json")
     if json_file.exists():
         json_info = json.loads(json_file.read_text())
@@ -188,7 +189,7 @@ def make_duration_batches(
     files: tp.Iterable[Path], max_duration: tp.Optional[float]
 ) -> tp.List[tp.List[Path]]:
     if max_duration is None:
-        # Sometime the data is already sharded (eg DATASET), we don't need to reshard them
+        # Sometime the data is already sharded (eg M2C2), we don't need to reshard them
         return [[f] for f in files]
 
     all_batches = []
@@ -326,6 +327,7 @@ def sort_file(
     chunk_file_size = int(os.getenv("STOPES_SHARD_CHUNK_SIZE", 64 * 1024))
     file_size = os.stat(input_file).st_size
     no_of_chunks = max(int(file_size / chunk_file_size), 1)
+
     if no_of_chunks > 1:
         from stopes.utils.file_chunker_utils import Chunker, find_offsets
 
@@ -354,49 +356,82 @@ def sort_file(
             ), f"Invalid value for `col` ({col}), file has only {len(cols)} columns)"
             return cols[col]
 
-    def merge(sorted_chunks):
-        keyed_chunks = [
-            ((col_value(line), line) for line in sorted_chunk)
-            for sorted_chunk in sorted_chunks
-        ]
-
-        # de-duplicate the line based on the key
-        prev_key = None
-        for key, line in heapq.merge(*keyed_chunks):
-            if prev_key != key or not no_duplicate:
-                yield line
-            prev_key = key
-
-    try:
-        outputs = []
+    def merge_sort(chunk_files: tp.List[Path]):
+        # Sort the lines from n opening chunks
         with contextlib.ExitStack() as stack:
-            tmp_dir = stack.enter_context(tempfile.TemporaryDirectory())
-            for i, _input in enumerate(inputs):
-                lines = list(iter(stack.enter_context(_input)))  # type: ignore[type-var]
-                if has_header and i == 0:
-                    header, *lines = lines
-                    col = header.rstrip("\n").split(sep).index(col)  # type: ignore[arg-type]
-                lines.sort(key=col_value)
-                tmp_output = open(Path(tmp_dir) / str(i), "a+")
-                tmp_output.writelines(lines)
-                tmp_output.flush()
-                tmp_output.seek(0)
-                outputs.append(tmp_output)
+            chunks = [stack.enter_context(open(f)) for f in chunk_files]
+            keyed_chunks = [
+                ((col_value(line), line) for line in chunk) for chunk in chunks
+            ]
 
-            # Small optimizattion of IO: In case of small input file (sorting in memory), no header and duplicates,
-            # The first intermediately sorted file is already the final result
-            if len(outputs) == 1 and header is None and not no_duplicate:
-                outputs[0].close()
-                shutil.move(str(Path(tmp_dir) / "0"), output_file)
-            else:
-                output = stack.enter_context(open(output_file, "w"))
-                if header:
-                    output.write(header)
-                output.writelines(merge(outputs))
-    finally:
-        for _output in outputs:
-            if not _output.closed:
-                _output.close()
+            # de-duplicate the line based on the key
+            prev_key = None
+            for key, line in heapq.merge(*keyed_chunks):
+                if prev_key != key or not no_duplicate:
+                    yield line
+                prev_key = key
+
+    def merge_output(
+        files: tp.List[Path], output_dir: Path, iter_no: int
+    ) -> tp.List[Path]:
+        # Merge the (maybe big) list of partial files into one sorted output
+        # Make sure not too many files are opened than what is allowed by the OS
+
+        num_cpus = os.cpu_count()
+        if num_cpus is None:
+            num_cpus = 1
+        max_ofile_per_cpu = (
+            resource.getrlimit(resource.RLIMIT_OFILE)[0] // num_cpus // 2
+        )
+        output_files = []
+
+        for batch_no, files_batch in enumerate(
+            batch(files, batch_size=max_ofile_per_cpu)
+        ):
+            output_file = output_dir / f".m{iter_no}.{batch_no}"
+            with open(output_file, "w") as output:
+                output.writelines(merge_sort(files_batch))
+            output_files.append(output_file)
+
+        return output_files
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        outputs = []
+        for i, _input in enumerate(inputs):
+            lines = None
+            with _input as lines_chunk:
+                lines = list(iter(lines_chunk))  # type: ignore[type-var]
+
+            # This happens when e.g. the line is too big to fit in one chunk
+            if lines is None or len(lines) == 0:
+                continue
+            if has_header and i == 0:
+                header, *lines = lines
+                col = header.rstrip("\n").split(sep).index(col)  # type: ignore[arg-type]
+            lines.sort(key=col_value)
+
+            tmp_output_path = Path(tmp_dir) / str(i)
+            with open(tmp_output_path, "a+") as tmp_output:
+                tmp_output.writelines(lines)
+
+            outputs.append(tmp_output_path)
+
+        # Small optimizattion of IO: In case of small input file (sorting in memory), no header and duplicates,
+        # The first intermediately sorted file is already the final result
+        if len(outputs) == 1 and header is None and not no_duplicate:
+            shutil.move(str(outputs[0]), output_file)
+            return
+
+        round_no = 1
+        while len(outputs) > 1:
+            outputs = merge_output(outputs, Path(tmp_dir), round_no)
+            round_no += 1
+
+        with open(output_file, "w") as output, open(outputs[0]) as input:
+            if header:
+                output.write(header)
+            for line in input:
+                output.write(line)
 
 
 def symlink(target: Path, actual: Path) -> None:

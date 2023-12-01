@@ -1,9 +1,0 @@
-_target_: stopes.modules.speech.postprocess.PostProcessAudioModule
-
-
-output_dir: ???
-output_filename: conf_test.tsv.gz
-mining_result_path: ???
-min_audio_length: 0
-mining_threshold:  1.06
-max_overlap: 0.2

@@ -8,17 +8,15 @@ sidebar_position: 2
 
 You can launch the mining for a pair of languages with the following command:
 
-
 ```bash
 python -m stopes.pipelines.bitext.global_mining_pipeline src_lang=fuv tgt_lang=zul demo_dir=.../stopes-repo/demo +preset=demo output_dir=. embed_text=laser2
 ```
-(see the demo doc for a quick understanding of the `+preset` override)
 
+(see the [demo](https://facebookresearch.github.io/stopes/docs/quickstart) doc for a quick understanding of the `+preset` override, and `stopes/pipelines/bitext/conf/preset/demo.yaml` to get the content of a demo preset)
 
 This will run the required steps and try to re-use whatever step outputs has already been computed. So if you run this exact command multiple times (e.g. after a pre-emption in slurm), it will start from where it failed instead of recomputing everything.
 
 Here is an example log:
-
 
 ```
 [global_mining][INFO] - output: ....../mining/global_mining/outputs/2021-11-02/08-56-40
@@ -38,36 +36,29 @@ Here is an example log:
 [train_faiss_index][INFO] - lang=hi, sents=162844151, required=40000000, index type=OPQ64,IVF65536,PQ64
 ```
 
-
 We can see that the launcher has found out that it doesn't need to run the encode and train index steps for the bn lang (source language) and can skip straight to populating the index with embeddings, but it also already processed 44 shards for that step, so will only re-schedule jobs for 11 shards. In parallel, it is also processing the target language (hi) and found that it still needs to run the index training step as it also recovered all the encoded shards.
 
 If you are using slurm as the launcher instead of the local setting, the pipeline also takes care of communicating with slurm, waiting for all slurm jobs to finish and synchronizing the consecutive jobs. See below on how to run single steps for debugging.
 
 You can run the whole pipeline locally with:
 
-
 ```bash
 python global_mining_pipeline.py src_lang=bn tgt_lang=hi +data=ccg launcher.cluster=local
 ```
 
-
-
 # Understanding the Configuration
 
-The configuration is driven by [Hydra](https://hydra.cc/), this makes it sound way more complicated than it actually is. The first main difference is how the command line arguments are specified. Instead of using the `--arg=foobar` standard notation, Hydra introduces its [own notation](https://hydra.cc/docs/1.0/advanced/override_grammar/basic/#basic-override-syntax) to be able to have a  more complete syntax. This is indeed odd, but once you are used to it, it provides a lot of benefits.
+The configuration is driven by [Hydra](https://hydra.cc/), this makes it sound way more complicated than it actually is. The first main difference is how the command line arguments are specified. Instead of using the `--arg=foobar` standard notation, Hydra introduces its [own notation](https://hydra.cc/docs/1.0/advanced/override_grammar/basic/#basic-override-syntax) to be able to have a more complete syntax. This is indeed odd, but once you are used to it, it provides a lot of benefits.
 
 A second big change is that most of the things that can be changed in the pipeline are driven by yaml configuration files instead of having to change the script files. These configuration files are checked in and you can override them on the command line (see the examples above). The pipeline will log the actual full config+overrides in the output folder when you do a run, so that you can always look at the config that was used to generate a particular data folder.
 
 The third major change, and main benefit, is that the configs are split in "groups" (hydra terminology) and you can override a whole group with another yaml file with a very simple syntax. For instance, the embed_text step has a set of pre-made configs in `global_mining/conf/embed_text` and you can swap between them. If you would like to make a new reusable/shared config for embed_text, you could put a new yaml file in that that folder (let say `global_mining/conf/embed_text/foobar.yaml`) and select it from the cli with:
 
-
 ```bash
 python global_mining_pipeline.py src_lang=bn tgt_lang=hi +data=ccg embed_text=foobar
 ```
 
-
 See the Data and Modules discussion below for more examples.
-
 
 ## Outputs and Working Dir
 
@@ -77,51 +68,43 @@ Because you might run the pipeline multiple times for the same "data run" (e.g. 
 
 It's therefore a good idea when you are doing a full run (not just testing), to specify a fixed outputs directory when launching the pipeline:
 
-
 ```bash
 python global_mining_pipeline.py src_lang=bn tgt_lang=hi +data=ccg output_dir=/myfinal/data/outputs
 ```
 
-
 This way logs and other temp files will go to the working directory, but the data will go to a clean central place.
-
 
 ## Data
 
 The current data configuration for the pipeline takes a few parameters:
 
-
-
-* data_version
-* iteration
-* data_shard_dir
-* shard_type
-* bname
+- data_version
+- iteration
+- data_shard_dir
+- shard_type
+- bname
 
 Because you will most often always use the same data for your runs, there is no need to specify this every time on the CLI or in the default config. There is a "group" under `global_mining/conf/data` where you can put common data sources. Checkout the demo config to see how to configure data. You can create a data config folder if you want to switch data without changing all other presets.
-
 
 # Modules
 
 The pipeline is made of seven main steps:
 
-* split_in_shards (optional)
-* embed_text
-* train_index
-* populate_index
-* merge_index
-* calculate_distances
-* mine_indexes
-* mine_sentences
-* merge_shards (optional)
+- split_in_shards (optional)
+- embed_text
+- train_index
+- populate_index
+- merge_index
+- calculate_distances
+- mine_indexes
+- mine_sentences
+- merge_shards (optional)
 
 Each of them is configured as a "group" and their configurations can be overridden by switching groups on the cli as explained above. This override can also completely switch the code/module that is being used to compute this step, without changing the pipeline itself.
-
 
 **Embedding Modules**
 
 You can switch the actual encoder being used to choose between multiple encoders. For example, you can choose to use LaBSE, BERT, RoBERTa, or any other model from the sentence-transformers repo within the HuggingFace Model Hub ([https://huggingface.co/sentence-transformers](https://huggingface.co/sentence-transformers)). Here’s an example of how to encode text using LaBSE (with encoder-specific options in blue):
-
 
 ```bash
 python global_mining_pipeline.py src_lang=bn tgt_lang=hi +data=ccg  embed_text=hf_roberta_large
@@ -132,6 +115,7 @@ python global_mining_pipeline.py src_lang=bn tgt_lang=hi +data=ccg  embed_text=h
 ```
 
 or you can choose any huggingface encoder by their name with:
+
 ```bash
 python global_mining_pipeline.py -c job src_lang=bn tgt_lang=hi +data=ccg  embed_text=huggingface embed_text.encoder_model=sentence-transformers/LaBSE
 ```
@@ -144,14 +128,14 @@ embed_text.config.encoder.encoder_model=path_to_laser_model
 embed_text.config.encoder.spm_model=path_to_spm_model
 ```
 
-
 ### Splitting and merging languages
-For some large languages, the mining might fail because of out-of-memory errors, especially if the FAISS indexes are stored on GPU. To mitigate this probelm, you can split a language into shards, perform the mining on them in parallel, and then merge the results. 
 
-The first optional module, `split_in_shards`, can randomly split the language (inclusing both text files and metadata files, if they exist) into several shards. 
-To use this option, you should specify the parameter `max_shard_size`, and the languages with more total lines than this number will be automatically split into smaller shards. 
+For some large languages, the mining might fail because of out-of-memory errors, especially if the FAISS indexes are stored on GPU. To mitigate this probelm, you can split a language into shards, perform the mining on them in parallel, and then merge the results.
+
+The first optional module, `split_in_shards`, can randomly split the language (inclusing both text files and metadata files, if they exist) into several shards. To use this option, you should specify the parameter `max_shard_size`, and the languages with more total lines than this number will be automatically split into smaller shards.
 
 Alternatively, you can manually split the data for the language and configure it as several separate "languages", e.g. `eng0,eng1,eng2`. In this case, you can indicate in the mining config that they should be merged into a single language after mining:
+
 ```
 sharded_langs:
   eng:
@@ -170,15 +154,13 @@ One of the benefits of the hydra cli override syntax, is that you can ask hydra 
 
 For instance, if you would like to run the pipeline on multiple languages, you can do:
 
-
 ```bash
 python global_mining_pipeline.py -m src_lang=en tgt_lang=bn,hi +data=ccg
 ```
 
-
 The `-m` parameter tells the pipeline to start with multi-run and `tgt_lang=bn,hi` tells it to make two runs, one for en-bn and one for en-hi.
 
- You could also sweep over the lang and the encoders with:
+You could also sweep over the lang and the encoders with:
 
 ```bash
 python global_mining_pipeline.py -m src_lang=en tgt_lang=bn,hi +data=ccg embed_text=hf_roberta_large,hf_labse
@@ -211,23 +193,24 @@ launcher.cache.caching_dir=/path/to/cache                           \
 maximum_epoch=20
 ```
 
-**NOTE**: In order for the training pipeline to know which column of the bitext corresponds to the selected `src_lang` and `tgt_lang`, it presumes that the two text columns in the bitext are ordered by their sorted language names. For example, for a `eng-lin` bitext, the format is: alignment-score [tab] english-text [tab] lingala-text (not alignment-score [tab] lingala-text [tab] english-text). 
+**NOTE**: In order for the training pipeline to know which column of the bitext corresponds to the selected `src_lang` and `tgt_lang`, it presumes that the two text columns in the bitext are ordered by their sorted language names. For example, for a `eng-lin` bitext, the format is: alignment-score [tab] english-text [tab] lingala-text (not alignment-score [tab] lingala-text [tab] english-text).
 
 ## Outputs
 
 The NMT pipeline will create the following directories in the specified `output_dir`:
+
 - `bin_dir`: moses preprocessed, spm-encoded, and binarized data.
 - `trained_models`: checkpoints from `fairseq-train`. **Note**: this directory will also contain files containing the outputs of both `fairseq-generate` (files ending in `.out`) and the corresponding BLEU evaluations for each checkpoint (files ending in `.bleu`).
 
 ## Evaluation data
 
-To find the evaluation data for your chosen languages, `stopes` needs to know the relevant path. See `path` in `stopes/pipelines/bitext/conf/preproc_binarize_mined/standard_conf.yaml`. Currently it defaults to the format of the `flores200` dataset. To use this, please [download flores200](https://github.com/facebookresearch/flores/tree/main/flores200). 
+To find the evaluation data for your chosen languages, `stopes` needs to know the relevant path. See `path` in `stopes/pipelines/bitext/conf/preproc_binarize_mined/standard_conf.yaml`. Currently it defaults to the format of the `flores200` dataset. To use this, please [download flores200](https://github.com/facebookresearch/flores/tree/main/flores200).
 
 ## Example overrides
 
 **Spm training**
 
-```spm.train.config.vocab_size=7000```
+`spm.train.config.vocab_size=7000`
 
 **Model configuation**
 

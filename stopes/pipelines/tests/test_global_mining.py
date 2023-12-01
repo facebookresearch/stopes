@@ -120,11 +120,17 @@ class ToyNumbersEncoder(EncodeToNPY):
         return np.stack([digits2vec(s) for (_, s) in lines_with_number])
 
 
-@pytest.mark.parametrize("split_langs", [True, False])
-@pytest.mark.parametrize("use_meta", [True, False])
-@pytest.mark.parametrize("fp16", [True, False])
+@pytest.mark.parametrize(
+    "split_langs,use_meta,fp16,modality",
+    [
+        (True, True, True, "text"),
+        (False, False, True, "text"),
+        (False, True, False, "text"),
+        (False, True, True, "speech"),
+    ],
+)
 def test_global_mining_pipeline(
-    tmp_path: Path, split_langs: bool, use_meta: bool, fp16: bool
+    tmp_path: Path, split_langs: bool, use_meta: bool, fp16: bool, modality: str
 ) -> None:
     """
     Test the mining pipeline with different settings.
@@ -176,7 +182,6 @@ def test_global_mining_pipeline(
         f"output_dir={output_dir}",
         # special settings
         "hydra.searchpath=[pkg://stopes.pipelines.tests/conf]",  # path to test_numbers_encoder cfg
-        "embed_text=test_numbers_encoder",  # do not test moses and laser; they are external
         "calculate_distances.config.gpu_type=",  # no gpu on test servers
         "train_index.config.use_gpu=False",
         "+populate_index.config.use_gpu=False",
@@ -188,13 +193,20 @@ def test_global_mining_pipeline(
         f"launcher.log_folder={tmp_path}/logs",
         f"local_tmp_dir={tmp_dir}",
         # fp16 flags
-        f"embed_text.encoder.fp16={fp16}",
+        f"embed_{modality}.encoder.fp16={fp16}",
         f"train_index.config.fp16={fp16}",
         f"+populate_index.config.fp16={fp16}",
         f"+calculate_distances.config.fp16={fp16}",
     ]
     if split_langs:
         overrides.append("max_shard_size=500")  # this splits the langs in two
+
+    # Prepare the default config of embedding model
+    if modality == "text":
+        overrides.append("embed_text=test_numbers_encoder")
+    else:
+        overrides.append("embed_speech=test_dummy_speech_encoder")
+        overrides.append("embed_speech.encoder.encoder_model=some_random_name")
 
     with hydra.initialize(version_base=None, config_path="../bitext/conf"):
         cfg = hydra.compose(
@@ -203,9 +215,10 @@ def test_global_mining_pipeline(
         )
     print(cfg)
     print("embed config is")
-    print(OmegaConf.to_yaml(cfg.embed_text))
+    print(OmegaConf.to_yaml(getattr(cfg, f"embed_{modality}")))
     print("demo dir is", str(demo_dir))
     print("result is", str(output_dir))
+
     out_texts_path, out_meta_path = global_mining_pipeline.main(cfg)
     print("out texts are", out_texts_path, out_meta_path)
 

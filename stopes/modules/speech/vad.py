@@ -11,7 +11,7 @@ There are two ways in which you could use it directly:
 
 ```Python
 from stopes.modules.speech.vad import VAD
-root = "/somewhere/seamless/nllb/modules_test_data"
+root = "$DATA_ROOT/seamless/nllb/modules_test_data"
 vad = VAD(
     model_path=f"{root}/silero_vad.jit",
     hard_limit_min_length=2.0,

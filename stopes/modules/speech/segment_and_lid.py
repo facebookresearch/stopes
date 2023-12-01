@@ -21,10 +21,10 @@ class SegmentLIDModule(StopesModule):
 
     python -m stopes.modules \
         +speech_preproc=segment_and_lid \
-        speech_preproc.shards="input_file.mp3" \
-        speech_preproc.segment_model=... \
-        speech_preproc.lid_model=... \
-        speech_preproc.output_dir=.
+        speech_preproc.shards="thai_example.mp3" \
+        speech_preproc.segment_model=silero_vad.jit \
+        speech_preproc.lid_model=epaca_100/best \
+        speech_preproc.output_dir=test-lid-thai
     """
 
     def __init__(self, config):

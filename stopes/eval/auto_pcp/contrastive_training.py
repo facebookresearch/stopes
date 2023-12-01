@@ -6,7 +6,6 @@
 
 """
 This module contains utils for contrastive and mixed training of prosody comparators.
-Usage example: 26_reproduce_contrastive_training.ipynb
 """
 
 import random
