@@ -179,11 +179,11 @@ class CompareAudiosModule(StopesModule):
             progress=progress,
         ).squeeze(1)
 
-    def compare_embeddings(self, src_embs, tgt_embs):
+    def compare_embeddings(self, src_emb, tgt_emb):
         return get_comparator_preds(
             model=self.comparator,
-            src=src_embs,
-            mt=tgt_embs,
+            src_emb=src_emb,
+            tgt_emb=tgt_emb,
             batch_size=self.config.batch_size,
             symmetrize=self.config.symmetrize,
         )
