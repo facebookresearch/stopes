@@ -10,12 +10,19 @@ import typing as tp
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import torch
 from omegaconf.omegaconf import MISSING
 
 from stopes.core.stopes_module import Requirements, StopesModule
-from stopes.eval.auto_pcp.audio_comparator import compare_audio_pairs
+from stopes.eval.auto_pcp.audio_comparator import (
+    Comparator,
+    compare_audio_pairs,
+    encode_audios,
+    get_comparator_preds,
+)
 from stopes.utils.web import cached_file_download
+from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model
 
 logger = logging.getLogger(__name__)
 
@@ -134,3 +141,49 @@ class CompareAudiosModule(StopesModule):
         iteration_index: int = 0,
     ) -> bool:
         return output.exists()
+
+    def load_models(self):
+        """Loading models once, to avoid future recalculation"""
+        use_cuda = self.config.use_cuda and torch.cuda.is_available()
+
+        self.audio_feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+            self.config.encoder_path
+        )
+        self.audio_encoder = Wav2Vec2Model.from_pretrained(self.config.encoder_path)
+        if use_cuda:
+            self.audio_encoder.cuda()
+
+        comparator_path = self.config.comparator_path
+        if comparator_path is None:
+            comparator_path = cached_file_download(
+                self.config.comparator_url,  # type: ignore
+                self.config.comparator_save_name,  # type: ignore
+                unzip=True,
+            )
+        self.comparator = Comparator.load(comparator_path, use_gpu=use_cuda)
+
+    def embed_audios(
+        self, inputs: tp.List[tp.Union[str, np.ndarray]], progress: bool = True
+    ) -> torch.Tensor:
+        """
+        Encode the audios to representations suitable for the comparator model.
+        This is useful for expressive alignment, where for each encoded audio we compute multiple comparisons.
+        """
+        return encode_audios(
+            audio_paths=inputs,
+            model=self.audio_encoder,
+            fex=self.audio_feature_extractor,
+            pick_layer=self.config.pick_layer,
+            batch_size=self.config.batch_size,
+            num_process=self.config.num_process,
+            progress=progress,
+        ).squeeze(1)
+
+    def compare_embeddings(self, src_embs, tgt_embs):
+        return get_comparator_preds(
+            model=self.comparator,
+            src=src_embs,
+            mt=tgt_embs,
+            batch_size=self.config.batch_size,
+            symmetrize=self.config.symmetrize,
+        )
