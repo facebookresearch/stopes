@@ -404,8 +404,8 @@ def compare_audio_pairs(
     logger.info("Comparing source and target embedding")
     preds = get_comparator_preds(
         model=model,
-        src=src_emb,
-        mt=tgt_emb,
+        src_emb=src_emb,
+        tgt_emb=tgt_emb,
         batch_size=batch_size,
         symmetrize=symmetrize,
     )
