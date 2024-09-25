@@ -38,7 +38,8 @@ classifiers=[
     "sentencepiece",
     "indic-nlp-library",
     "emoji",
-    "pythainlp",
+    "pythainlp==4.0.2",
+    "hasami",  # Japanese sentence segmentation
     "botok",
     "khmer-nltk",
     "laonlp",

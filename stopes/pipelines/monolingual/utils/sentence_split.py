@@ -13,6 +13,11 @@ from pathlib import Path
 # Moses-style
 from sentence_splitter import SentenceSplitter
 
+from stopes.pipelines.monolingual.language_utils.bod.bod_sentenizer import BodSentenizer
+from stopes.pipelines.monolingual.language_utils.urd.urdu_sentenizer import (
+    urdu_sentence_tokenizer,
+)
+
 # Indicp NLP
 
 
@@ -89,10 +94,56 @@ LANGS_MOSES = {
 LANGS_THAINLP = {"tha": "tha"}
 LANGS_LAONLP = {"lao": "lao"}
 LANGS_KHMER = {"khm": "khm"}
-LANGS_BODNLP = {
+LANGS_BOTOK = {
     "bod": "bod",
     "dzo": "dzo",
 }  # languages with tibetan script
+LANGS_URDU = {"urd": "urd"}
+LANGS_HASAMI = {"jpn": "jpn"}
+
+# ----------------------------------------------
+LANGS_CASELESS = {"kat": "kat"}
+
+
+def make_splitter_caseless(
+    base_splitter: tp.Callable[[str], tp.Iterable[str]]
+) -> tp.Callable[[str], tp.Iterable[str]]:
+    """
+    Try splitting an uppercase version of the texts.
+    Works for languages like Georgian, where the texts are written in lowercase,
+    where otherwise the default splitter ignores full stops, because they are not followed by uppercase letters.
+    The splitter is applied by upper-casing the text, then running a base splitter on it,
+    but returning the corresponding substrings of the original text.
+    Two conditions must hold:
+    - After upper-casing, the text doesn't change lenght;
+    - The sentences returned by the base splitter are substrings of the text being split.
+    If they do not hold, falling back to just running the base splitter.
+    """
+
+    def caseless_splitter(text: str) -> tp.List[str]:
+        upper = text.upper()
+        if len(text) != len(upper):
+            logger.warning(
+                f"The text changes length at uppercasing, so caseless splitter could not be applied."
+                f"Falling back to the case-dependend splitter for `{text[:20]}...`"
+            )
+            return list(base_splitter(text))
+        upper_sents = base_splitter(upper)
+        sents = []
+        start_id = 0
+        for upper_sent in upper_sents:
+            start_id = upper.find(upper_sent, start_id)
+            if start_id == -1:
+                logger.warning(
+                    f"A sentence `{upper_sent}...` was not found in the text in a caseless-splitter."
+                    f"Falling back to the case-dependend splitter for `{upper[:20]}...`"
+                )
+                return list(base_splitter(text))
+            sents.append(text[start_id : start_id + len(upper_sent)])
+        return sents
+
+    return caseless_splitter
+
 
 # ----------------------------------------------
 LANGS_INDIC = {
@@ -114,7 +165,7 @@ LANGS_INDIC = {
     "snd": "sd",
     "tam": "ta",
     "tel": "te",
-    "urd": "ur",
+    # "urd": "ur", # For Urdu, a special splitter is applied instead
 }
 
 # ----------------------------------------------
@@ -175,6 +226,24 @@ def split_chinese(line: str) -> tp.Iterable[str]:
         yield sent
 
 
+# ----------------------------------------------
+LANGS_ARMENIAN = {"hye": "hye"}
+
+
+def armenian_tokenize_naive(text):
+    prev_end = 0
+    results = []
+    for found in re.finditer("[.:։՜՞] ", text):
+        sentence = text[prev_end : max(prev_end, found.end() - 1)].strip()
+        if sentence:
+            results.append(sentence)
+        prev_end = found.end()
+    sentence = text[prev_end:]
+    if sentence:
+        results.append(sentence)
+    return results
+
+
 # ----------------------------------
 
 
@@ -196,6 +265,16 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
             split_algo = "chinese"
         elif lang in LANGS_THAINLP:
             split_algo = "thai"
+        elif lang in LANGS_URDU:
+            split_algo = "urduhack"
+        elif lang in LANGS_HASAMI:
+            split_algo = "hasami"
+        elif lang in LANGS_BOTOK:
+            split_algo = "botok"
+        elif lang in LANGS_ARMENIAN:
+            split_algo = "armenian"
+        elif lang in LANGS_CASELESS:
+            split_algo = "moses_caseless"
         else:
             # use Moses by default (which likely will fall-back to English)
             split_algo = "moses"
@@ -205,7 +284,7 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
         logger.info(" - no sentence splitting")
         return lambda line: [line]
 
-    elif split_algo == "moses":
+    elif split_algo == "moses" or split_algo == "moses_caseless":
         if lang in LANGS_MOSES:
             lang = LANGS_MOSES[lang]
             logger.info(f" - Moses sentence splitter: using rules for '{lang}'")
@@ -215,6 +294,8 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
                 f" - Moses sentence splitter for {lang}: falling back to {lang} rules"
             )
         splitter = SentenceSplitter(language=lang)
+        if split_algo == "moses_caseless":
+            return make_splitter_caseless(splitter.split)
         # non_breaking_prefix_file=non_breaking_prefix_file
         return splitter.split
 
@@ -262,11 +343,11 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
         logger.info(f" - Khmer NLTK sentence splitter applied to '{lang}'")
         return khm_sent_tok
 
-    elif split_algo == "bodnlp":
+    elif split_algo == "botok":
         logger.info(f" - Tibetan NLTK sentence splitter applied to '{lang}'")
-        from botok.tokenizers import sentencetokenizer as bod_sent_tok
+        sentenizer = BodSentenizer()
 
-        return bod_sent_tok
+        return sentenizer
 
     elif split_algo == "geez":
         logger.info(f" - Ge'ez rule-based sentence splitter applied to '{lang}'")
@@ -285,5 +366,20 @@ def get_split_algo(lang: str, split_algo: str) -> tp.Callable[[str], tp.Iterable
         from pythainlp import sent_tokenize
 
         return sent_tokenize  # type: ignore[no-any-return]
+
+    elif split_algo == "urduhack":
+        logger.info(f" - Urdu Hack sentence splitter applied to '{lang}'")
+        return urdu_sentence_tokenizer
+
+    elif split_algo == "hasami":
+        logger.info(f" - Hasami sentence splitter applied to '{lang}'")
+        from hasami import segment_sentences
+
+        return segment_sentences
+
+    elif split_algo == "armenian":
+        logger.info(f" - Armenian sentence splitter applied to '{lang}'")
+
+        return armenian_tokenize_naive
 
     raise ValueError(f"Unknown splitting algorithm {split_algo}")
