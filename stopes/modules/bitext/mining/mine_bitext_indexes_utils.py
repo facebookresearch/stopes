@@ -27,7 +27,7 @@ DISTANCES_FILE_SUFFIX = ".dist"
 INDICES_FILE_SUFFIX = ".idx"
 
 # when requesting more neighbors than elements in the index, FAISS returns -1
-INVALID_INDEX_VALUE = np.uint32(-1)
+INVALID_INDEX_VALUE = np.int32(-1)
 INVALID_INDEX_REPLACEMENT = 0
 INVALID_DISTANCES_REPLACEMENT = 2.0
 

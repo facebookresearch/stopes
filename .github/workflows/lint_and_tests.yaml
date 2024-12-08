@@ -13,7 +13,7 @@ jobs:
       max-parallel: 1
       matrix:
         platform: [ubuntu-latest]
-        python-version: [3.8]
+        python-version: [3.9]
 
     runs-on: ${{ matrix.platform }}
 
@@ -30,6 +30,7 @@ jobs:
         # Fairseq doesn't install with pip==22.1 we need to upgrade past it.
         # Also the version on pypi is from before Oct 2020.
         # wheel is required by fasttext to be installed correctly with recent pip versions
+        # fairseq+omegaconf do not play nice when using pip > 24.1
         run: |
           python --version
           python -m pip install --upgrade 'pip>=22.1.2,<24.1'

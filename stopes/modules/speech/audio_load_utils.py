@@ -12,12 +12,21 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from torch import multiprocessing
 
 from stopes.modules.speech import utils as speech_utils
 
 log = logging.getLogger(__name__)
-multiprocessing.set_start_method("spawn", force=True)
+
+
+@contextlib.contextmanager
+def spawn_mp(num_processses: int):
+    from torch import multiprocessing
+
+    start_method = multiprocessing.get_start_method()
+    multiprocessing.set_start_method("spawn", force=True)
+    yield multiprocessing.Pool(num_processses)
+
+    multiprocessing.set_start_method(start_method)
 
 
 def parallel_audio_read(
@@ -28,8 +37,8 @@ def parallel_audio_read(
     num_process: tp.Optional[int] = 4,
     chunksize: int = 16,
     sampling_factor: int = 16,
-    read_audio_func: tp.Callable = speech_utils.read_audio,
     collapse_channels: bool = False,
+    **kwargs,
 ) -> tp.Iterator[Tuple[str, np.ndarray]]:
     """
     Load audio from a given manifest file, using several processes.
@@ -40,7 +49,8 @@ def parallel_audio_read(
     """
     with contextlib.ExitStack() as stack:
         if num_process is None or num_process > 1:
-            pool = stack.enter_context(multiprocessing.Pool(num_process))
+            num_process = num_process or 4  # default number of processes
+            pool = stack.enter_context(spawn_mp(num_process))
             # chunksize=16, to send segments from the same file to the same worker.
             # Note this optimization only work if the input file is sorted per segment,
             # which in the case of mining only work for the source segments.
@@ -58,8 +68,8 @@ def parallel_audio_read(
             # pytorch modifies the multiprocessing behaviour to optimize serializing Tensors.
             # This causes non-deterministic "No space left on device" errors when we return a Tensor.
             # In order to avoid that, we are using numpy arrays as return values.
-            read_audio_func=read_audio_func,
             collapse_channels=collapse_channels,
+            **kwargs,
         )
         yield from pool_imap(_load, lines)
 
@@ -71,8 +81,8 @@ def load_audio(
     line: str,
     sampling_factor: int = 16,
     as_numpy: bool = False,
-    read_audio_func: tp.Callable = speech_utils.read_audio,
     collapse_channels: bool = False,
+    **kwargs,
 ) -> tp.Tuple[str, tp.Union[torch.Tensor, np.ndarray]]:
     """
     Load audio from a TSV-line where column at `column_offset` contains audio info
@@ -91,7 +101,10 @@ def load_audio(
     if isinstance(audio_meta, speech_utils.Audio):
         # mp3 files need to be fully read before we can extract a segment.
         # But segments are sorted so we should hit several time the same file.
-        wav = read_audio_func(audio_meta.path, audio_meta.sampling_factor * 1000)
+        wav = speech_utils.read_audio(
+            audio_meta.path,
+            audio_meta.sampling_factor * 1000,
+        )
         if len(wav.shape) > 1:
             wav = wav[:, audio_meta.start : audio_meta.end]
         else:
@@ -99,7 +112,12 @@ def load_audio(
     elif isinstance(audio_meta, speech_utils.AudioBytes):
         wav = audio_meta.load()
     elif isinstance(audio_meta, speech_utils.Text):
-        wav = read_audio_func(audio_meta.content, sampling_factor * 1000)
+        wav = speech_utils.read_audio(
+            audio_meta.content,
+            sampling_factor * 1000,
+            kwargs.get("start_frame", None),
+            kwargs.get("end_frame", None),
+        )
     if gpu and torch.cuda.is_available():
         wav = wav.cuda()
         if fp16:

@@ -36,6 +36,7 @@ class Requirements:
     cpus_per_task: int = 5
     timeout_min: int = 720
     constraint: tp.Optional[str] = None
+    max_num_timeout: int = 10
 
 
 class StopesModule(ABC):

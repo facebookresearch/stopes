@@ -17,8 +17,14 @@ from omegaconf import MISSING
 
 import stopes.modules.speech.utils as speech_utils
 from stopes.core.stopes_module import Requirements, StopesModule
+from stopes.modules.speech.audio_load_utils import load_audio
 from stopes.modules.speech.speech_units import parallel_audio_read
-from stopes.utils.shards import Shard, make_shards, parse_header, resolve_output
+from stopes.utils.sharding.text_shards import (
+    TextShard,
+    make_text_file_shards,
+    parse_header,
+    resolve_output,
+)
 
 logger = logging.getLogger("stopes.whisper")
 
@@ -45,6 +51,7 @@ class WhisperConfig:
     nshards: int = 1
     gpu: bool = True
     cpus_per_task: int = 4
+    timeout_min: int = 180
 
 
 class WhisperModule(StopesModule):
@@ -59,11 +66,11 @@ class WhisperModule(StopesModule):
         self.header = (
             isinstance(self.config.column, str) and not self.config.column.isdecimal()
         )
-        self._current_progress: tp.Optional[Shard] = None
+        self._current_progress: tp.Optional[TextShard] = None
 
-    def array(self) -> tp.List[Shard]:
+    def array(self) -> tp.List[TextShard]:
         return list(
-            make_shards(
+            make_text_file_shards(
                 self.config.shards,
                 nshards=self.config.nshards,
                 header=self.header,
@@ -77,7 +84,7 @@ class WhisperModule(StopesModule):
         return Requirements(
             gpus_per_node=int(self.config.gpu),
             cpus_per_task=int(self.config.cpus_per_task),
-            timeout_min=180,
+            timeout_min=int(self.config.timeout_min),
         )
 
     def get_audio(self, infile: str, ts_start: int, ts_end: int) -> torch.Tensor:
@@ -104,8 +111,21 @@ class WhisperModule(StopesModule):
             line = line.rstrip()
             line = line.split("\t")[column_offset]
             infile, ts_start, ts_end, _ = speech_utils.parse_audio_deprecated(line)
+            # If no ts_start and ts_end provided,
+            # return ts_start = 0 and ts_end = len(wav) to read the full audio instead
+            if not (ts_start and ts_end) and not self.config.longest_segment:
+                ts_start = 0
+                line, wav = load_audio(
+                    column_offset,
+                    gpu=False,
+                    fp16=True,
+                    line=line,
+                    sampling_factor=16,
+                    collapse_channels=True,
+                )
+                ts_end = len(wav)
             assert (
-                ts_start and ts_end
+                ts_start is not None and ts_end is not None
             ), f"Cannot parse timetamp from audio segment info: {line}"
             ts_start = int(ts_start)
             ts_end = int(ts_end)
@@ -166,7 +186,9 @@ class WhisperModule(StopesModule):
                 self.config.shards
             ).is_file(), "Direct call of run() only works with a single shard"
             cols = parse_header(self.config.shards, "\t") if self.header else None
-            shard = Shard(self.config.shards, cols=cols, sep="\t")
+            shard = TextShard(
+                input_file=self.config.shards, columns=cols, sep="\t", filter=None
+            )
         self._current_progress = shard
 
         assert (
@@ -178,9 +200,11 @@ class WhisperModule(StopesModule):
             out_file
         ), f"Cannot determine the output file name for {shard.input_file} (shard #{shard.index})"
         column_offset = shard.resolve_column_index(self.config.column)
-        with shard as f, open(
-            out_file, "a+"
-        ) as o, tempfile.TemporaryDirectory() as data_gym_cache:
+        with (
+            shard as f,
+            open(out_file, "a+") as o,
+            tempfile.TemporaryDirectory() as data_gym_cache,
+        ):
             os.environ["DATA_GYM_CACHE_DIR"] = str(data_gym_cache)
             self.model = whisper.load_model(self.config.model)
 

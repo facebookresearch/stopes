@@ -6,7 +6,7 @@ build-backend = "flit_core.buildapi"
 name = "stopes"
 readme = "README.md"
 authors = [{name = "Facebook AI Research"}]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dynamic = ["version", "description"]
 
 dependencies = [
@@ -15,7 +15,7 @@ dependencies = [
   "submitit>=1.4.5",
   "tqdm",
   "posix_ipc",
-  "pyarrow>=13.0.0"
+  "pyarrow>=16.1.0"
 ]
 # zip_safe = false
 classifiers=[
@@ -75,7 +75,7 @@ classifiers=[
     "torchaudio",
     "scipy",
     "pandas",
-    "pyarrow>=13.0.0",
+    "pyarrow>=16.1.0",
     "numba",
     "transformers",
     "openai-whisper==20230314",

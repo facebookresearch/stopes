@@ -6,9 +6,7 @@
 #
 # Different modules for speech recognition / speech-to-text
 import dataclasses
-import importlib
 import logging
-import sys
 import typing as tp
 from pathlib import Path
 
@@ -26,7 +24,12 @@ from stopes.modules.speech.wav2vec.utils import WavesDataset
 from stopes.speech.asr.wav2vec import decoder as wave2vec_decoder
 from stopes.speech.asr.wav2vec.base_decoder import BaseDecoder
 from stopes.speech.asr.wav2vec.decoder_config import FlashlightDecoderConfig
-from stopes.utils.shards import Shard, make_shards, parse_header, resolve_output
+from stopes.utils.sharding.text_shards import (
+    TextShard,
+    make_text_file_shards,
+    parse_header,
+    resolve_output,
+)
 
 
 @dataclasses.dataclass
@@ -78,7 +81,7 @@ class Wav2vecASR(StopesModule):
         )
         self.logger = logging.getLogger("stopes.asr")
         self.kwargs = kwargs
-        self._current_progress: tp.Optional[Shard] = None
+        self._current_progress: tp.Optional[TextShard] = None
 
     def load_model_and_task(self) -> tp.Tuple[tp.List[FairseqModel], FairseqTask]:
         """Load a Wav2vec Encoder and the ASR task"""
@@ -104,9 +107,9 @@ class Wav2vecASR(StopesModule):
             cpus_per_task=int(self.config.cpus_per_task),
         )
 
-    def array(self) -> tp.List[Shard]:
+    def array(self) -> tp.List[TextShard]:
         return list(
-            make_shards(
+            make_text_file_shards(
                 self.config.shards,
                 nshards=self.config.nshards,
                 header=self.header,
@@ -193,8 +196,10 @@ class Wav2vecASR(StopesModule):
             assert Path(
                 self.config.shards
             ).is_file(), "Direct call of run() only works with a single shard"
-            cols = parse_header(self.config.shards, "\t") if self.header else None
-            shard = Shard(self.config.shards, cols=cols, sep="\t")
+            cols = parse_header(self.config.shards, self.header, "\t")
+            shard = TextShard(
+                input_file=self.config.shards, columns=cols, sep="\t", filter=None
+            )
         self._current_progress = shard
 
         # Set up I/O variables
@@ -237,7 +242,7 @@ class Wav2vecASR(StopesModule):
 
     def checkpoint(
         self,
-        iteration_value: Shard,
+        iteration_value: TextShard,
         iteration_index: int,
         **kwargs: tp.Any,
     ) -> submitit.helpers.DelayedSubmission:

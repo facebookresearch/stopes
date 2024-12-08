@@ -36,6 +36,34 @@ def find_offsets(filename: tp.Union[str, Path], num_chunks: int) -> tp.List[int]
         return offsets
 
 
+def find_offsets_of_lines(
+    filename: tp.Union[str, Path], num_chunks: int, nrows: int
+) -> tp.List[int]:
+    """
+    Find the offsets of a text file that makes a total of `num_chunks` roughly equal-size chunks.
+    Here only the first `nrows` lines are read. This function should be used when `nrows` is
+    relatively small compared to the size of `filename`.
+    To find offsets of the entire file, please use `stopes.utils.file_chunker_utils.find_offsets()`
+    """
+    offsets = []
+    r = nrows % num_chunks
+    chunk_size = nrows // num_chunks
+    with open(filename, "r", encoding="utf-8") as f:
+        # Each of the r first chunks has one more line than the rest num_chunks - r
+        size = chunk_size + 1
+        for _ in range(r):
+            offsets.append(f.tell())
+            [f.readline() for _ in range(size)]
+
+        for _ in range(0, num_chunks - r):
+            offsets.append(f.tell())
+            [f.readline() for _ in range(chunk_size)]
+
+        offsets.append(f.tell())
+
+    return offsets
+
+
 def find_line_numbers(
     filename: tp.Union[str, Path], start_offsets: tp.List[int]
 ) -> tp.List[int]:

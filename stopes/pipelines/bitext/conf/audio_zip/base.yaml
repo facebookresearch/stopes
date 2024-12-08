@@ -1,5 +1,5 @@
 _target_: stopes.modules.speech.audio_zip.AudioZipModule
-tsv_file: ???
+input_file: ???
 output_dir: ???
 output_prefix: ""
 sample_rate: 16000
@@ -13,6 +13,12 @@ output_validation_token: false
 # column should be index of the tsv file 0 or 2... or multiple indices at once separated by comma '0,6'
 column: ???
 nshards: ???
+
+# If true, the audio paths will be sorted to speed up the audio reading (by taking advantage of
+# memory cache when loading segments from the same file). This means the order of audios in the
+# zip file is not the same as in the input TSV file. If False, no sorting is performed, the audios
+# are appended to the zip file in the same order as in the input TSV file
+sorted: true
 
 # Whether to add duplicate segments to the zip file. Default true but this can be turned off
 # for debugging purpose
