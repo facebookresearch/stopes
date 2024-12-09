@@ -32,7 +32,7 @@ jobs:
         # wheel is required by fasttext to be installed correctly with recent pip versions
         run: |
           python --version
-          python -m pip install --upgrade 'pip>=22.1.2'
+          python -m pip install --upgrade 'pip>=22.1.2,<24.1'
           python -m pip show pip
           python -m pip install wheel
           python -m pip install 'git+https://github.com/facebookresearch/fairseq.git@v0.12.1'
