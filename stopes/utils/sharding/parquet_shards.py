@@ -409,7 +409,6 @@ class ParquetOutputConfig(OutputDatasetConfig):
     keep_same_partitioning: bool = True
     partition_columns: tp.Optional[tp.List[str]] = None
     filesystem_expr: tp.Optional[str] = None
-    blobstore_expiration_timestamp: Optional[int] = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -431,7 +430,6 @@ class ParquetOutputConfig(OutputDatasetConfig):
         self.dataset_path, self.filesystem = get_filesystem_from_path(  # type: ignore
             str(self.dataset_path),
             filter=self.filesystem_expr,
-            expiration_timestamp=self.blobstore_expiration_timestamp,
         )
         if self.filesystem is None:
             Path(self.dataset_path).mkdir(parents=True, exist_ok=True)
