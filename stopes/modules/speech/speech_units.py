@@ -19,9 +19,13 @@ from tqdm import tqdm
 
 from stopes import hub
 from stopes.core import Requirements, StopesModule, utils
-from stopes.modules.speech.audio_load_utils import load_audio, parallel_audio_read
+from stopes.modules.speech.audio_load_utils import parallel_audio_read
 from stopes.speech.tokenizers import SpeechTokenizer
-from stopes.utils.shards import Shard, make_shards, resolve_output
+from stopes.utils.sharding.text_shards import (
+    TextShard,
+    make_text_file_shards,
+    resolve_output,
+)
 
 log = logging.getLogger("stopes.speech.units")
 multiprocessing.set_start_method("spawn", force=True)
@@ -101,7 +105,7 @@ class SpeechUnitsModule(StopesModule):
         super().__init__(config)
         self.output_dir = Path(self.config.output_dir)
         self.output_dir.mkdir(exist_ok=True)
-        self._current_progress: Optional[Shard] = None
+        self._current_progress: Optional[TextShard] = None
 
     @functools.cached_property
     def tokenizer(self) -> SpeechTokenizer:
@@ -119,12 +123,12 @@ class SpeechUnitsModule(StopesModule):
             constraint=None if self.tokenizer.config["fp16"] else "volta32gb",
         )
 
-    def array(self) -> List[Shard]:
+    def array(self) -> List[TextShard]:
         header = (
             isinstance(self.config.column, str) and not self.config.column.isdecimal()
         )
         return list(
-            make_shards(
+            make_text_file_shards(
                 self.config.shards,
                 cache_dir=self.output_dir,
                 header=header,
@@ -144,7 +148,7 @@ class SpeechUnitsModule(StopesModule):
         iteration_value: Optional[Any] = None,
         iteration_index: Optional[int] = None,
     ) -> Any:
-        assert isinstance(iteration_value, Shard)
+        assert isinstance(iteration_value, TextShard)
         shard = iteration_value
         self._current_progress = shard
         lang = getattr(self.tokenizer.config, "lang", None)
@@ -198,7 +202,7 @@ class SpeechUnitsModule(StopesModule):
 
     def checkpoint(
         self,
-        iteration_value: Shard,
+        iteration_value: TextShard,
         iteration_index: int,
         **kwargs: Any,
     ) -> submitit.helpers.DelayedSubmission:

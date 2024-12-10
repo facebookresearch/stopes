@@ -230,7 +230,7 @@ class TextShardingConfig(InputShardingConfig):
         assert self.nb_shards > 0, f"invalid number of shards ({self.nb_shards})"
         assert (
             len(self.skip_n_rows_per_shard) == 0
-        ), f"skipping not supported for this shard type"
+        ), "skipping not supported for this shard type"
 
     def validate(self) -> None:
         # TODO: verify that files exists and are readable with provided parameters
@@ -522,7 +522,6 @@ def parse_header(
     header: tp.Optional[tp.Union[bool, tp.List[str]]],
     sep: tp.Optional[str],
 ) -> tp.Optional[tp.List[str]]:
-
     if header is False or header is None:
         return None
 
@@ -831,5 +830,5 @@ def merge_shards(shards: tp.List[tp.Union[Path]], outdir: Path, suffix: str = ""
                     with stopes_open(shard_output) as so:
                         for line in so:
                             o.write(line)
-                except Exception as err:
+                except Exception:
                     log.error(f"Error in processing {shard_output}")

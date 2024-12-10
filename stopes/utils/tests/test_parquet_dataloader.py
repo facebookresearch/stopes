@@ -5,61 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import random
 import shutil
-import string
 import tempfile
-import typing as tp
 import unittest
 from collections import Counter
-from typing import Optional
 
-from stopes.utils.parquet_dataloader import ParquetBasicDataLoader, np, pa, pd, pq
+from conftest import generated_partitioned_parquet_file
 
-
-def gen_random_string(length: int) -> str:
-    return "".join(
-        random.choice(string.ascii_letters + string.digits) for n in range(length)
-    )
-
-
-def generate_random_pandas_df(size: int, seed: int = 123) -> pd.DataFrame:
-    np_rs = np.random.RandomState(seed)
-    df: tp.Dict[str, tp.Union[np.ndarray, list]] = {}
-    df["int_col"] = np_rs.randint(0, 200, size)
-    df["float_col"] = np_rs.randn(size)
-
-    df["string_col1"] = [gen_random_string(10) for _ in range(size)]
-    df["string_col2"] = [gen_random_string(2) for _ in range(size)]
-
-    df["list_int_col"] = [
-        np_rs.randint(-10, 10, np_rs.randint(0, 100)) for _ in range(size)
-    ]
-    df["list_float_col"] = [
-        np_rs.rand(np_rs.randint(0, 10)).astype(np.float32) for _ in range(size)
-    ]
-    df["list_float_fixed_size_col"] = [
-        np_rs.rand(7).astype(np.float32) for _ in range(size)
-    ]
-    return pd.DataFrame(df)
-
-
-def generated_partitioned_parquet_file(
-    path: str, size: int, n_partitions: int = 20, seed: int = 123
-) -> None:
-    df = generate_random_pandas_df(size, seed)
-
-    if n_partitions > 0:
-        df["part_key"] = np.arange(size) % n_partitions
-
-    table = pa.Table.from_pandas(df)
-
-    pq.write_to_dataset(
-        table,
-        path,
-        partition_cols=["part_key"] if n_partitions > 0 else None,
-        existing_data_behavior="delete_matching",
-    )
+from stopes.utils.parquet_dataloader import ParquetBasicDataLoader, np, pa, pd
 
 
 class TestParquetDataloader(unittest.TestCase):

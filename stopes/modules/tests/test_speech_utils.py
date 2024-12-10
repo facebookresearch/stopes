@@ -20,6 +20,7 @@ from torchaudio.backend.common import AudioMetaData
 
 import stopes.modules.speech.postprocess as sprocess
 import stopes.modules.speech.utils as sputils
+from stopes.modules.speech.audio_load_utils import load_audio
 from stopes.modules.speech.utils import Audio, AudioBytes, Text
 
 
@@ -358,27 +359,11 @@ def test_parse_audio_bytes_with_resample(sample_audio, caplog):
 
 @pytest.mark.parametrize("gpu", [True, False])
 @pytest.mark.parametrize("fp16", [True, False])
-@pytest.mark.parametrize("custom_read_func", [True, False])
-def test_load_audio_in_devices(sample_audio, gpu, fp16, custom_read_func, caplog):
-    # TODO: move load_audio to speech_utils
-    from stopes.modules.speech.speech_units import load_audio
-    from stopes.modules.speech.utils import read_audio
-
+def test_load_audio_in_devices(sample_audio, gpu, fp16, caplog):
     audio_path, num_frames = sample_audio[0]
-    fake_read_func = lambda *a: torch.zeros(1)  # noqa
-    read_func = fake_read_func if custom_read_func else read_audio  # ignore[assignment]
     line = f"{audio_path}|0|{num_frames}|16\tcoluimn2"
-    load_res = load_audio(
-        0, gpu, fp16, line, sampling_factor=32, read_audio_func=read_func  # type: ignore[arg-type]
-    )
+    load_res = load_audio(0, gpu, fp16, line, sampling_factor=32)  # type: ignore[arg-type]
     assert load_res[0] == line
-    if custom_read_func:
-        expected_wav = torch.zeros(1)
-        if gpu and torch.cuda.is_available():
-            expected_wav = expected_wav.cuda()
-            if fp16:
-                expected_wav = expected_wav.half()
-        assert torch.equal(load_res[1], expected_wav)  # type: ignore[arg-type]
     line_no_sample = f"{audio_path}|0|{num_frames}\tcoluimn2"
     with assert_warns(
         caplog, match="Sampling factor not present in file, using provided value."

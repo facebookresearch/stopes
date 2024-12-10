@@ -22,8 +22,16 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 from stopes.core import utils
 from stopes.core.cache import Cache, MissingCache, NoCache
-from stopes.core.jobs_registry.registry import JobsRegistry
-from stopes.core.jobs_registry.submitit_slurm_job import SubmititJob
+from stopes.core.jobs_registry.registry import JobsRegistry  # type: ignore
+from stopes.core.jobs_registry.submitit_slurm_job import SubmititJob  # type: ignore
+
+
+@dataclasses.dataclass
+class SkipValue:
+    """A value to skip in the array."""
+
+    expected_result: tp.Any
+
 
 if tp.TYPE_CHECKING:
     from stopes.core import StopesModule
@@ -222,6 +230,8 @@ class Launcher:
         log_folder: tp.Union[Path, str] = Path("executor_logs"),
         cluster: str = "local",
         partition: tp.Optional[str] = None,
+        qos: tp.Optional[str] = None,
+        account: tp.Optional[str] = None,
         supports_mem_spec: bool = True,  # some slurm clusters do not support mem_gb, if you set this to False, the Requirements.mem_gb coming from the module will be ignored
         disable_tqdm: bool = False,  # if you don't want tqdm progress bars
         max_retries: int = 0,
@@ -237,6 +247,8 @@ class Launcher:
          - `log_folder` where to store execution logs for each job (default: `executor_logs`)
          - `cluster`, a submitit cluster spec. `local` to run locally, `slurm` for slurm
          - `partition`, the slurm partition to use
+         - `qos`, the slurm QOS (quality-of-service) to use
+         - `account`, the slurm account to use
          - `supports_mem_spec`, ignore mem requirements for some cluster
          - `disable_tqdm`, don't show that fancy progress  bar
          - `max_retries`, how many retries do we want for each job
@@ -255,6 +267,8 @@ class Launcher:
         self.log_folder = Path(log_folder)
         self.cluster = cluster
         self.partition = partition
+        self.qos = qos
+        self.account = account
         self.supports_mem_spec = supports_mem_spec
         self.disable_tqdm = disable_tqdm
         self.progress_bar: tqdm.tqdm = None
@@ -265,9 +279,11 @@ class Launcher:
 
         if throttle:
             self.throttle = utils.AsyncIPCSemaphore(
-                name=throttle.shared_name
-                if throttle.shared_name
-                else f"/launcher_{getpass.getuser()}_{uuid.uuid4()}",
+                name=(
+                    throttle.shared_name
+                    if throttle.shared_name
+                    else f"/launcher_{getpass.getuser()}_{uuid.uuid4()}"
+                ),
                 flags=posix_ipc.O_CREAT,
                 initial_value=throttle.limit,
                 timeout=throttle.timeout,
@@ -324,17 +340,24 @@ class Launcher:
         name = module.name()
         module_log_folder = self.log_folder / name
         module_log_folder.mkdir(parents=True, exist_ok=True)
-        executor = AutoExecutor(folder=module_log_folder, cluster=self.cluster)
 
+        reqs = module.requirements()
+        executor = AutoExecutor(
+            folder=module_log_folder,
+            cluster=self.cluster,
+            slurm_max_num_timeout=3 if reqs is None else reqs.max_num_timeout,
+        )
         # update launcher params
         if self.update_parameters:
             executor.update_parameters(**self.update_parameters)
 
         # setup parameters
-        reqs = module.requirements()
+
         executor.update_parameters(
             name=module.name(),
             slurm_partition=self.partition,
+            slurm_qos=self.qos,
+            slurm_account=self.account,
         )
         if self.partition and self.cluster == "slurm":
             executor.update_parameters(
@@ -439,7 +462,13 @@ class Launcher:
 
         for idx, val in enumerate(value_array):
             task = Task(module, idx, val, launcher=self)
-            # first, look up if this iteration has already been cached
+            # first, look up if this iteration has been skipped
+            if isinstance(val, SkipValue):
+                task = task.done_from_cache(val.expected_result)
+                self.progress_job_end()
+                tasks.append(task)
+                continue
+            # second, look up if this iteration has already been cached
             try:
                 cached_result = self.cache.get_cache(
                     module,

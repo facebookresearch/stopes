@@ -91,9 +91,7 @@ class ParquetBasicDataLoader:
             pq.filters_to_expression(filters) if filters else None
         )
         # split_row_groups=True is not supported yet
-        self.source_ds = pq.ParquetDataset(
-            self.dataset_path, validate_schema=True, filters=filters
-        )
+        self.source_ds = pq.ParquetDataset(self.dataset_path, filters=filters)
 
         self.columns = columns or self.source_ds.schema.names
         assert set(self.columns).issubset(set(self.source_ds.schema.names))
