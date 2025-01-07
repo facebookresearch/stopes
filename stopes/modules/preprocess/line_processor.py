@@ -69,13 +69,15 @@ class LineProcessorConfig:
     # if only hydra allowed, the right type would be tp.Union[str, tp.List[str]]
     shards: tp.Any = MISSING
     buffer_size: int = 10_000
-    requirements: Requirements = field(default_factory=lambda: Requirements(
-        nodes=1,
-        tasks_per_node=1,
-        gpus_per_node=0,
-        cpus_per_task=4,
-        timeout_min=120,
-    ))
+    requirements: Requirements = field(
+        default_factory=lambda: Requirements(
+            nodes=1,
+            tasks_per_node=1,
+            gpus_per_node=0,
+            cpus_per_task=4,
+            timeout_min=120,
+        )
+    )
     custom_name: str = ""
 
 
