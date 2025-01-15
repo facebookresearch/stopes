@@ -13,7 +13,7 @@ jobs:
       max-parallel: 1
       matrix:
         platform: [ubuntu-latest]
-        python-version: [3.9]  # we might need a version 3.10 to pass the tests correctly
+        python-version: [3.9]
 
     runs-on: ${{ matrix.platform }}
 

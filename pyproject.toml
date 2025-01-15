@@ -257,3 +257,4 @@ norecursedirs = [
   "stopes/utils/aligner_utils", # it imports from a non-main branch of fairseq
   "stopes/eval/local_prosody/unity2_forced_aligner_f1", # it imports the package above
 ]
+asyncio_default_fixture_loop_scope = "session"
