@@ -1,0 +1,17 @@
+defaults:
+  - launcher: local
+  - _self_
+
+output_dir: ???
+split: "test"
+model_name: "seamlessM4T_medium"
+eval_first_pass: True
+dataset: "fleurs"
+audio_format: "n_pred.wav"
+
+launcher:
+  partition: ??? # set as null if running locally
+  cache:
+    caching_dir: ${output_dir}/cache
+
+datasets: ???
