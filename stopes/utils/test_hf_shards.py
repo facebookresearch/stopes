@@ -8,39 +8,44 @@
 from stopes.utils.sharding.hf_shards import HFInputConfig, HFShard
 
 # TODO: Hard code this to test if there are changes in HF datasets API
-first_item_id = 7
+expected_first_four = [
+    1,
+    0,
+    1,
+    0,
+]  # contemmcm/rotten_tomatoes first 4 reviewState values
 
 
 def test_shard_iteration():
     shard = HFShard(
         filter=None,
-        path_or_name="Fraser/mnist-text-small",
-        split="test",
+        path_or_name="contemmcm/rotten_tomatoes",
+        split="complete",
         index=0,
         num_shards=50,
-        trust_remote_code=True,
     )
     with shard:
         item = next(iter(shard))
         assert isinstance(item, dict)
-        assert "label" in item
-        assert item["label"] == first_item_id
+        assert "reviewState" in item
+        assert item["reviewState"] == expected_first_four[0]
 
     with shard as progress:
         batch_iter = progress.to_batches(batch_size=4)
-        item = next(batch_iter)
-        assert item["label"][0].as_py() == first_item_id  # type: ignore
+        batch = next(batch_iter)
+        # Verify first 4 items match expected pattern [1,0,1,0]
+        for i in range(4):
+            assert batch["reviewState"][i].as_py() == expected_first_four[i]  # type: ignore
 
 
 def test_input_config():
     input_config = HFInputConfig(
-        input_file="Fraser/mnist-text-small",
-        split="test",
+        input_file="contemmcm/rotten_tomatoes",
+        split="complete",
         num_shards=50,
-        trust_remote_code=True,
     )
     shards = input_config.make_shards()
     first_shard = shards[0]
     with first_shard:
         item = next(iter(first_shard))
-        assert item["label"] == first_item_id
+        assert item["reviewState"] == expected_first_four[0]
