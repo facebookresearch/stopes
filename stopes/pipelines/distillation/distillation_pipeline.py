@@ -95,7 +95,7 @@ async def bitext_clean_helper(
     )
     with utils.clone_config(config) as bitext_config:
         bitext_config.custom_name = f"bitext_clean_{lang_pair}.{tgt_lang}"
-        bitext_config.shards = [([str(file) for file in file_pair])]
+        bitext_config.shards = [[str(file) for file in file_pair]]
         bitext_config.requirements = Requirements(**config.requirements)
         bitext_config.bitext_processor._target_ = (
             f"{BitextSplitNormalizeFilterLID.__module__}.BitextSplitNormalizeFilterLID"

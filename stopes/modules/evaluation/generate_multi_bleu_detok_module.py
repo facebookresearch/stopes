@@ -234,9 +234,10 @@ def process_output_ref_hyp_file(
     return_file = Path(f"{fairseq_generate_output_file}.{file_type}")
     desired_line_prefix = "T" if file_type == "ref" else "H"
     desired_col_number = 1 if file_type == "ref" else 2
-    with open(fairseq_generate_output_file, "r", encoding="utf-8") as read_file, open(
-        return_file, "w", encoding="utf-8"
-    ) as write_file:
+    with (
+        open(fairseq_generate_output_file, "r", encoding="utf-8") as read_file,
+        open(return_file, "w", encoding="utf-8") as write_file,
+    ):
         for line in read_file:
             if line.startswith(desired_line_prefix):
                 line = line.rstrip("\n")

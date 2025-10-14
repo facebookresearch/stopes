@@ -261,9 +261,11 @@ def auto_parse_line(line: str, sampling_factor: tp.Optional[int] = None) -> Line
     columns = line.split("\t")
     return LineResult(
         columns=[
-            auto_parse(column, sampling_factor)
-            if i == 0
-            else parse_audio_or_text(column, sampling_factor)
+            (
+                auto_parse(column, sampling_factor)
+                if i == 0
+                else parse_audio_or_text(column, sampling_factor)
+            )
             for (i, column) in enumerate(columns)
         ]
     )

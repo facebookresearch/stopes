@@ -43,9 +43,11 @@ def plot_toxicity_per_lang():
     }
     sorted_axes = sorted(list(axis_colors.keys()))
     axis_display_names = {
-        axis: "Race and ethnicity"
-        if axis == "race_ethnicity"
-        else axis[0].upper() + axis[1:].replace("_", " ")
+        axis: (
+            "Race and ethnicity"
+            if axis == "race_ethnicity"
+            else axis[0].upper() + axis[1:].replace("_", " ")
+        )
         for axis in sorted_axes
     }
     sorted_axis_names = sorted(list(axis_colors.keys()))

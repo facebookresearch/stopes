@@ -42,9 +42,10 @@ async def test_split_with_meta(tmp_path: Path):
         )
         input_shards.append(text_name)
         input_metas.append(meta_name)
-        with gzip.open(text_name, mode="wt") as f_text, gzip.open(
-            meta_name, mode="wt"
-        ) as f_meta:
+        with (
+            gzip.open(text_name, mode="wt") as f_text,
+            gzip.open(meta_name, mode="wt") as f_meta,
+        ):
             for line_id in range(shard_size):
                 print("text", i, line_id, file=f_text)
                 print("meta", i, line_id, file=f_meta)
@@ -164,9 +165,10 @@ async def test_merge_bitext(tmp_path: Path):
             tmp_path / f"bimeta_{j}.tsv.gz",
         )
         inputs.append((text_name, meta_name))
-        with utils.open(text_name, mode="wt") as f_text, utils.open(
-            meta_name, mode="wt"
-        ) as f_meta:
+        with (
+            utils.open(text_name, mode="wt") as f_text,
+            utils.open(meta_name, mode="wt") as f_meta,
+        ):
             unique_texts = [
                 (f"unique_text_en_{j}_{i}", f"unique_text_fr_{j}_{i}")
                 for i in range(50)

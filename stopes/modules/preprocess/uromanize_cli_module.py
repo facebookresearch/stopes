@@ -73,7 +73,10 @@ def run_uroman_cli_standalone(input_file: Path, output_file: Path, lang: str) ->
 def uromanize(text: tp.List[str]) -> tp.List[str]:
     if text is None or len(text) == 0:
         return []
-    with tempfile.NamedTemporaryFile() as input_file, tempfile.NamedTemporaryFile() as output_file:
+    with (
+        tempfile.NamedTemporaryFile() as input_file,
+        tempfile.NamedTemporaryFile() as output_file,
+    ):
         with open(input_file.name, "w") as f:
             for sentence in text:
                 f.write(f"{sentence}\n")

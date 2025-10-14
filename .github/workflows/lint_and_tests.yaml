@@ -41,6 +41,8 @@ jobs:
 
       - name: isort
         run: isort --check --diff .
+      - name: black version
+        run: black --version
       - name: black
         run: black --check --diff .
       - name: pytest

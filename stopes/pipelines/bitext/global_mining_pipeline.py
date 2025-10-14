@@ -75,7 +75,9 @@ class Lang:
     # This representation of a language is used within the pipeline.
     # It is inherited from the config, but may change if the language is split.
     lang_name: str  # original language name (e.g. eng)
-    split_name: str  # language split name (can be different for big languages, e.g. eng001)
+    split_name: (
+        str  # language split name (can be different for big languages, e.g. eng001)
+    )
     data_shards: tp.List[str]
     meta_shards: tp.Optional[tp.List[str]]
     shard_sizes: tp.List[int]
@@ -604,9 +606,9 @@ class GlobalMiningPipeline:
                 lang_name=lng.lang_name,
                 split_name=f"{lng.lang_name}_{i:03d}",
                 data_shards=[str(text) for text in texts],
-                meta_shards=[str(meta) for meta in metas]
-                if metas is not None
-                else None,
+                meta_shards=(
+                    [str(meta) for meta in metas] if metas is not None else None
+                ),
                 shard_sizes=sizes,
             )
             for i, (texts, sizes, metas) in enumerate(
