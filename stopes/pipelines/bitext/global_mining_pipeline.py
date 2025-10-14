@@ -419,10 +419,9 @@ class GlobalMiningPipeline:
             return result
 
     def run(self) -> tp.Tuple[Path, Path]:
-        loop = asyncio.get_event_loop()
         if self.config.launcher.cluster == "debug":
-            loop.set_debug(True)
-        return loop.run_until_complete(self.arun())
+            asyncio.get_event_loop().set_debug(True)
+        return asyncio.run(self.arun())
 
     async def arun(self) -> tp.Tuple[Path, Path]:
         """Run the global mining pipeline and return the paths of the mined text and metadata files"""
