@@ -3,7 +3,7 @@
 torch==2.8.0
 unbabel-comet==1.1.3
 sentence-transformers==2.2.2
-transformers==4.22.0
+transformers==4.53.0
 pandas==1.5.1
 numpy==1.23.2
 sacrebleu==2.3.1
