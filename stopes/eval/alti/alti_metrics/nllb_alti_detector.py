@@ -104,7 +104,8 @@ def load_bilingual_model(
 @dataclasses.dataclass
 class ALTIMetricsConfig:
     """The config indicating how to load sentence pairs, load the model,
-    compute the ALTI metrics with it, and save results. - to use with the `compute_nllb_alti` function."""
+    compute the ALTI metrics with it, and save results. - to use with the `compute_nllb_alti` function.
+    """
 
     # the model used to compute ALTI
     is_multilingual: bool
@@ -118,7 +119,9 @@ class ALTIMetricsConfig:
         Path
     ]  # a .jsonl file with token-level contributions
     # format and location of the source data
-    input_filename: Path  # the source file with sources and translations; assumed to be .tsv
+    input_filename: (
+        Path  # the source file with sources and translations; assumed to be .tsv
+    )
     src_lang: str
     tgt_lang: str
     src_col: tp.Union[str, int] = "src"

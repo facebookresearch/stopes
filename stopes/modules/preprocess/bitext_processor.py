@@ -49,7 +49,6 @@ class BitextProcessorCallback(AbstractContextManager):
     def process_lines(
         self, dataset_reader: tp.Generator[DatasetLine, None, None]
     ) -> None:
-
         """
         process a batch of lines from two files and writes them to two output_files the way you want.
         The input are two iterators of lines with their line number in the input file

@@ -188,7 +188,7 @@ async def test_semaphore():
 
     # make sure that the semaphore blocks execution
     ends.sort()
-    for (end1, end2) in zip(ends, ends[1:]):
+    for end1, end2 in zip(ends, ends[1:]):
         t_diff = end2 - end1
         assert (
             t_diff.total_seconds() >= sleep_time

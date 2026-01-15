@@ -111,7 +111,7 @@ class MultiProcFairSeqBinarizerEncoder(MultiprocLineProcessorCallback):
 
     def process_lines(self, lines_with_number: tp.Iterator[tp.Tuple[int, str]]) -> None:
         summary = BinarizeSummary()
-        for (_, s) in lines_with_number:
+        for _, s in lines_with_number:
             self.dataset_builder.add_item(self.binarizer.binarize_line(s, summary))
         self.summary.merge(summary)
         logger.info(self.summary)
