@@ -14,14 +14,15 @@ import logging
 import typing as tp
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm.auto import tqdm
-from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model
 
 from stopes.core import utils
 from stopes.modules.speech.audio_load_utils import parallel_audio_read
+from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model
 
 logger = logging.getLogger(__name__)
 
@@ -255,13 +256,17 @@ def encode_audios(
         if use_cuda:
             model.cuda()
 
-    itr = parallel_audio_read(
-        lines=audio_paths,
-        column_offset=0,
-        sampling_factor=sampling_factor,
-        num_process=num_process,
-        collapse_channels=True,
-    )
+    if isinstance(audio_paths[0], np.ndarray):
+        # if the input list consists of waveforms, we don't need to read them
+        itr = [(None, wav) for wav in audio_paths]
+    else:
+        itr = parallel_audio_read(
+            lines=audio_paths,
+            column_offset=0,
+            sampling_factor=sampling_factor,
+            num_process=num_process,
+            collapse_channels=True,
+        )
     if progress:
         itr = tqdm(itr, total=len(audio_paths))
 
@@ -397,6 +402,25 @@ def compare_audio_pairs(
         num_process=num_process,
     )[:, 0]
     logger.info("Comparing source and target embedding")
+    preds = get_comparator_preds(
+        model=model,
+        src_emb=src_emb,
+        tgt_emb=tgt_emb,
+        batch_size=batch_size,
+        symmetrize=symmetrize,
+    )
+    return list(preds)
+
+
+def get_comparator_preds(
+    model, src_emb, tgt_emb, batch_size: int = 16, symmetrize: bool = True
+) -> np.ndarray:
+    if isinstance(src_emb, np.ndarray):
+        src_emb = torch.tensor(src_emb)
+    if isinstance(tgt_emb, np.ndarray):
+        tgt_emb = torch.tensor(tgt_emb)
+    src_emb = src_emb.squeeze(1)
+    tgt_emb = tgt_emb.squeeze(1)
     preds = (
         get_model_pred(
             model,
@@ -421,4 +445,4 @@ def compare_audio_pairs(
             .numpy()
         )
         preds = (preds2 + preds) / 2
-    return list(preds)
+    return preds
