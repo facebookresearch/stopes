@@ -103,7 +103,6 @@ class HFShard(Shard):
             cache_dir=_cache_dir,
             download_mode=_download_mode,
             split=self.split,
-            trust_remote_code=self.trust_remote_code,
         )
         if self.split is None:  # _data is a DatasetDict, convert to Dataset
             _data = concatenate_datasets(

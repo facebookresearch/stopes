@@ -205,7 +205,7 @@ class SplitConcatBitextFiles(stopes.core.StopesModule):
         """
         lines = 0
         with utils.open(output, "wb") as o:
-            for (src_file, tgt_file) in self.public_bitext:
+            for src_file, tgt_file in self.public_bitext:
                 with utils.open(tgt_file if tgt else src_file, "rb") as f:
                     for line in f:
                         lines += 1

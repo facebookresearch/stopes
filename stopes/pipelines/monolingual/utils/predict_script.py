@@ -202,7 +202,10 @@ def test_predict_script():
     assert predictor_fn(
         "자미로콰이 Jamiroquai는 영국의 애시드 재즈 밴드이다 자미로콰이는 년대 초반 런던에서 활발하게 일어난 애시드 재즈"
     ) == ("Hang", 0.8148148148148148)
-    assert predictor_fn("이어지는기사  에서그점  에관해알려줄것  입니다") == ("Hang", 1.0)
+    assert predictor_fn("이어지는기사  에서그점  에관해알려줄것  입니다") == (
+        "Hang",
+        1.0,
+    )
 
     # not sure about this behaviour
     assert predictor_fn("এ 1234 b") == (None, 0)

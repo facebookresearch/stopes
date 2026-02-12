@@ -242,9 +242,9 @@ class FilterLID:
             thresholds_file = getattr(lid_config, "thresholds_file", None)
             self.lid_predictor = get_lid_predictor(
                 model_file=Path(lid_config.model_file),
-                thresholds_file=Path(thresholds_file)
-                if thresholds_file is not None
-                else None,
+                thresholds_file=(
+                    Path(thresholds_file) if thresholds_file is not None else None
+                ),
                 label_unk=lid_config.label_unk,
             )
         else:
@@ -406,7 +406,7 @@ class SplitNormalizeFilterLID(MultiprocLineProcessorCallback):
         and write them to the output file
         """
         # split sentences
-        for (line_id, line) in lines_with_number:
+        for line_id, line in lines_with_number:
             (real_line, _metadata) = extract_metadata(line, self.corpus)
             # we throw away metadata, use corpus+offset+linenumber to rebuild it
             self.result_summary.paragraphs += 1

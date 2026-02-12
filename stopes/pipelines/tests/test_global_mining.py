@@ -129,7 +129,6 @@ class ToyNumbersEncoder(EncodeToNPY):
         (False, True, True, "speech"),
     ],
 )
-@pytest.mark.asyncio(scope="session")
 def test_global_mining_pipeline(
     tmp_path: Path, split_langs: bool, use_meta: bool, fp16: bool, modality: str
 ) -> None:

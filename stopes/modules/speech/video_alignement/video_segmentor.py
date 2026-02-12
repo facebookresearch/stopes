@@ -115,7 +115,6 @@ class WhisperSegmentorConfig:
 
 
 class WhisperSegmentorModule(StopesModule):
-
     """Extract utterances from an audio and embed them
     This module is multi-lingual : different languages can be processed with the same pipeline
 
@@ -382,7 +381,9 @@ class WhisperSegmentorModule(StopesModule):
         logger.info(
             f"Starting Whisper segmentation on wav of length {round(len(wav) / self.SR / 60, 3)} minuntes in lang = {lang}"
         )
-        with tempfile.TemporaryDirectory() as data_gym_cache:  # attempt to fixe loading issue
+        with (
+            tempfile.TemporaryDirectory() as data_gym_cache
+        ):  # attempt to fixe loading issue
             os.environ["DATA_GYM_CACHE_DIR"] = str(data_gym_cache)
             whisper_model = self._load_whisper(self.config.whisper_model).cuda()
             wav = wav.cpu()

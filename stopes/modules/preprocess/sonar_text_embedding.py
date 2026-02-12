@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import torch
-from fairseq2.assets.error import AssetError
+from fairseq2.error import OperationalError
 from retrying import retry
 from sonar.inference_pipelines.text import (
     EmbeddingToTextModelPipeline,
@@ -37,7 +37,9 @@ from stopes.utils.sharding.abstract_shards import BatchFormat, batch_to_table
 from stopes.utils.sharding.parquet_shards import ParquetOutputConfig
 
 fairse2_asset_loading_retry = retry(
-    retry_on_exception=lambda exception: isinstance(exception, (AssetError, IOError)),
+    retry_on_exception=lambda exception: isinstance(
+        exception, (OperationalError, IOError)
+    ),
     stop_max_attempt_number=20,
     wait_random_min=1000,
     wait_random_max=30_000,

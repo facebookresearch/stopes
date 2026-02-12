@@ -33,7 +33,8 @@ class MergeShardsConfig:
 
 class ShardForMerge:
     """Represent an input shard opened for merge.
-    Both input and output shards are in decreasing order of match scores, and this object helps manage that."""
+    Both input and output shards are in decreasing order of match scores, and this object helps manage that.
+    """
 
     def __init__(self, text_path: Path, meta_path: tp.Optional[Path]):
         self.text_path = text_path

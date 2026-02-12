@@ -106,7 +106,7 @@ LANGS_CASELESS = {"kat": "kat"}
 
 
 def make_splitter_caseless(
-    base_splitter: tp.Callable[[str], tp.Iterable[str]]
+    base_splitter: tp.Callable[[str], tp.Iterable[str]],
 ) -> tp.Callable[[str], tp.Iterable[str]]:
     """
     Try splitting an uppercase version of the texts.
