@@ -102,19 +102,21 @@ async def eval_blaser(
                 )
             )
         ),
-        launcher.schedule(
-            ComputeEmbedding(
-                ComputeEmbeddingConfig(
-                    checkpoint_file=ref_enc,
-                    manifest_file=config.ref_manifest,
-                    out_file=emb_out_dir / f"reference-{config.ref_lang}-emb.npy",
-                    checkpoint_dir=config.checkpoint_dir,
-                    max_tokens=config.max_tokens,
+        (
+            launcher.schedule(
+                ComputeEmbedding(
+                    ComputeEmbeddingConfig(
+                        checkpoint_file=ref_enc,
+                        manifest_file=config.ref_manifest,
+                        out_file=emb_out_dir / f"reference-{config.ref_lang}-emb.npy",
+                        checkpoint_dir=config.checkpoint_dir,
+                        max_tokens=config.max_tokens,
+                    )
                 )
             )
-        )
-        if config.ref_manifest
-        else None,
+            if config.ref_manifest
+            else None
+        ),
     )
 
     # 2. call blaser

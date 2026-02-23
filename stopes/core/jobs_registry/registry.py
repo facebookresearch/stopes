@@ -14,6 +14,7 @@ from stopes.core.jobs_registry.submitit_slurm_job import RegistryStatuses, Stope
 
 logger = logging.getLogger("stopes.jobs")
 
+
 ################################################################################
 #  Registry Exceptions
 ################################################################################

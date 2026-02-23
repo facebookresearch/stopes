@@ -306,9 +306,9 @@ class LaserLstmEncoder(nn.Module):
         return {
             "sentemb": sentemb,
             "encoder_out": (x, final_hiddens, final_cells),
-            "encoder_padding_mask": encoder_padding_mask
-            if encoder_padding_mask.any()
-            else None,
+            "encoder_padding_mask": (
+                encoder_padding_mask if encoder_padding_mask.any() else None
+            ),
         }
 
 
