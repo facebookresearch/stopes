@@ -121,9 +121,10 @@ class DedupSharding(StopesModule):
 
         if dedup_sharding_job.eval_datasets:
             for eval_dataset in dedup_sharding_job.eval_datasets:
-                with utils.open(eval_dataset.src, "rt") as s_f, utils.open(
-                    eval_dataset.tgt, "rt"
-                ) as t_f:
+                with (
+                    utils.open(eval_dataset.src, "rt") as s_f,
+                    utils.open(eval_dataset.tgt, "rt") as t_f,
+                ):
                     for src_line, tgt_line in zip(s_f, t_f):
                         self._already_seen(src_line, tgt_line, DedupType.both)
 
@@ -164,9 +165,9 @@ class DedupSharding(StopesModule):
                         Dataset(
                             src=str(src_outfile),
                             tgt=str(tgt_outfile),
-                            metadata=str(metadata_outfile)
-                            if metadata_outfile
-                            else None,
+                            metadata=(
+                                str(metadata_outfile) if metadata_outfile else None
+                            ),
                             lang_dir=lang_dir,
                             fold=train_dataset.fold,
                         )
@@ -175,13 +176,15 @@ class DedupSharding(StopesModule):
                 random.seed(0)
                 seen_lines = 0
                 num_lines = 0
-                with utils.open(train_dataset.src, "rt") as s_f, utils.open(
-                    train_dataset.tgt, "rt"
-                ) as t_f, utils.open(
-                    train_dataset.metadata, "rt"
-                ) if train_dataset.metadata else contextlib.nullcontext(
-                    itertools.repeat(None)
-                ) as m_f:
+                with (
+                    utils.open(train_dataset.src, "rt") as s_f,
+                    utils.open(train_dataset.tgt, "rt") as t_f,
+                    (
+                        utils.open(train_dataset.metadata, "rt")
+                        if train_dataset.metadata
+                        else contextlib.nullcontext(itertools.repeat(None))
+                    ) as m_f,
+                ):
                     for src_line, tgt_line, metadata_line in zip(s_f, t_f, m_f):
                         shard_id = random.randint(0, num_shards - 1)
                         if not self._already_seen(

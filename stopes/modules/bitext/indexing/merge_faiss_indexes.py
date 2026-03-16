@@ -118,12 +118,16 @@ class MergeFAISSIndexesModule(StopesModule):
         return submitit.helpers.DelayedSubmission(
             MergeFAISSIndexesModule(
                 config=self.config,
-                checkpoint_part=self.partial_merge_file
-                if self.config.enable_checkpointing
-                else None,
-                checkpoint_file_idx=self.checkpoint_file_idx
-                if self.config.enable_checkpointing
-                else None,
+                checkpoint_part=(
+                    self.partial_merge_file
+                    if self.config.enable_checkpointing
+                    else None
+                ),
+                checkpoint_file_idx=(
+                    self.checkpoint_file_idx
+                    if self.config.enable_checkpointing
+                    else None
+                ),
             ),
             *args,
             **kwargs,

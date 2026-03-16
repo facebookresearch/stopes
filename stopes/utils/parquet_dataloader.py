@@ -223,12 +223,14 @@ class ParquetBasicDataLoader:
             )
 
         np_rs = np.random.RandomState(seed)
-        with Parallel(
-            n_jobs=max(nb_cpu // 2, 1), backend="threading", return_as="generator"
-        ) as parallel_outer, Parallel(
-            n_jobs=nb_cpu, backend="threading", return_as="generator"
-        ) as parallel_inner, pyarrow_cpu(
-            nb_cpu
+        with (
+            Parallel(
+                n_jobs=max(nb_cpu // 2, 1), backend="threading", return_as="generator"
+            ) as parallel_outer,
+            Parallel(
+                n_jobs=nb_cpu, backend="threading", return_as="generator"
+            ) as parallel_inner,
+            pyarrow_cpu(nb_cpu),
         ):
             if order_by_length is not None:
                 columns = sorted(

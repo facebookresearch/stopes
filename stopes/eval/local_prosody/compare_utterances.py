@@ -124,7 +124,7 @@ def align_pauses(
 
     duration_scores = []
     alignment_scores = []
-    for (pauses, p2a) in [(pp_src, p2a_src), (pp_tgt, p2a_tgt)]:
+    for pauses, p2a in [(pp_src, p2a_src), (pp_tgt, p2a_tgt)]:
         for prev_word_id, duration in pauses:
             if prev_word_id not in p2a:
                 duration_scores.append(0.0)
@@ -353,12 +353,12 @@ def aggregate_pause_alignment_statistics(df: pd.DataFrame):
             "mean_duration_score": df.duration_score.mean(),
             "mean_alignment_score": df.alignment_score.mean(),
             "mean_joint_score": joint_score.mean(),
-            "wmean_duration_score": (df.duration_score * w).sum() / w.sum()
-            if non_empty
-            else 1,
-            "wmean_alignment_score": (df.alignment_score * w).sum() / w.sum()
-            if non_empty
-            else 1,
+            "wmean_duration_score": (
+                (df.duration_score * w).sum() / w.sum() if non_empty else 1
+            ),
+            "wmean_alignment_score": (
+                (df.alignment_score * w).sum() / w.sum() if non_empty else 1
+            ),
             "wmean_joint_score": (joint_score * w).sum() / w.sum() if non_empty else 1,
             "total_weight": w.sum(),
             "n_items": df.shape[0],

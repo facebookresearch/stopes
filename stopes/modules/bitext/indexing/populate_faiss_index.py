@@ -202,9 +202,11 @@ class PopulateFAISSIndexModule(stopes.core.StopesModule):
         return submitit.helpers.DelayedSubmission(
             PopulateFAISSIndexModule(
                 config=self.config,
-                checkpoint_summary=self.checkpoint_summary
-                if self.config.enable_checkpointing
-                else None,
+                checkpoint_summary=(
+                    self.checkpoint_summary
+                    if self.config.enable_checkpointing
+                    else None
+                ),
             ),
             *args,
             **kwargs,
