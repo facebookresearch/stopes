@@ -82,7 +82,7 @@ async def validate(
     train_tgt_counts_map = defaultdict(int)
     train_counts_map = defaultdict(int)
 
-    for (num_lines, dataset) in validation_results:
+    for num_lines, dataset in validation_results:
         if dataset.fold.startswith("train"):
             src, tgt = dataset.lang_dir.split("-")
             train_src_counts_map[src] += num_lines

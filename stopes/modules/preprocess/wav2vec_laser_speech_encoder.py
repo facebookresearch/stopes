@@ -54,7 +54,8 @@ class LaserSpeechEncoder:
     @property
     def fbank_features(self) -> int:
         """Number of fbank features to feed to the encoder (0 if instead of fbank it expects a raw waveform).
-        This parameter is defined based on the architecture of the underlying encoder."""
+        This parameter is defined based on the architecture of the underlying encoder.
+        """
         return self.encoder_cfg.task.get("fbank_features", 0)
 
     def _encode_batch(self, source, padding_mask):

@@ -259,7 +259,7 @@ class BitextSplitNormalizeFilterLID(MultiprocBitextProcessorCallback):
         and write them to the output file
         """
         # split sentences
-        for (line_id, dataset_line) in enumerate(dataset_reader):
+        for line_id, dataset_line in enumerate(dataset_reader):
             (real_tgt_line, _tgt_metadata) = extract_distillation_metadata(
                 dataset_line.tgt
             )

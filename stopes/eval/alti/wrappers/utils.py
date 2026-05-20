@@ -18,7 +18,8 @@ from ..alignment import align
 
 def spearmanr(x, y):
     """Compute Spearman rank's correlation bertween two attribution vectors.
-    https://github.com/samiraabnar/attention_flow/blob/master/compute_corel_distilbert_sst.py"""
+    https://github.com/samiraabnar/attention_flow/blob/master/compute_corel_distilbert_sst.py
+    """
 
     x = pd.Series(x)
     y = pd.Series(y)

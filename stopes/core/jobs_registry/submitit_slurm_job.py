@@ -284,7 +284,9 @@ class SubmititJob(StopesJob):
 
             return job_status
 
-        except KeyError:  # Entering this except block means slurm_status doesn't exist in submitit_state_to_registry_state_dict
+        except (
+            KeyError
+        ):  # Entering this except block means slurm_status doesn't exist in submitit_state_to_registry_state_dict
             logger.warning(
                 f"Job with id: {job_id} has unrecognized slurm status: {slurm_status}. Please inspect and if suitable, add this status to the slurm_state_to_registry_state_map converter."
             )

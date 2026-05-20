@@ -105,7 +105,7 @@ def map_batches(
         for x, res in zip(batch, new_results):
             cache[x] = res
         j = 0
-        for (x, maybe_res) in batch_with_results:
+        for x, maybe_res in batch_with_results:
             if maybe_res is None:
                 maybe_res = new_results[j]
                 j += 1

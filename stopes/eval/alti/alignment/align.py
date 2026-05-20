@@ -6,7 +6,7 @@
 
 # This code was adapted from the repository https://github.com/mt-upc/transformer-contributions-nmt by Javier Ferrando.
 
-""" Various utilities for computing word attributions and word alignment quality metrics."""
+"""Various utilities for computing word attributions and word alignment quality metrics."""
 
 import itertools
 import typing as tp
@@ -109,7 +109,8 @@ def compute_alignment_metrics(
     sure: tp.List[tp.Set], possible: tp.List[tp.Set], hypothesis: tp.List[tp.Set]
 ) -> tp.Tuple[float, float, float]:
     """Compute average alignment rate, precision and recall for alignment.
-    Inputs are lists of alignments. All alignments are presented as sets of (tgt, src) pairs."""
+    Inputs are lists of alignments. All alignments are presented as sets of (tgt, src) pairs.
+    """
     sum_a_intersect_p, sum_a_intersect_s, sum_s, sum_a = 0, 0, 0, 0
 
     for s, p, a in itertools.zip_longest(sure, possible, hypothesis):

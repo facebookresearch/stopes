@@ -79,7 +79,7 @@ classifiers=[
     "numba",
     "transformers",
     "openai-whisper==20230314",
-    "fairseq2==0.2.*",
+    "fairseq2>=0.5.*",
     "sonar-space==0.2.*",
   ]
   vocal_style_sim = [
@@ -87,7 +87,7 @@ classifiers=[
   ]
   sonar_mining = [
     "sonar-space==0.2.*",
-    "fairseq2==0.2.*",
+    "fairseq2>=0.5.*",
   ]
   dev = [
       # Test

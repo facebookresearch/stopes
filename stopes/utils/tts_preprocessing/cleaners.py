@@ -20,7 +20,9 @@ from stopes.utils.tts_preprocessing.cmn import cmn_norm
 from stopes.utils.tts_preprocessing.numbers import (
     SUPPORTED_LANGS as NUMEXP_SUPPORTED_LANGS,
 )
-from stopes.utils.tts_preprocessing.numbers import expand_numbers
+from stopes.utils.tts_preprocessing.numbers import (
+    expand_numbers,
+)
 
 logger = logging.getLogger(__name__)
 

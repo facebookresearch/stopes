@@ -124,7 +124,7 @@ class Utterance:
         parts = []
         pause_durations = self.get_pauses_after_words(min_duration=min_pause_duration)
         emphasis_scores = self.emphasis_scores or [0] * len(self.words)
-        for (word, pause, emph_score) in zip(
+        for word, pause, emph_score in zip(
             self.words, pause_durations, emphasis_scores
         ):
             if emph_score > min_emph_score:
