@@ -51,7 +51,9 @@ The mining pipeline's `embed_text` step supports two LASER encoder families:
 
 `LaserSentenceEncoder.__init__` accepts an `fp16_model` argument (see
 `stopes/modules/preprocess/laser_sentence_encoder.py`), and the
-`laser3_encoder.yaml` / `laser2_lstm_encoder` configs expose it. However, this
+`laser3_encoder.yaml` config exposes it (the speech configs `speech_encoder.yaml`
+and `mining_speech_encoder.yaml` default it to `True`; the LSTM-based
+`laser2_encoder.yaml` doesn't expose this flag at all). However, this
 flag is never read anywhere in the constructor body or forwarded to the
 underlying `SentenceEncoder` — it only affects the on-disk dtype of the saved
 `.npy` embeddings via the separate `fp16` flag, not the model's compute dtype.
